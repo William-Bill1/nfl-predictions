@@ -5,7 +5,7 @@ Converts play-by-play data to game-level player statistics.
 Usage:
     from player_props.aggregators import aggregate_passing_stats
     
-    pbp = pd.read_csv('data_files/nfl_play_by_play_historical.csv.gz', compression='gzip')
+    pbp = pd.read_csv('data_files/nfl_play_by_play_historical.csv.gz', compression='gzip', sep='\t')
     passing_stats = aggregate_passing_stats(pbp)
 """
 import pandas as pd

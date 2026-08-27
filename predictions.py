@@ -909,14 +909,27 @@ def load_play_by_play_chunked(max_rows: int | None = None, usecols: list | None 
     if not os.path.exists(file_path):
         return pd.DataFrame()
 
-    # Default columns to read if none specified
+    # Default columns to read if none specified. These are the columns the
+    # Historical Data & Filters view actually displays; keeping the list to
+    # real column names lets the chunked (memory-optimised) read succeed
+    # instead of silently falling back to loading all ~370 columns.
+    # (nflverse PBP uses posteam/defteam, not offense/defense.)
     if usecols is None:
-        usecols = ['game_id', 'play_id', 'qtr', 'desc', 'offense', 'defense', 'yards_gained', 'play_type', 'game_date']
+        usecols = [
+            'game_id', 'play_id', 'game_date', 'week', 'season',
+            'home_team', 'away_team', 'posteam', 'defteam',
+            'game_seconds_remaining', 'qtr', 'down', 'ydstogo', 'yardline_100',
+            'play_type', 'yards_gained', 'desc', 'epa', 'wp',
+            'posteam_score', 'defteam_score', 'score_differential',
+            'pass_attempt', 'rush_attempt', 'complete_pass', 'interception',
+            'fumble_lost', 'td_prob', 'touchdown', 'field_goal_result',
+        ]
 
     chunks = []
     rows_read = 0
     try:
-        for chunk in pd.read_csv(file_path, compression='gzip', sep=',', usecols=usecols, chunksize=200_000, low_memory=True):
+        # The PBP file is tab-separated (see create-play-by-play.py / update_pbp_smart.py).
+        for chunk in pd.read_csv(file_path, compression='gzip', sep='\t', usecols=usecols, chunksize=200_000, low_memory=True):
             # Cast numeric columns to reduce memory footprint early
             if 'yards_gained' in chunk.columns:
                 chunk['yards_gained'] = pd.to_numeric(chunk['yards_gained'], errors='coerce').astype('float32')
@@ -928,7 +941,7 @@ def load_play_by_play_chunked(max_rows: int | None = None, usecols: list | None 
     except Exception:
         # Fallback to a full read if chunked read fails for unexpected reasons
         try:
-            df = pd.read_csv(file_path, compression='gzip', sep=',', low_memory=False)
+            df = pd.read_csv(file_path, compression='gzip', sep='\t', low_memory=False)
             return df if max_rows is None else df.head(max_rows)
         except Exception:
             return pd.DataFrame()

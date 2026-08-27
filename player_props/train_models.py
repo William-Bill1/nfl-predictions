@@ -53,12 +53,13 @@ REQUIRED_PBP_COLS = [
 
 def _load_pbp() -> pd.DataFrame:
     """Load play-by-play data from data_files/."""
+    # The PBP file is tab-separated (see create-play-by-play.py / update_pbp_smart.py).
     if PBP_FILE.exists():
         print(f"Loading PBP from {PBP_FILE} ...")
-        pbp = pd.read_csv(PBP_FILE, compression='gzip', low_memory=False)
+        pbp = pd.read_csv(PBP_FILE, compression='gzip', sep='\t', low_memory=False)
     elif PBP_FILE_UNCOMPRESSED.exists():
         print(f"Loading PBP from {PBP_FILE_UNCOMPRESSED} ...")
-        pbp = pd.read_csv(PBP_FILE_UNCOMPRESSED, low_memory=False)
+        pbp = pd.read_csv(PBP_FILE_UNCOMPRESSED, sep='\t', low_memory=False)
     else:
         raise FileNotFoundError(
             f"Play-by-play file not found. Expected one of:\n"

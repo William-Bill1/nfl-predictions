@@ -3,18 +3,14 @@ import pandas as pd
 from os import path
 
 import os
-from datetime import datetime
 import requests
 import argparse
 
+from season_utils import FIRST_SEASON, latest_pbp_season
+
 DATA_DIR = 'data_files/'
-current_year = datetime.now().year
-# Only fetch through current year if season has started (September+), otherwise use last year
-# NFL regular season starts in September, so if we're before September, use previous year
-if datetime.now().month < 9:
-    end_year = current_year - 1
-else:
-    end_year = current_year
+# Newest season with play-by-play data (rolls over at September kickoff).
+end_year = latest_pbp_season()
 
 def main():
     parser = argparse.ArgumentParser(description='Download NFL play-by-play data')
@@ -28,7 +24,7 @@ def main():
         print(f"📅 Downloading only current season ({end_year}) data...")
     else:
         # Download all historical seasons
-        YEARS = range(2020, end_year + 1)
+        YEARS = range(FIRST_SEASON, end_year + 1)
         print(f"📚 Downloading all seasons ({min(YEARS)}-{end_year}) data...")
 
     data = pd.DataFrame()

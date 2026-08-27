@@ -175,12 +175,12 @@ The nightly workflow automatically updates predictions during football season:
 
 **Local Alternative**: For local development, run the update manually:
 ```bash
-# Fetch latest ESPN data
-python fetch_espn_weekly_scores.py
-
-# Rebuild predictions
+# Refresh play-by-play data, then rebuild schedule + predictions
+python update_pbp_smart.py
 python build_and_train_pipeline.py
 ```
+(Completed-game scores/odds from ESPN are refreshed inside the app itself when
+the dashboard loads - see `predictions.py::update_completed_games`.)
 
 ### **Environment variables & .env (local development)**
 

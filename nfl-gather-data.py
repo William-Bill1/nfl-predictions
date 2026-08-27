@@ -196,7 +196,9 @@ historical_game_level_data['awayTeamShortRest'] = np.where(historical_game_level
 # Add weather impact features (already have temp and wind from data)
 print("Adding weather impact features...")
 historical_game_level_data['isColdWeather'] = np.where(historical_game_level_data['temp'] <= 32, 1, 0)
-historical_game_level_data['isWindy'] = np.where(historical_game_level_data['temp'] >= 15, 1, 0)
+# isWindy keys off wind speed (mph), not temperature. Previously this compared
+# `temp >= 15`, so the "windy game" flag was really a mild-temperature flag.
+historical_game_level_data['isWindy'] = np.where(historical_game_level_data['wind'] >= 15, 1, 0)
 historical_game_level_data['isExtremeWeather'] = np.where(
     (historical_game_level_data['temp'] <= 25) | (historical_game_level_data['wind'] >= 20), 1, 0
 )
