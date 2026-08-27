@@ -1,0 +1,5 @@
+# Development / CI extras. Install with:  pip install -r requirements-dev.txt
+# (this pulls in requirements.txt as well)
+-r requirements.txt
+
+pytest==9.1.1
