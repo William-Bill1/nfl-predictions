@@ -244,11 +244,14 @@ def main():
             return all_features
 
     features = [
-        # Pregame features only (removed 'total' as it's actual game total, causing data leakage)
+        # Pregame odds / context. Numeric only: string columns that used to be
+        # listed here (home_team, away_team, gameday, roof, surface, stadium,
+        # location, home/away_coach, home/away_qb_id, home/away_qb_name) were
+        # always silently dropped by the select_dtypes filter below, so they are
+        # omitted. Encoding them is a separate change. ('total' is also excluded
+        # - it's the actual game total and would be data leakage.)
         'spread_line', 'away_moneyline', 'home_moneyline', 'away_spread_odds', 'home_spread_odds', 'total_line',
-        'under_odds', 'over_odds', 'div_game', 'roof', 'surface', 'temp', 'wind', 'away_rest', 'home_rest',
-        'home_team', 'away_team', 'gameday', 'week', 'season', 'home_qb_id', 'away_qb_id', 'home_qb_name', 'away_qb_name',
-        'home_coach', 'away_coach', 'stadium', 'location',
+        'under_odds', 'over_odds', 'div_game', 'temp', 'wind', 'away_rest', 'home_rest', 'week', 'season',
         # Rolling team stats (calculated from previous games only)
         'homeTeamWinPct', 'awayTeamWinPct', 'homeTeamCloseGamePct', 'awayTeamCloseGamePct', 'homeTeamBlowoutPct', 'awayTeamBlowoutPct',
         'homeTeamAvgScore', 'awayTeamAvgScore', 'homeTeamAvgScoreAllowed', 'awayTeamAvgScoreAllowed', 'homeTeamAvgPointDiff', 'awayTeamAvgPointDiff',
@@ -652,16 +655,20 @@ def main():
         lambda row: calculate_betting_return(row, 'totals'), axis=1
     )
 
-    # Calculate betting performance metrics
-    print(f"\nBetting Analysis Debug:")
-    print(f"Total games: {len(historical_game_level_data)}")
-    print(f"Games with optimal underdog predictions: {(historical_game_level_data['pred_underdogWon_optimal'] == 1).sum()}")
-    print(f"Games with high spread confidence (>=0.55): {(historical_game_level_data['prob_underdogCovered'] >= 0.55).sum()}")
-    print(f"Games with optimal totals predictions: {(historical_game_level_data['pred_overHit_optimal'] == 1).sum()}")
+    # Betting simulation on the held-out TEST games only. Scoring the whole
+    # dataset (as this block did before) counts games the models trained on and
+    # makes the win rate / ROI look far better than they are. After the temporal
+    # split the three targets share one test index, so X_test_spread.index covers
+    # all of them.
+    test_games = historical_game_level_data.loc[X_test_spread.index]
+    print(f"\nBetting Analysis (held-out test set: {len(test_games)} games):")
+    print(f"Games with optimal underdog predictions: {(test_games['pred_underdogWon_optimal'] == 1).sum()}")
+    print(f"Games with high spread confidence (>=0.55): {(test_games['prob_underdogCovered'] >= 0.55).sum()}")
+    print(f"Games with optimal totals predictions: {(test_games['pred_overHit_optimal'] == 1).sum()}")
 
-    moneyline_bets = historical_game_level_data[historical_game_level_data['pred_underdogWon_optimal'] == 1]
-    spread_bets = historical_game_level_data[historical_game_level_data['prob_underdogCovered'] >= 0.55]
-    totals_bets = historical_game_level_data[historical_game_level_data['pred_overHit_optimal'] == 1]
+    moneyline_bets = test_games[test_games['pred_underdogWon_optimal'] == 1]
+    spread_bets = test_games[test_games['prob_underdogCovered'] >= 0.55]
+    totals_bets = test_games[test_games['pred_overHit_optimal'] == 1]
 
     if len(moneyline_bets) > 0:
         total_moneyline_return = moneyline_bets['moneyline_bet_return'].sum()
