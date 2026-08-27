@@ -51,6 +51,15 @@ def temporal_split(X, y, test_frac=0.2):
 
 DATA_DIR = 'data_files/'
 
+# Reproducibility: a fixed seed plus single-threaded training. XGBoost's `hist`
+# tree method and LightGBM both build histograms across threads, and the
+# float-reduction order there varies between runs, so back-to-back runs of this
+# pipeline produced slightly different models. n_jobs=1 removes that; the seed
+# pins the (currently unused) sampling RNG and documents intent.
+RANDOM_STATE = 42
+_XGB_KW = {"random_state": RANDOM_STATE, "n_jobs": 1}
+_LGBM_KW = {"random_state": RANDOM_STATE, "n_jobs": 1}
+
 
 def main():
     """Build features, train the three game models, write predictions +
@@ -268,9 +277,14 @@ def main():
         # Upset-specific features
         'spreadSize', 'isCloseSpread', 'isMediumSpread', 'isLargeSpread'
     ]
-    best_features_spread = load_best_features('best_features_spread.txt', features)
-    best_features_moneyline = load_best_features('best_features_moneyline.txt', features)
-    best_features_totals = load_best_features('best_features_totals.txt', features)
+    # Sort so the model's feature-column order (and therefore the trained model)
+    # doesn't depend on the line order in best_features_*.txt. The spread file in
+    # particular is rewritten by the Monte-Carlo step below in random.sample()
+    # order, so without this each pipeline run would train on a different column
+    # permutation and produce a different model - the pipeline never converged.
+    best_features_spread = sorted(load_best_features('best_features_spread.txt', features))
+    best_features_moneyline = sorted(load_best_features('best_features_moneyline.txt', features))
+    best_features_totals = sorted(load_best_features('best_features_totals.txt', features))
     target_spread = 'spreadCovered'
     target_overunder = 'overHit'  # Predicting over hits; under hits can be derived as 1 - overHit
 
@@ -320,7 +334,7 @@ def main():
     # Use isotonic calibration (better for well-separated probabilities) with 5-fold CV
     print("Training XGBoost models ...")
     model_spread = CalibratedClassifierCV(
-        XGBClassifier(eval_metric='logloss', n_estimators=150, max_depth=6, learning_rate=0.1),
+        XGBClassifier(eval_metric='logloss', n_estimators=150, max_depth=6, learning_rate=0.1, **_XGB_KW),
         method='isotonic',
         cv=5
     )
@@ -332,14 +346,14 @@ def main():
     scale_pos_weight = class_weights[1] / class_weights[0]
 
     model_moneyline = CalibratedClassifierCV(
-        XGBClassifier(eval_metric='logloss', scale_pos_weight=scale_pos_weight, n_estimators=150, max_depth=6, learning_rate=0.1),
+        XGBClassifier(eval_metric='logloss', scale_pos_weight=scale_pos_weight, n_estimators=150, max_depth=6, learning_rate=0.1, **_XGB_KW),
         method='isotonic',
         cv=5
     )
     model_moneyline.fit(X_train_ml, y_train_ml)
 
     model_totals = CalibratedClassifierCV(
-        XGBClassifier(eval_metric='logloss', n_estimators=150, max_depth=6, learning_rate=0.1),
+        XGBClassifier(eval_metric='logloss', n_estimators=150, max_depth=6, learning_rate=0.1, **_XGB_KW),
         method='isotonic',
         cv=5
     )
@@ -350,7 +364,7 @@ def main():
     if _LGBM_AVAILABLE:
         print("Training LightGBM ensemble models ...")
         lgbm_spread = CalibratedClassifierCV(
-            lgb.LGBMClassifier(n_estimators=150, max_depth=6, learning_rate=0.1, verbosity=-1),
+            lgb.LGBMClassifier(n_estimators=150, max_depth=6, learning_rate=0.1, verbosity=-1, **_LGBM_KW),
             method='isotonic',
             cv=5
         )
@@ -359,7 +373,7 @@ def main():
         lgbm_moneyline = CalibratedClassifierCV(
             lgb.LGBMClassifier(
                 n_estimators=150, max_depth=6, learning_rate=0.1,
-                scale_pos_weight=scale_pos_weight, verbosity=-1
+                scale_pos_weight=scale_pos_weight, verbosity=-1, **_LGBM_KW
             ),
             method='isotonic',
             cv=5
@@ -367,7 +381,7 @@ def main():
         lgbm_moneyline.fit(X_train_ml, y_train_ml)
 
         lgbm_totals = CalibratedClassifierCV(
-            lgb.LGBMClassifier(n_estimators=150, max_depth=6, learning_rate=0.1, verbosity=-1),
+            lgb.LGBMClassifier(n_estimators=150, max_depth=6, learning_rate=0.1, verbosity=-1, **_LGBM_KW),
             method='isotonic',
             cv=5
         )
@@ -877,7 +891,7 @@ def main():
         if len(valid_subset) < SUBSET_SIZE:
             print(f"Warning: Dropped invalid features from subset: {set(subset) - set(valid_subset)}")
         X_subset = X_train_spread[valid_subset]
-        model = XGBClassifier(eval_metric='logloss')
+        model = XGBClassifier(eval_metric='logloss', **_XGB_KW)
         scores = cross_val_score(model, X_subset, y_spread_train, cv=3, scoring='accuracy')
         mean_score = scores.mean()
         if mean_score > best_score:
@@ -887,9 +901,10 @@ def main():
     print(f"Best feature subset (spread, Monte Carlo {NUM_ITER} iters): {best_features}")
     print(f"Best mean CV accuracy: {best_score:.4f}")
 
-    # Save best features to a file
+    # Save best features to a file, sorted so re-reading it next run yields the
+    # same list (a fixed point) rather than a fresh random.sample() permutation.
     with open(path.join(DATA_DIR, 'best_features_spread.txt'), 'w') as f:
-        f.write("\n".join(best_features))
+        f.write("\n".join(sorted(best_features)))
         f.write(f"\nBest mean CV accuracy: {best_score:.4f}\n")
 
 
