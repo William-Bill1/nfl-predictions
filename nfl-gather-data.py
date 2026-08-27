@@ -49,6 +49,18 @@ def temporal_split(X, y, test_frac=0.2):
     cut = n - n_test
     return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
+
+def implied_prob(odds):
+    """American moneyline odds -> implied win probability. odds == 0 -> NaN."""
+    odds = np.array(odds, dtype=float)
+    prob = np.full_like(odds, np.nan, dtype=float)
+    mask_neg = odds < 0
+    mask_pos = odds > 0
+    prob[mask_neg] = (-odds[mask_neg]) / ((-odds[mask_neg]) + 100)
+    prob[mask_pos] = 100 / (odds[mask_pos] + 100)
+    return prob
+
+
 DATA_DIR = 'data_files/'
 
 # Reproducibility: a fixed seed plus single-threaded training. XGBoost's `hist`
@@ -506,8 +518,21 @@ def main():
 
     # Predict probabilities for all data
     historical_game_level_data['prob_underdogCovered'] = _blend_proba(model_spread, lgbm_spread, X_spread)
-    historical_game_level_data['prob_underdogWon'] = _blend_proba(model_moneyline, lgbm_moneyline, X_moneyline)
     historical_game_level_data['prob_overHit'] = _blend_proba(model_totals, lgbm_totals, X_totals)
+
+    # Moneyline: the trained model has no out-of-time edge (temporal-split
+    # AUC ~0.56, worse-calibrated than the 33% base rate, negative backtest ROI),
+    # and its "edges" are anti-predictive. Ship the market's own implied
+    # probability instead - honest and slightly predictive (AUC ~0.65). This
+    # makes ev_moneyline ~0 for every game, so no moneyline bet is recommended.
+    # model_moneyline / lgbm_moneyline are still trained for the reported
+    # diagnostics but their probabilities are not used downstream.
+    _ud_ml_odds = np.where(
+        historical_game_level_data['away_moneyline'] > historical_game_level_data['home_moneyline'],
+        historical_game_level_data['away_moneyline'],
+        historical_game_level_data['home_moneyline'],
+    )
+    historical_game_level_data['prob_underdogWon'] = implied_prob(_ud_ml_odds)
 
     # FIX: Invert spread predictions (model is backwards due to target variable definition)
     # Testing showed 66% ROI with inversion vs -90% without
@@ -580,11 +605,11 @@ def main():
 
     historical_game_level_data['ev_totals'] = historical_game_level_data.apply(calculate_totals_ev, axis=1)
 
-    # Apply EV-based thresholds for predictions (only bet when EV > 0)
-    historical_game_level_data['pred_underdogWon_optimal'] = (
-        (historical_game_level_data['prob_underdogWon'] >= optimal_moneyline_threshold) & 
-        (historical_game_level_data['ev_moneyline'] > 0)
-    ).astype(int)
+    # Apply EV-based thresholds for predictions (only bet when EV > 0).
+    # Moneyline is disabled: prob_underdogWon is the market's own implied
+    # probability, so ev_moneyline is 0 +/- float noise for every game and any
+    # ">0" would just be sign noise. No moneyline model edge -> no moneyline bets.
+    historical_game_level_data['pred_underdogWon_optimal'] = 0
 
     historical_game_level_data['pred_spreadCovered_optimal'] = (
         (historical_game_level_data['prob_underdogCovered'] >= optimal_spread_threshold) & 
@@ -798,22 +823,14 @@ def main():
     historical_game_level_data.loc[X_test_spread.index, 'predictedSpreadCovered'] = y_spread_pred
     historical_game_level_data.loc[X_test_tot.index, 'predictedOverHit'] = y_totals_pred
 
-    # --- Implied probability and edge calculations ---
-    def implied_prob(odds):
-        # American odds to implied probability, handle zeros as NaN
-        odds = np.array(odds, dtype=float)
-        prob = np.full_like(odds, np.nan, dtype=float)
-        mask_neg = odds < 0
-        mask_pos = odds > 0
-        prob[mask_neg] = (-odds[mask_neg]) / ((-odds[mask_neg]) + 100)
-        prob[mask_pos] = 100 / (odds[mask_pos] + 100)
-        # odds == 0 stays as NaN
-        return prob
+    # --- Implied probability and edge calculations ---  (implied_prob is module-level)
 
     # Underdog moneyline implied probability and edge
     underdog_is_away = historical_game_level_data['away_moneyline'] > historical_game_level_data['home_moneyline']
     underdog_ml_odds = np.where(underdog_is_away, historical_game_level_data['away_moneyline'], historical_game_level_data['home_moneyline'])
     historical_game_level_data['implied_prob_underdog_ml'] = implied_prob(underdog_ml_odds)
+    # prob_underdogWon IS the implied probability now (see above), so this edge is
+    # identically ~0 - kept for schema stability / dashboard compatibility.
     historical_game_level_data['edge_underdog_ml'] = historical_game_level_data['prob_underdogWon'] - historical_game_level_data['implied_prob_underdog_ml']
 
     # Spread implied probability and edge (for underdog covering)
@@ -848,7 +865,13 @@ def main():
         "Totals MAE": float(mean_absolute_error(y_test_tot, y_totals_pred)),
         "Optimal Spread Threshold": float(optimal_spread_threshold),
         "Optimal Moneyline Threshold": float(optimal_moneyline_threshold),
-        "Optimal Totals Threshold": float(optimal_totals_threshold)
+        "Optimal Totals Threshold": float(optimal_totals_threshold),
+        "Moneyline Note": (
+            "prob_underdogWon is the market implied probability. model_moneyline "
+            "is trained for the accuracy/MAE/threshold diagnostics above but is "
+            "not used for predictions - it has no out-of-time edge (temporal AUC "
+            "~0.56). No moneyline bets are generated."
+        ),
     }
     # Include EV analysis if available
     try:

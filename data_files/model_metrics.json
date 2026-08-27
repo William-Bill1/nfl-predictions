@@ -8,6 +8,7 @@
   "Optimal Spread Threshold": 0.5472245095664502,
   "Optimal Moneyline Threshold": 0.2,
   "Optimal Totals Threshold": 0.18000000000000002,
+  "Moneyline Note": "prob_underdogWon is the market implied probability. model_moneyline is trained for the accuracy/MAE/threshold diagnostics above but is not used for predictions - it has no out-of-time edge (temporal AUC ~0.56). No moneyline bets are generated.",
   "Spread_EV_Analysis": {
     "threshold": 0.5472245095664502,
     "min_edge": 0.02,
