@@ -1,11 +1,13 @@
 import nfl_data_py as nfl
 import pandas as pd
 from os import path
-from datetime import datetime
+
+from season_utils import upcoming_or_current_season
 
 DATA_DIR = 'data_files/'
-# Use 2025 for the current NFL season (starts in 2025, playoffs in 2026)
-season_year = 2025
+# Season whose schedule we publish: the one in progress, or the next one once
+# its schedule is out (rolls over on 1 March).
+season_year = upcoming_or_current_season()
 
 # Fetch schedule for current season
 print(f"Fetching NFL schedule for {season_year}...")
