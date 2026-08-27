@@ -6,6 +6,31 @@ bottom.
 
 ---
 
+## August 2026
+
+- **Pipeline reproducibility.** Seeded every XGBoost/LightGBM estimator with
+  `RANDOM_STATE=42` and `n_jobs=1`, and sort the feature lists on load so
+  `best_features_spread.txt` (rewritten each run by the Monte-Carlo step) is a
+  fixed point. `python nfl-gather-data.py` now byte-reproduces its own artifacts.
+- **Temporal train/test split** replaces the random one — test games are now the
+  last 20% by date, so reported metrics are out-of-time. `nfl-gather-data.py`
+  body wrapped in `main()` + `__main__` guard.
+- **Moneyline model disabled.** On the temporal hold-out it had no edge
+  (AUC ≈ 0.56, worse-calibrated than the base rate, negative backtest ROI; its
+  "edges" were anti-predictive). `prob_underdogWon` now ships the market implied
+  probability; `ev_moneyline` ≈ 0 for every game so no moneyline bets are
+  generated. `model_moneyline` is still trained for the reported diagnostics.
+  The Underdog Bets tab carries a note explaining this.
+- Betting-simulation prints restricted to the held-out test set (were scoring
+  training games). String columns dropped from the model `features` list (were
+  always ignored). New `tests.yml` CI workflow; `pytest.ini` scopes collection
+  to `tests/`.
+- Dependencies pinned (`requirements.txt` + `requirements-dev.txt`);
+  `beautifulsoup4` added. Correctness fixes: `isWindy` uses wind not temp; PBP
+  files read as tab-separated; season-year logic centralised in `season_utils.py`.
+- README trimmed 795 → ~200 lines; this CHANGELOG and
+  `docs/SPREAD_MODEL_INVESTIGATION.md` added.
+
 ## April 2026
 
 - Added `lightgbm` to `requirements.txt`; XGBoost + LightGBM soft-voting

@@ -5,9 +5,9 @@
 </p>
 
 A multi-page Streamlit app that trains machine-learning models on historical NFL
-data (2020–present) to predict game outcomes — **spread, moneyline, over/under** —
-plus a **player-props** system (passing / rushing / receiving yards and TDs) for
-DraftKings Pick 6-style markets. Everything is batch-computed: scripts write
+data (2020–present) to predict game outcomes — **spread** and **over/under**
+betting signals, plus an underdog-moneyline view — and a **player-props** system
+(passing / rushing / receiving yards and TDs) for DraftKings Pick 6-style markets. Everything is batch-computed: scripts write
 CSV/JSON into `data_files/`, and the app reads those files, so no build step or
 API keys are needed to run the dashboard.
 
@@ -46,7 +46,7 @@ To run the test suite: `pip install pytest && pytest -q`.
 | Page / tab | Contents |
 |---|---|
 | **Predictions** (main) | Model predictions vs. actual results; upcoming-game probabilities & edges (model % − implied %); betting-performance metrics |
-| **Underdog Bets** | Next moneyline opportunities where model confidence ≥ 28%, with payout math |
+| **Underdog Bets** | Market implied probability that the underdog wins outright. The moneyline *model* is disabled — no out-of-time edge — so no bets are generated here. |
 | **Spread Bets** | High-confidence spread picks, confidence-tiered |
 | **Over/Under Bets** | Totals picks sorted by value edge |
 | **Betting Log** | Auto-logged recommendations with timestamps and outcomes |
@@ -59,22 +59,27 @@ To run the test suite: `pip install pytest && pytest -q`.
 
 Three binary classifiers in `nfl-gather-data.py`, each a
 `CalibratedClassifierCV(XGBClassifier, isotonic)` optionally soft-voted with a
-LightGBM twin:
+LightGBM twin. Training is seeded and single-threaded, so the pipeline is
+byte-reproducible.
 
-| Target | Predicts | Threshold |
+| Target | Predicts | Ships? |
 |---|---|---|
-| `spreadCovered` | favorite covers the spread | EV-based (≥ 0.50) |
-| `underdogWon` | underdog wins outright | 28% (F1-optimized) |
-| `overHit` | total goes over | F1-optimized |
+| `spreadCovered` | favorite covers the spread | yes — EV-based threshold |
+| `overHit` | total goes over | yes — F1-optimized threshold |
+| `underdogWon` | underdog wins outright | **no** — model trained for diagnostics only; `prob_underdogWon` ships the market implied probability instead |
 
-Confidence tiers: 🔥 Elite ≥65%, ⭐ Strong 60–65%, 📈 Good 55–60%, Standard <55%.
+Performance on the **temporal** hold-out (last 20% of games by date, 339 games):
 
-Reported performance (spread 58.9% CV acc / 91.9% win rate on the selective
-high-confidence subset / 75.5% ROI; moneyline 64.2% / 59.5% / 65.4%): these come
-from a **random** train/test split and are optimistic. The spread model is
-trained on "favorite covers" and its probability is then inverted (`1 − p`);
-see [`docs/SPREAD_MODEL_INVESTIGATION.md`](docs/SPREAD_MODEL_INVESTIGATION.md)
-for what that fix actually does and what remains fragile.
+| | test accuracy | notes |
+|---|---|---|
+| Spread | ~0.55 | +EV bet subset (~13 games) backtests around +17% theoretical ROI |
+| Totals | ~0.51 | near coin-flip |
+| Moneyline | — | model AUC ≈ 0.56, worse-calibrated than the 33% base rate, negative backtest ROI → **disabled** (see the Underdog Bets note) |
+
+The spread model is trained on "favorite covers" and its probability is then
+inverted (`1 − p`); see
+[`docs/SPREAD_MODEL_INVESTIGATION.md`](docs/SPREAD_MODEL_INVESTIGATION.md) for
+what that fix actually does and what remains fragile.
 
 ### Feature engineering
 

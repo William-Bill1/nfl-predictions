@@ -3443,7 +3443,14 @@ def home_page():
     with pred_tab4:
         if predictions_df is not None:
             st.write("### 🎯 Next 10 Recommended Underdog Bets")
-            st.write("*Games where model recommends betting on underdog to win (≥28% confidence)*")
+            st.info(
+                "**Moneyline model disabled.** On a temporal (out-of-time) hold-out it "
+                "had no edge — AUC ≈ 0.56, worse calibrated than the 33% base rate, and "
+                "negative backtest ROI. `prob_underdogWon` now shows the **market's own "
+                "implied probability**, so no moneyline bets are generated. This section "
+                "is kept for reference; use the Spread and Over/Under tabs for signals."
+            )
+            st.write("*Market implied probability that the underdog wins outright — no model edge.*")
 
             # Reload predictions_df fresh and filter for upcoming games only
             predictions_df_upcoming = pd.read_csv(predictions_csv_path, sep='\t')
