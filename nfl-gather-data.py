@@ -14,7 +14,6 @@ try:
     _LGBM_AVAILABLE = True
 except ImportError:
     _LGBM_AVAILABLE = False
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_absolute_error, accuracy_score
 from sklearn.inspection import permutation_importance
 import json
@@ -29,6 +28,26 @@ def _blend_proba(xgb_model, lgbm_model, X):
     if lgbm_model is not None:
         p = (p + lgbm_model.predict_proba(X)[:, 1]) / 2.0
     return p
+
+
+def temporal_split(X, y, test_frac=0.2):
+    """Chronological hold-out split.
+
+    Rows are assumed already ordered by (season, week) - which they are, straight
+    from nfl_games_historical.csv. The last `test_frac` of rows become the test
+    set, so every test game occurs on or after every training game.
+
+    This replaces a random, stratified `train_test_split`: that split interleaved
+    test games with training games in time, letting the model "see the future"
+    at evaluation time and inflating the reported accuracy / win-rate / ROI.
+
+    Test-set size matches `train_test_split(test_size=test_frac)`:
+    ceil(n * test_frac) rows.
+    """
+    n = len(X)
+    n_test = int(np.ceil(n * test_frac))
+    cut = n - n_test
+    return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
 DATA_DIR = 'data_files/'
 
@@ -262,22 +281,27 @@ def main():
     if set(best_features_spread) - set(X_spread.columns):
         print(f"Warning: Dropped non-numeric features for spread: {set(best_features_spread) - set(X_spread.columns)}")
     y_spread = historical_game_level_data[target_spread]
-    X_train_spread, X_test_spread, y_spread_train, y_spread_test = train_test_split(
-        X_spread, y_spread, test_size=0.2, random_state=42, stratify=y_spread)
+
+    # The three targets share one chronological cut-off (a temporal split can't be
+    # stratified per target the way the old random split was). Guard the ordering
+    # the split relies on.
+    _season_week = historical_game_level_data[['season', 'week']]
+    assert _season_week.equals(_season_week.sort_values(['season', 'week'], kind='stable')), \
+        "nfl_games_historical.csv rows must be ordered by (season, week) for the temporal split"
+
+    X_train_spread, X_test_spread, y_spread_train, y_spread_test = temporal_split(X_spread, y_spread)
 
     X_moneyline = historical_game_level_data[best_features_moneyline].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_moneyline) - set(X_moneyline.columns):
         print(f"Warning: Dropped non-numeric features for moneyline: {set(best_features_moneyline) - set(X_moneyline.columns)}")
     y_moneyline = historical_game_level_data['underdogWon']
-    X_train_ml, X_test_ml, y_train_ml, y_test_ml = train_test_split(
-        X_moneyline, y_moneyline, test_size=0.2, random_state=42, stratify=y_moneyline)
+    X_train_ml, X_test_ml, y_train_ml, y_test_ml = temporal_split(X_moneyline, y_moneyline)
 
     X_totals = historical_game_level_data[best_features_totals].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_totals) - set(X_totals.columns):
         print(f"Warning: Dropped non-numeric features for totals: {set(best_features_totals) - set(X_totals.columns)}")
     y_totals = historical_game_level_data[target_overunder]
-    X_train_tot, X_test_tot, y_train_tot, y_test_tot = train_test_split(
-        X_totals, y_totals, test_size=0.2, random_state=42, stratify=y_totals)
+    X_train_tot, X_test_tot, y_train_tot, y_test_tot = temporal_split(X_totals, y_totals)
 
 
     print('y_spread_train value counts:')
