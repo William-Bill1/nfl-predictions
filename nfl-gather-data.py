@@ -96,17 +96,27 @@ def main():
     historical_game_level_data['homeFavored'] = np.where(historical_game_level_data['spread_line'] > 0, 1, 0)
     historical_game_level_data['awayFavored'] = np.where(historical_game_level_data['spread_line'] < 0, 1, 0)
 
-    # Fix: spreadCovered = 1 when the favored team covers the spread
-    historical_game_level_data['spreadCovered'] = np.where((historical_game_level_data['homeFavored'] == 1) & ((historical_game_level_data['home_score'] - historical_game_level_data['away_score']) > historical_game_level_data['spread_line']), 1,
-                                                        np.where((historical_game_level_data['awayFavored'] == 1) & ((historical_game_level_data['away_score'] - historical_game_level_data['home_score']) > abs(historical_game_level_data['spread_line'])), 1, 0))
-    historical_game_level_data['favoriteCovered'] = np.where(
-        (historical_game_level_data['homeFavored'] == 1) & ((historical_game_level_data['home_score'] - historical_game_level_data['away_score']) > historical_game_level_data['spread_line']), 1,
-        np.where((historical_game_level_data['awayFavored'] == 1) & ((historical_game_level_data['away_score'] - historical_game_level_data['home_score']) > abs(historical_game_level_data['spread_line'])), 1, 0)
+    # Spread outcomes, one consistent convention. `margin` = favorite's margin of
+    # victory (negative if the favorite lost); the favorite "line" to beat is
+    # abs(spread_line). Exactly one of covered / not-covered / push is 1 per game.
+    _fav_margin = np.where(
+        historical_game_level_data['homeFavored'] == 1,
+        historical_game_level_data['home_score'] - historical_game_level_data['away_score'],
+        historical_game_level_data['away_score'] - historical_game_level_data['home_score'],
     )
-    historical_game_level_data['underdogCovered'] = np.where(
-        (historical_game_level_data['homeFavored'] == 1) & ((historical_game_level_data['away_score'] - historical_game_level_data['home_score']) + historical_game_level_data['spread_line'] >= 0), 1,
-        np.where((historical_game_level_data['awayFavored'] == 1) & ((historical_game_level_data['home_score'] - historical_game_level_data['away_score']) - historical_game_level_data['spread_line'] >= 0), 1, 0)
-    )
+    _fav_line = historical_game_level_data['spread_line'].abs()
+    _is_pickem = (historical_game_level_data['homeFavored'] == 0) & (historical_game_level_data['awayFavored'] == 0)
+
+    # spreadCovered = 1 when the FAVORITE covers (strict). Unchanged from before
+    # (push was already 0 here); this is the model's training target.
+    historical_game_level_data['spreadCovered'] = np.where(_is_pickem, 0, (_fav_margin > _fav_line).astype(int))
+    # favoriteCovered is a synonym kept for CSV/schema compatibility.
+    historical_game_level_data['favoriteCovered'] = historical_game_level_data['spreadCovered']
+    # spreadPush = 1 when the favorite's margin lands exactly on the line (bet refunded).
+    historical_game_level_data['spreadPush'] = np.where(_is_pickem, 0, (_fav_margin == _fav_line).astype(int))
+    # underdogCovered = 1 when the UNDERDOG covers (strict). A push is NOT an
+    # underdog cover (previously >= let pushes count as underdog wins).
+    historical_game_level_data['underdogCovered'] = np.where(_is_pickem, 0, (_fav_margin < _fav_line).astype(int))
     # Fix: underdogWon = 1 when the underdog wins outright
     historical_game_level_data['underdogWon'] = np.where(
         (historical_game_level_data['homeFavored'] == 1) & (historical_game_level_data['away_score'] > historical_game_level_data['home_score']), 1,
@@ -405,7 +415,9 @@ def main():
     # Predict
 
     # Predict on test sets using ensemble probabilities
-    y_spread_pred = (_blend_proba(model_spread, lgbm_spread, X_test_spread) >= 0.5).astype(int)
+    _sp_prob_fav_test = _blend_proba(model_spread, lgbm_spread, X_test_spread)
+    y_spread_pred = (_sp_prob_fav_test >= 0.5).astype(int)               # P(favorite covers) - model-native
+    y_spread_pred_ud = ((1.0 - _sp_prob_fav_test) >= 0.5).astype(int)    # P(underdog covers) - shipped convention
     y_moneyline_pred = (_blend_proba(model_moneyline, lgbm_moneyline, X_test_ml) >= 0.5).astype(int)
     y_totals_pred = (_blend_proba(model_totals, lgbm_totals, X_test_tot) >= 0.5).astype(int)
 
@@ -445,65 +457,62 @@ def main():
     best_threshold = thresholds[np.argmax(f1_scores)]
     optimal_moneyline_threshold = best_threshold
 
-    def calculate_spread_ev_threshold(model, X_test, y_test, spread_lines=None, min_edge=0.02, lgbm_model=None):
+    def spread_ev_threshold(probs, y_true, min_edge=0.02):
+        """EV-based spread threshold, computed in P(underdog covers) space.
+
+        `probs`  - model P(underdog covers) on the test games (pushes excluded).
+        `y_true` - the actual underdogCovered outcome for those same games.
+
+        A -110 spread bet breaks even at 0.5238. A game is +EV when the model
+        probability clears that by at least `min_edge` and is itself >= 0.50; the
+        threshold is the smallest probability among those +EV games. Falls back
+        to 0.50 when none qualify. Returns (threshold, analysis dict).
         """
-        Calculate an EV-based spread threshold.
+        probs = np.asarray(probs, dtype=float)
+        y_true = np.asarray(y_true, dtype=float)
+        BREAKEVEN = 0.5238  # -110
 
-        Returns (optimal_threshold, analysis_dict).
-        """
-        probs = _blend_proba(model, lgbm_model, X_test)
-
-        # Default implied probability for -110
-        implied_prob = 0.5238
-
-        # Edge = model prob - implied prob
-        edges = probs - implied_prob
-
-        # Only consider bets where edge >= min_edge and prob >= 0.50
-        ev_based_bets = (edges >= min_edge) & (probs >= 0.50)
-
-        if ev_based_bets.sum() > 0:
-            optimal_threshold = float(probs[ev_based_bets].min())
-        else:
-            optimal_threshold = 0.50
-            print("⚠️ Warning: No +EV spread bets found in validation set; falling back to 50%")
+        ev_bets = ((probs - BREAKEVEN) >= min_edge) & (probs >= 0.50)
+        threshold = float(probs[ev_bets].min()) if ev_bets.any() else 0.50
+        if not ev_bets.any():
+            print("⚠️ No +EV spread bets in the test set; threshold falls back to 0.50")
 
         analysis = {
-            'threshold': float(optimal_threshold),
+            'threshold': threshold,
             'min_edge': float(min_edge),
-            'bets_triggered': int(ev_based_bets.sum()),
+            'bets_triggered': int(ev_bets.sum()),
             'total_games': int(len(probs)),
-            'bet_percentage': float(ev_based_bets.sum() / len(probs) * 100.0)
+            'bet_percentage': float(ev_bets.sum() / len(probs) * 100.0) if len(probs) else 0.0,
         }
+        if ev_bets.any():
+            wins = int(y_true[ev_bets].sum())
+            losses = int(ev_bets.sum() - wins)
+            profit = wins * 90.91 - losses * 100
+            analysis.update({
+                'historical_accuracy': float(y_true[ev_bets].mean()),
+                'wins': wins, 'losses': losses,
+                'theoretical_roi_pct': profit / (ev_bets.sum() * 100.0) * 100.0,
+            })
 
-        # Backtest performance if any bets
-        if ev_based_bets.sum() > 0:
-            accuracy = float(y_test[ev_based_bets].mean())
-            wins = int(y_test[ev_based_bets].sum())
-            losses = int(ev_based_bets.sum() - wins)
-            # Theoretical ROI at -110
-            profit = (wins * 90.91) - (losses * 100)
-            roi = (profit / (ev_based_bets.sum() * 100.0)) * 100.0
-            analysis.update({'historical_accuracy': accuracy, 'wins': wins, 'losses': losses, 'theoretical_roi_pct': roi})
-
-        print("\n📊 EV-Based Spread Threshold Analysis:")
+        print("\n📊 EV-Based Spread Threshold Analysis (P(underdog covers), pushes excluded):")
         print(f"   - Optimal threshold: {analysis['threshold']:.3f}")
         print(f"   - Min edge required: {analysis['min_edge']*100:.1f}%")
         print(f"   - Bets triggered: {analysis['bets_triggered']}/{analysis['total_games']} ({analysis['bet_percentage']:.1f}%)")
         if 'historical_accuracy' in analysis:
-            print(f"   - Historical accuracy on +EV bets: {analysis['historical_accuracy']*100:.1f}%")
+            print(f"   - Accuracy on +EV bets: {analysis['historical_accuracy']*100:.1f}%")
             print(f"   - Theoretical ROI: {analysis['theoretical_roi_pct']:.2f}%")
+        return analysis['threshold'], analysis
 
-        return optimal_threshold, analysis
 
-
-    # Use EV-based approach (recommended). Falls back to 50% when no +EV bets found.
-    print("\nCalculating EV-based threshold for spread betting (recommended)")
-    optimal_spread_threshold, spread_ev_analysis = calculate_spread_ev_threshold(
-        model_spread, X_test_spread, y_spread_test,
-        spread_lines=X_test_spread.get('spread_line') if isinstance(X_test_spread, pd.DataFrame) else None,
-        min_edge=0.02,
-        lgbm_model=lgbm_spread
+    # EV threshold in the same convention the bets use: P(underdog covers), on the
+    # held-out test games, with pushes removed.
+    print("\nCalculating EV-based threshold for spread betting")
+    _sp_test_idx = X_test_spread.index
+    _sp_prob_ud_test = 1.0 - _sp_prob_fav_test
+    _sp_true_ud_test = historical_game_level_data.loc[_sp_test_idx, 'underdogCovered'].to_numpy()
+    _sp_push_test = historical_game_level_data.loc[_sp_test_idx, 'spreadPush'].to_numpy().astype(bool)
+    optimal_spread_threshold, spread_ev_analysis = spread_ev_threshold(
+        _sp_prob_ud_test[~_sp_push_test], _sp_true_ud_test[~_sp_push_test], min_edge=0.02
     )
 
     # Totals threshold optimization
@@ -516,8 +525,13 @@ def main():
     best_totals_threshold = thresholds[np.argmax(f1_scores_totals)]
     optimal_totals_threshold = best_totals_threshold
 
-    # Predict probabilities for all data
-    historical_game_level_data['prob_underdogCovered'] = _blend_proba(model_spread, lgbm_spread, X_spread)
+    # Predict probabilities for all data.
+    # The spread model is trained on `spreadCovered` = P(the FAVORITE covers).
+    # The dashboard and EV code work in P(the UNDERDOG covers), which is the
+    # complement (a push is neither; handled via spreadPush). This is a change of
+    # convention applied once here - NOT a fix for a "backwards" model.
+    _prob_favorite_covers = _blend_proba(model_spread, lgbm_spread, X_spread)
+    historical_game_level_data['prob_underdogCovered'] = 1.0 - _prob_favorite_covers
 
     # Totals: the trained model is noise out-of-time (temporal AUC ~0.50, i.e.
     # a coin flip; worse-calibrated than the P(over) base rate; shipped signal
@@ -540,13 +554,9 @@ def main():
     )
     historical_game_level_data['prob_underdogWon'] = implied_prob(_ud_ml_odds)
 
-    # FIX: Invert spread predictions (model is backwards due to target variable definition)
-    # Testing showed 66% ROI with inversion vs -90% without
-    print("\n[FIX] APPLYING INVERSION FIX: Model predictions were backwards")
-    print(f"   Before inversion - Max prob: {historical_game_level_data['prob_underdogCovered'].max():.1%}")
-    historical_game_level_data['prob_underdogCovered'] = 1 - historical_game_level_data['prob_underdogCovered']
-    print(f"   After inversion - Max prob: {historical_game_level_data['prob_underdogCovered'].max():.1%}")
-    print(f"   Expected impact: Calibration error 45% -> 28%, ROI -90% -> +66%")
+    print(f"Spread: P(underdog covers) range "
+          f"{historical_game_level_data['prob_underdogCovered'].min():.1%}"
+          f" - {historical_game_level_data['prob_underdogCovered'].max():.1%}")
 
     # Calculate Expected Value (EV) for each bet type
     # EV = (win_probability * payout) - (loss_probability * stake)
@@ -649,6 +659,8 @@ def main():
         elif bet_type == 'spread':
             # Spread betting - bet on underdog to cover (EV-based)
             if row['pred_spreadCovered_optimal'] == 1:  # EV > 0 and meets threshold
+                if row.get('spreadPush', 0) == 1:
+                    return 0  # push - stake refunded
                 if row['underdogCovered'] == 1:  # Underdog covered
                     return 90.91  # Standard -110 odds: win $90.91 on $100 bet
                 else:
@@ -707,11 +719,12 @@ def main():
     test_games = historical_game_level_data.loc[X_test_spread.index]
     print(f"\nBetting Analysis (held-out test set: {len(test_games)} games):")
     print(f"Games with optimal underdog predictions: {(test_games['pred_underdogWon_optimal'] == 1).sum()}")
-    print(f"Games with high spread confidence (>=0.55): {(test_games['prob_underdogCovered'] >= 0.55).sum()}")
+    print(f"Games with a spread bet signal: {(test_games['pred_spreadCovered_optimal'] == 1).sum()}")
     print(f"Games with optimal totals predictions: {(test_games['pred_overHit_optimal'] == 1).sum()}")
 
     moneyline_bets = test_games[test_games['pred_underdogWon_optimal'] == 1]
-    spread_bets = test_games[test_games['prob_underdogCovered'] >= 0.55]
+    # Actual spread bet signal, push games excluded (push = refund, not a result).
+    spread_bets = test_games[(test_games['pred_spreadCovered_optimal'] == 1) & (test_games['spreadPush'] != 1)]
     totals_bets = test_games[test_games['pred_overHit_optimal'] == 1]
 
     if len(moneyline_bets) > 0:
@@ -760,11 +773,16 @@ def main():
 
     from sklearn.metrics import classification_report, precision_score, recall_score, f1_score
 
-    spread_accuracy = accuracy_score(y_spread_test, y_spread_pred)
+    # Spread accuracy is measured on the SHIPPED quantity - P(underdog covers) -
+    # against the actual underdogCovered outcome, with push games excluded (a
+    # push is a refund, not a right/wrong prediction).
+    _sp_true_ud_all = historical_game_level_data.loc[_sp_test_idx, 'underdogCovered'].to_numpy()
+    _sp_nonpush = ~historical_game_level_data.loc[_sp_test_idx, 'spreadPush'].to_numpy().astype(bool)
+    spread_accuracy = accuracy_score(_sp_true_ud_all[_sp_nonpush], y_spread_pred_ud[_sp_nonpush])
     moneyline_accuracy = accuracy_score(y_test_ml, y_moneyline_pred)
     totals_accuracy = accuracy_score(y_test_tot, y_totals_pred)
 
-    print(f"Spread Prediction Accuracy: {spread_accuracy:.4f}")
+    print(f"Spread Prediction Accuracy (underdog covers, non-push): {spread_accuracy:.4f}")
     print(f"Moneyline Prediction Accuracy: {moneyline_accuracy:.4f}")
     print(f"Totals Prediction Accuracy: {totals_accuracy:.4f}")
 
@@ -822,10 +840,11 @@ def main():
     for idx in sorted_idx_totals[:5]:
         print(f"{best_features_totals[idx]}: {feature_importance_totals[idx]:.4f}")
 
-    # Assign predictions to the correct rows in the DataFrame
+    # Assign test-set predictions to the DataFrame. predictedSpreadCovered is in
+    # the shipped convention: 1 = model predicts the UNDERDOG covers.
     historical_game_level_data['predictedSpreadCovered'] = np.nan
     historical_game_level_data['predictedOverHit'] = np.nan
-    historical_game_level_data.loc[X_test_spread.index, 'predictedSpreadCovered'] = y_spread_pred
+    historical_game_level_data.loc[X_test_spread.index, 'predictedSpreadCovered'] = y_spread_pred_ud
     historical_game_level_data.loc[X_test_tot.index, 'predictedOverHit'] = y_totals_pred
 
     # --- Implied probability and edge calculations ---  (implied_prob is module-level)
@@ -867,12 +886,18 @@ def main():
         "Spread Accuracy": float(spread_accuracy),
         "Moneyline Accuracy": float(moneyline_accuracy),
         "Totals Accuracy": float(totals_accuracy),
-        "Spread MAE": float(mean_absolute_error(y_spread_test, y_spread_pred)),
+        "Spread MAE": float(mean_absolute_error(_sp_true_ud_all[_sp_nonpush], y_spread_pred_ud[_sp_nonpush])),
         "Moneyline MAE": float(mean_absolute_error(y_test_ml, y_moneyline_pred)),
         "Totals MAE": float(mean_absolute_error(y_test_tot, y_totals_pred)),
         "Optimal Spread Threshold": float(optimal_spread_threshold),
         "Optimal Moneyline Threshold": float(optimal_moneyline_threshold),
         "Optimal Totals Threshold": float(optimal_totals_threshold),
+        "Spread Note": (
+            "prob_underdogCovered = 1 - P(favorite covers) from model_spread "
+            "(a change of convention, not an inversion fix). Spread Accuracy/MAE "
+            "and the EV threshold are all in P(underdog covers) space on the "
+            "held-out test set with push games excluded."
+        ),
         "Moneyline Note": (
             "prob_underdogWon is the market implied probability. model_moneyline "
             "is trained for the accuracy/MAE/threshold diagnostics above but is "

@@ -15,6 +15,16 @@ bottom.
 - **Temporal train/test split** replaces the random one — test games are now the
   last 20% by date, so reported metrics are out-of-time. `nfl-gather-data.py`
   body wrapped in `main()` + `__main__` guard.
+- **Spread model: one convention.** `model_spread` predicts P(favorite covers);
+  `nfl-gather-data.py` now takes the complement once
+  (`prob_underdogCovered = 1 - that`) with an honest comment instead of a
+  "predictions are backwards" narrative. The EV threshold, `Spread Accuracy`,
+  `Spread MAE` and `predictedSpreadCovered` are all in P(underdog covers) space
+  now. New `spreadPush` column; a push is no longer counted as an underdog
+  cover and is refunded (return 0) in the backtest, not scored as a loss. Model
+  training is unchanged (byte-identical feature importances). See
+  `docs/SPREAD_MODEL_INVESTIGATION.md` (now marked resolved).
+
 - **Moneyline and totals models disabled.** On the temporal hold-out neither
   has an out-of-time edge — moneyline AUC ≈ 0.56 (its "edges" anti-predictive,
   −4% backtest ROI); totals AUC ≈ 0.50 (a coin flip, −5% backtest ROI). Both are

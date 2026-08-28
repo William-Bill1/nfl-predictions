@@ -1,24 +1,25 @@
 {
-  "Spread Accuracy": 0.5486725663716814,
+  "Spread Accuracy": 0.5473372781065089,
   "Moneyline Accuracy": 0.6666666666666666,
   "Totals Accuracy": 0.5103244837758112,
-  "Spread MAE": 0.45132743362831856,
+  "Spread MAE": 0.4526627218934911,
   "Moneyline MAE": 0.3333333333333333,
   "Totals MAE": 0.4896755162241888,
-  "Optimal Spread Threshold": 0.5472245095664502,
+  "Optimal Spread Threshold": 0.5449067125446195,
   "Optimal Moneyline Threshold": 0.2,
   "Optimal Totals Threshold": 0.18000000000000002,
+  "Spread Note": "prob_underdogCovered = 1 - P(favorite covers) from model_spread (a change of convention, not an inversion fix). Spread Accuracy/MAE and the EV threshold are all in P(underdog covers) space on the held-out test set with push games excluded.",
   "Moneyline Note": "prob_underdogWon is the market implied probability. model_moneyline is trained for the accuracy/MAE/threshold diagnostics above but is not used for predictions - it has no out-of-time edge (temporal AUC ~0.56). No moneyline bets are generated.",
   "Totals Note": "prob_overHit is the market implied P(over). model_totals is trained for the diagnostics above but is not used for predictions - it is noise out-of-time (temporal AUC ~0.50). No totals bets are generated.",
   "Spread_EV_Analysis": {
-    "threshold": 0.5472245095664502,
+    "threshold": 0.5449067125446195,
     "min_edge": 0.02,
-    "bets_triggered": 13,
-    "total_games": 339,
-    "bet_percentage": 3.8348082595870205,
-    "historical_accuracy": 0.6153846153846154,
-    "wins": 8,
-    "losses": 5,
-    "theoretical_roi_pct": 17.483076923076922
+    "bets_triggered": 78,
+    "total_games": 338,
+    "bet_percentage": 23.076923076923077,
+    "historical_accuracy": 0.6666666666666666,
+    "wins": 52,
+    "losses": 26,
+    "theoretical_roi_pct": 27.273333333333326
   }
 }

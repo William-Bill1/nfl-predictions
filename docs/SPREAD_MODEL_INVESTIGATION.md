@@ -1,9 +1,35 @@
 # Spread Model: "Inversion Fix" Investigation
 
-**Status:** analysis only, no code change.
+**Status:** RESOLVED (Aug 2026, branch `refactor/spread-single-convention`).
 **Scope:** `nfl-gather-data.py` spread model — label definitions, the `1 - p`
 "inversion fix", and the threshold/EV code that consumes it.
 **Question:** is the model genuinely "backwards", and is the current fix correct?
+
+## Resolution
+
+Single convention adopted end to end, without renaming the CSV columns:
+
+- **P1** — the split-then-invert (`prob = blend(); prob = 1 - prob`) is now one
+  line with an honest comment: `prob_underdogCovered = 1 - P(favorite covers)`.
+  The "model is backwards" prints are gone.
+- **P2** — `spread_ev_threshold()` now takes `P(underdog covers)` and
+  `underdogCovered` labels directly (pushes removed), so the threshold and the
+  bets it gates live in the same space.
+- **P3** — `predictedSpreadCovered` is now the underdog-covers prediction
+  (`prob_underdogCovered >= 0.5`); the dashboard's "Actual Spread" column now
+  reads `underdogCovered`.
+- **P4** — `Spread Accuracy` / `Spread MAE` measure underdog-covers on the
+  held-out test set, push games excluded. A `"Spread Note"` in
+  `model_metrics.json` states the convention.
+- **P5** — new `spreadPush` column; `underdogCovered` uses strict `>` (a push is
+  no longer an underdog cover); `spread_bet_return` refunds pushes (returns 0).
+- **P6** — temporal split landed earlier (`refactor/temporal-split`).
+
+Model training is unchanged (target is still `spreadCovered`, whose definition
+did not change), verified byte-identical `model_feature_importances.csv` /
+`best_features_spread.txt`. The rest of this doc is the original analysis.
+
+---
 
 ---
 
