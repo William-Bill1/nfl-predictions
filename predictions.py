@@ -3730,7 +3730,14 @@ def home_page():
 
     with pred_tab6:
         st.write("### 🎯 Over/Under Betting Opportunities")
-        st.write("*Top games where the model predicts profitable over/under bets based on optimal threshold*")
+        st.info(
+            "**Totals model disabled.** On a temporal (out-of-time) hold-out it was "
+            "no better than a coin flip — AUC ≈ 0.50, worse calibrated than the "
+            "P(over) base rate, and its signal backtested around −5% ROI (NFL totals "
+            "are efficiently priced). `prob_overHit` now shows the **market's implied "
+            "P(over)**, so no totals bets are generated. Kept for reference."
+        )
+        st.write("*Market implied probability the total goes over — no model edge.*")
 
         if os.path.exists(predictions_csv_path):
             predictions_df_full = pd.read_csv(predictions_csv_path, sep='\t')

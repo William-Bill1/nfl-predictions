@@ -15,12 +15,15 @@ bottom.
 - **Temporal train/test split** replaces the random one — test games are now the
   last 20% by date, so reported metrics are out-of-time. `nfl-gather-data.py`
   body wrapped in `main()` + `__main__` guard.
-- **Moneyline model disabled.** On the temporal hold-out it had no edge
-  (AUC ≈ 0.56, worse-calibrated than the base rate, negative backtest ROI; its
-  "edges" were anti-predictive). `prob_underdogWon` now ships the market implied
-  probability; `ev_moneyline` ≈ 0 for every game so no moneyline bets are
-  generated. `model_moneyline` is still trained for the reported diagnostics.
-  The Underdog Bets tab carries a note explaining this.
+- **Moneyline and totals models disabled.** On the temporal hold-out neither
+  has an out-of-time edge — moneyline AUC ≈ 0.56 (its "edges" anti-predictive,
+  −4% backtest ROI); totals AUC ≈ 0.50 (a coin flip, −5% backtest ROI). Both are
+  worse-calibrated than their base rates. `prob_underdogWon` / `prob_overHit`
+  now ship the **market implied** probabilities, `pred_*_optimal` are forced to
+  0, so no moneyline or totals bets are generated. Both models are still trained
+  for the diagnostics on the Model Performance page; `model_metrics.json` carries
+  a note for each. The Underdog Bets and Over/Under Bets tabs explain this.
+  **Only the spread model currently drives a bet signal.**
 - Betting-simulation prints restricted to the held-out test set (were scoring
   training games). String columns dropped from the model `features` list (were
   always ignored). New `tests.yml` CI workflow; `pytest.ini` scopes collection

@@ -5,9 +5,10 @@
 </p>
 
 A multi-page Streamlit app that trains machine-learning models on historical NFL
-data (2020–present) to predict game outcomes — **spread** and **over/under**
-betting signals, plus an underdog-moneyline view — and a **player-props** system
-(passing / rushing / receiving yards and TDs) for DraftKings Pick 6-style markets. Everything is batch-computed: scripts write
+data (2020–present) for game outcomes — currently a **spread** betting signal,
+plus market-implied moneyline and over/under views — and a **player-props**
+system (passing / rushing / receiving yards and TDs) for DraftKings Pick 6-style
+markets. Everything is batch-computed: scripts write
 CSV/JSON into `data_files/`, and the app reads those files, so no build step or
 API keys are needed to run the dashboard.
 
@@ -48,7 +49,7 @@ To run the test suite: `pip install pytest && pytest -q`.
 | **Predictions** (main) | Model predictions vs. actual results; upcoming-game probabilities & edges (model % − implied %); betting-performance metrics |
 | **Underdog Bets** | Market implied probability that the underdog wins outright. The moneyline *model* is disabled — no out-of-time edge — so no bets are generated here. |
 | **Spread Bets** | High-confidence spread picks, confidence-tiered |
-| **Over/Under Bets** | Totals picks sorted by value edge |
+| **Over/Under Bets** | Market implied P(over). The totals *model* is disabled — no out-of-time edge — so no bets are generated here. |
 | **Betting Log** | Auto-logged recommendations with timestamps and outcomes |
 | **Historical Data** page | Filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination |
 | **Player Props** page | Per-player predictions + interactive **DK Pick 6 calculator** (enter a line, get OVER/UNDER with confidence tier; ML model or Laplace-smoothed historical fallback) |
@@ -64,17 +65,20 @@ byte-reproducible.
 
 | Target | Predicts | Ships? |
 |---|---|---|
-| `spreadCovered` | favorite covers the spread | yes — EV-based threshold |
-| `overHit` | total goes over | yes — F1-optimized threshold |
-| `underdogWon` | underdog wins outright | **no** — model trained for diagnostics only; `prob_underdogWon` ships the market implied probability instead |
+| `spreadCovered` | favorite covers the spread | **yes** — EV-based threshold |
+| `underdogWon` | underdog wins outright | **no** — no out-of-time edge; `prob_underdogWon` ships the market implied probability instead |
+| `overHit` | total goes over | **no** — no out-of-time edge; `prob_overHit` ships the market implied P(over) instead |
+
+All three are still trained (for the accuracy/calibration diagnostics on the
+Model Performance page); only the spread model's probability drives a bet signal.
 
 Performance on the **temporal** hold-out (last 20% of games by date, 339 games):
 
-| | test accuracy | notes |
+| | test AUC | verdict |
 |---|---|---|
-| Spread | ~0.55 | +EV bet subset (~13 games) backtests around +17% theoretical ROI |
-| Totals | ~0.51 | near coin-flip |
-| Moneyline | — | model AUC ≈ 0.56, worse-calibrated than the 33% base rate, negative backtest ROI → **disabled** (see the Underdog Bets note) |
+| Spread | ~0.58 | ships — +EV bet subset (~13 games) backtests around +17% theoretical ROI |
+| Moneyline | ~0.56 | **disabled** — worse-calibrated than the 33% base rate; "edges" anti-predictive; backtest −4% ROI |
+| Totals | ~0.50 | **disabled** — coin flip; worse than the P(over) base rate; backtest −5% ROI |
 
 The spread model is trained on "favorite covers" and its probability is then
 inverted (`1 − p`); see
