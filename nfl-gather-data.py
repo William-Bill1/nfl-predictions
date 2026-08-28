@@ -518,7 +518,13 @@ def main():
 
     # Predict probabilities for all data
     historical_game_level_data['prob_underdogCovered'] = _blend_proba(model_spread, lgbm_spread, X_spread)
-    historical_game_level_data['prob_overHit'] = _blend_proba(model_totals, lgbm_totals, X_totals)
+
+    # Totals: the trained model is noise out-of-time (temporal AUC ~0.50, i.e.
+    # a coin flip; worse-calibrated than the P(over) base rate; shipped signal
+    # backtests ~-5% ROI). NFL totals are efficiently priced. Ship the market's
+    # own implied P(over) instead. Makes ev_totals ~0, so no totals bet is
+    # recommended. model_totals / lgbm_totals stay trained for the diagnostics.
+    historical_game_level_data['prob_overHit'] = implied_prob(historical_game_level_data['over_odds'])
 
     # Moneyline: the trained model has no out-of-time edge (temporal-split
     # AUC ~0.56, worse-calibrated than the 33% base rate, negative backtest ROI),
@@ -616,12 +622,11 @@ def main():
         (historical_game_level_data['ev_spread'] > 0)
     ).astype(int)
 
-    historical_game_level_data['pred_overHit_optimal'] = (
-        (historical_game_level_data['prob_overHit'] >= optimal_totals_threshold) & 
-        (historical_game_level_data['ev_totals'] > 0)
-    ).astype(int)
+    # Totals disabled (see above): prob_overHit is the market's implied P(over),
+    # so ev_totals is 0 +/- float noise. No totals model edge -> no totals bets.
+    historical_game_level_data['pred_overHit_optimal'] = 0
 
-    # Create pred_over column: 1 = bet on over, 0 = bet on under
+    # Create pred_over column: 1 = market leans over, 0 = leans under
     historical_game_level_data['pred_over'] = (historical_game_level_data['prob_overHit'] >= 0.5).astype(int)
 
     # Betting Simulation Analysis
@@ -838,7 +843,9 @@ def main():
     historical_game_level_data['implied_prob_underdog_spread'] = implied_prob(underdog_spread_odds)
     historical_game_level_data['edge_underdog_spread'] = historical_game_level_data['prob_underdogCovered'] - historical_game_level_data['implied_prob_underdog_spread']
 
-    # Over/under implied probability and edge
+    # Over/under implied probability and edge. prob_overHit IS implied_prob_over
+    # now (see above), so edge_over is ~0 and edge_under is ~-vig; kept for
+    # schema stability / dashboard compatibility.
     historical_game_level_data['implied_prob_over'] = implied_prob(historical_game_level_data['over_odds'])
     historical_game_level_data['implied_prob_under'] = implied_prob(historical_game_level_data['under_odds'])
     historical_game_level_data['edge_over'] = historical_game_level_data['prob_overHit'] - historical_game_level_data['implied_prob_over']
@@ -871,6 +878,11 @@ def main():
             "is trained for the accuracy/MAE/threshold diagnostics above but is "
             "not used for predictions - it has no out-of-time edge (temporal AUC "
             "~0.56). No moneyline bets are generated."
+        ),
+        "Totals Note": (
+            "prob_overHit is the market implied P(over). model_totals is trained "
+            "for the diagnostics above but is not used for predictions - it is "
+            "noise out-of-time (temporal AUC ~0.50). No totals bets are generated."
         ),
     }
     # Include EV analysis if available

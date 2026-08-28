@@ -9,6 +9,7 @@
   "Optimal Moneyline Threshold": 0.2,
   "Optimal Totals Threshold": 0.18000000000000002,
   "Moneyline Note": "prob_underdogWon is the market implied probability. model_moneyline is trained for the accuracy/MAE/threshold diagnostics above but is not used for predictions - it has no out-of-time edge (temporal AUC ~0.56). No moneyline bets are generated.",
+  "Totals Note": "prob_overHit is the market implied P(over). model_totals is trained for the diagnostics above but is not used for predictions - it is noise out-of-time (temporal AUC ~0.50). No totals bets are generated.",
   "Spread_EV_Analysis": {
     "threshold": 0.5472245095664502,
     "min_edge": 0.02,
