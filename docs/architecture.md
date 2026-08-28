@@ -30,15 +30,23 @@ Step 2 — UI:
 Three XGBoost classifiers (binary):
 | Model | Target | Threshold | Notes |
 |-------|--------|-----------|-------|
-| Spread | `underdogCovered` | 50% | Was inverted — fixed Dec 2025 (apply `1 - prob`) |
-| Moneyline | Winner | 28% | F1-optimised for underdogs |
-| Totals | Over/Under | 50% | F1-optimised |
+| Spread | trained on `spreadCovered` (favorite covers); ships `prob_underdogCovered = 1 - that` | EV-based | the only model that drives a bet signal |
+| Moneyline | trained on `underdogWon`; **not shipped** — ships market implied prob (no out-of-time edge) | — | — |
+| Totals | trained on `overHit`; **not shipped** — ships market implied P(over) (coin flip out-of-time) | — | — |
 
 Confidence tiers: Elite ≥65%, Strong 60–65%, Good 55–60%, Standard 50–55%
 
-### Critical: Spread Model Inversion Fix
-After training spread model: `prob_underdogCovered = 1 - prob_underdogCovered`
-Impact: ROI improved from -90% to +60%.
+### Spread convention (Aug 2026 — was the "inversion fix")
+
+`model_spread` predicts `P(favorite covers)`. The dashboard and EV code work in
+`P(underdog covers)`, so `nfl-gather-data.py` computes the complement **once**:
+`prob_underdogCovered = 1 - _blend_proba(model_spread, ...)`. A push
+(`spreadPush = 1`, favorite's margin lands exactly on the line) is neither a
+cover nor an underdog cover and is excluded from accuracy/ROI. The EV threshold,
+`Spread Accuracy`, `Spread MAE` and `predictedSpreadCovered` are all in
+underdog-covers space. This is a change of convention, not a fix for a
+"backwards" model — the earlier "-90% → +60% ROI" story was a variable mix-up
+(favorite-covers probability fed into underdog-covers bet logic).
 
 ### Player Props (`player_props/`)
 XGBoost + LightGBM soft-voting ensembles per stat category. Models in `player_props/models/*.json`. DK Pick 6 Calculator in `pages/2_🎯_Player_Props.py`.

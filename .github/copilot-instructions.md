@@ -47,13 +47,17 @@ def load_predictions_csv():
 predictions_df = load_predictions_csv()
 ```
 
-### Model Training - Spread Prediction Inversion
-**CRITICAL BUG FIX (Dec 2025)**: Spread model predictions are inverted due to `underdogCovered` target definition:
+### Spread model - one convention (Aug 2026)
+`model_spread` is trained on `spreadCovered` = P(**favorite** covers). Everything
+downstream works in P(**underdog** covers), so `nfl-gather-data.py` takes the
+complement exactly once:
 ```python
-# In nfl-gather-data.py, after spread model predictions
-prob_underdogCovered = 1 - prob_underdogCovered  # Fix inversion
-# Impact: ROI improved from -90% to +60%, win rate 3.6% → 91.9%
+prob_underdogCovered = 1.0 - _blend_proba(model_spread, lgbm_spread, X_spread)
 ```
+Pushes get their own `spreadPush` column and are excluded from accuracy/ROI. The
+EV threshold, Spread Accuracy/MAE and `predictedSpreadCovered` are all in
+underdog-covers space. Do **not** re-invert anywhere else. (The old "predictions
+are backwards / -90%→+60% ROI" framing was a variable mix-up, not a model bug.)
 
 ### Betting Thresholds
 - **Spread**: 50% (natural decision boundary for binary classification), warnings below 45%

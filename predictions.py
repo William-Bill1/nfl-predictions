@@ -3108,7 +3108,7 @@ def home_page():
             display_cols = [
                 'game_id', 'gameday', 'home_team', 'away_team', 'home_score', 'away_score',
                 'total_line', 'spread_line',
-                'predictedSpreadCovered', 'spreadCovered',
+                'predictedSpreadCovered', 'underdogCovered',
                 'predictedOverHit', 'overHit'
             ]
             # Only show columns that exist
@@ -3137,8 +3137,8 @@ def home_page():
                     'away_score': st.column_config.NumberColumn('Away Score', format='%d'),
                     'total_line': st.column_config.NumberColumn('O/U Line', format='%.1f', help='Over/Under betting line'),
                     'spread_line': st.column_config.NumberColumn('Spread', format='%.1f', help='Point spread (negative = away favored)'),
-                    'predictedSpreadCovered': st.column_config.CheckboxColumn('Predicted Spread', help='Model prediction: underdog covers spread'),
-                    'spreadCovered': st.column_config.CheckboxColumn('Actual Spread', help='Actual result: underdog covered spread'),
+                    'predictedSpreadCovered': st.column_config.CheckboxColumn('Predicted Spread', help='Model prediction: underdog covers the spread'),
+                    'underdogCovered': st.column_config.CheckboxColumn('Actual Spread', help='Actual result: underdog covered the spread (push = 0)'),
                     'predictedOverHit': st.column_config.CheckboxColumn('Predicted Over', help='Model prediction: total goes over'),
                     'overHit': st.column_config.CheckboxColumn('Actual Over', help='Actual result: total went over')
                 }
