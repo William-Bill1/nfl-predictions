@@ -3290,6 +3290,12 @@ def home_page():
             if predictions_df_full is not None and 'pred_underdogWon_optimal' in predictions_df_full.columns and 'moneyline_bet_return' in predictions_df_full.columns:
                 # Moneyline betting stats
                 moneyline_bets = predictions_df_full[predictions_df_full['pred_underdogWon_optimal'] == 1].copy()
+                if len(moneyline_bets) == 0:
+                    st.info(
+                        "**Moneyline model disabled** — no out-of-time edge (temporal AUC ≈ 0.56). "
+                        "No moneyline bets are generated, so there is nothing to report here. "
+                        "See the Underdog Bets tab."
+                    )
                 if len(moneyline_bets) > 0:
                     bet_returns = moneyline_bets['moneyline_bet_return']
                     moneyline_wins = (bet_returns > 0).sum()
@@ -3415,27 +3421,44 @@ def home_page():
 
                 # Over/Under betting performance
                 if 'totals_bet_return' in predictions_df_full.columns:
-                    totals_bets = predictions_df_full[predictions_df_full['totals_bet_return'].notna()]
-                    totals_wins = (totals_bets['totals_bet_return'] > 0).sum()
-                    totals_total_return = totals_bets['totals_bet_return'].sum()
-                    totals_win_rate = totals_wins / len(totals_bets)
-                    totals_roi = totals_total_return / (len(totals_bets) * 100)
+                    totals_bets = predictions_df_full[predictions_df_full['totals_bet_return'].fillna(0) != 0]
+                    if len(totals_bets) > 0:
+                        totals_wins = (totals_bets['totals_bet_return'] > 0).sum()
+                        totals_total_return = totals_bets['totals_bet_return'].sum()
+                        totals_win_rate = totals_wins / len(totals_bets)
+                        totals_roi = totals_total_return / (len(totals_bets) * 100)
 
-                    st.write("#### 🎯 Over/Under Betting Performance")
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.metric("Over/Under Bets", f"{len(totals_bets):,}")
-                    with col2:
-                        st.metric("Win Rate", f"{totals_win_rate:.1%}")
-                    with col3:
-                        st.metric("ROI", f"{totals_roi:.1%}")
+                        st.write("#### 🎯 Over/Under Betting Performance")
+                        col1, col2, col3 = st.columns(3)
+                        with col1:
+                            st.metric("Over/Under Bets", f"{len(totals_bets):,}")
+                        with col2:
+                            st.metric("Win Rate", f"{totals_win_rate:.1%}")
+                        with col3:
+                            st.metric("ROI", f"{totals_roi:.1%}")
+                    else:
+                        st.info(
+                            "**Totals model disabled** — coin flip out-of-time (temporal AUC ≈ 0.50). "
+                            "No over/under bets are generated. See the Over/Under Bets tab."
+                        )
 
             # Performance comparison
             st.write("#### 🏆 Model vs Baseline Comparison")
             baseline_accuracy = (predictions_df_full['underdogWon'] == 0).mean()  # Always pick favorites
-            st.write(f"- **Baseline Strategy (Always Pick Favorites)**: {baseline_accuracy:.1%} accuracy")
-            st.write(f"- **Our Model**: Identifies profitable underdog opportunities with {moneyline_roi:.1%} ROI")
-            st.write(f"- **Key Insight**: While model sacrifices overall accuracy, it finds value bets with positive expected return")
+            st.write(f"- **Baseline (always pick the favorite on the moneyline)**: {baseline_accuracy:.1%} accuracy")
+            if 'spread_bet_return' in predictions_df_full.columns:
+                _sb = predictions_df_full[predictions_df_full['spread_bet_return'].fillna(0) != 0]
+                if len(_sb) > 0:
+                    _sb_roi = _sb['spread_bet_return'].sum() / (len(_sb) * 100)
+                    _sb_wr = (_sb['spread_bet_return'] > 0).mean()
+                    st.write(
+                        f"- **Spread model** (the only live bet signal): {_sb_wr:.1%} win rate, "
+                        f"{_sb_roi:+.1%} ROI over {len(_sb):,} EV-qualified bets (in-sample to threshold selection)"
+                    )
+            st.caption(
+                "Moneyline and totals models are disabled — no out-of-time edge. Only the spread "
+                "model produces a bet signal."
+            )
 
         else:
             st.warning("Predictions CSV not found. Run the model script to generate betting analysis.")
