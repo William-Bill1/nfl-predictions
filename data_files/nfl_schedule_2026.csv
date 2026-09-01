@@ -1,1 +1,273 @@
 week,date,home_team,away_team,venue,status
+1,2026-09-09,SEA,NE,Lumen Field,REG
+1,2026-09-10,LA,SF,Melbourne Cricket Ground,REG
+1,2026-09-13,CAR,CHI,Bank of America Stadium,REG
+1,2026-09-13,CIN,TB,Paycor Stadium,REG
+1,2026-09-13,DET,NO,Ford Field,REG
+1,2026-09-13,HOU,BUF,Reliant Stadium,REG
+1,2026-09-13,IND,BAL,Lucas Oil Stadium,REG
+1,2026-09-13,JAX,CLE,EverBank Stadium,REG
+1,2026-09-13,PIT,ATL,Acrisure Stadium,REG
+1,2026-09-13,TEN,NYJ,Nissan Stadium,REG
+1,2026-09-13,LAC,ARI,SoFi Stadium,REG
+1,2026-09-13,LV,MIA,Allegiant Stadium,REG
+1,2026-09-13,MIN,GB,U.S. Bank Stadium,REG
+1,2026-09-13,PHI,WAS,Lincoln Financial Field,REG
+1,2026-09-13,NYG,DAL,MetLife Stadium,REG
+1,2026-09-14,KC,DEN,GEHA Field at Arrowhead Stadium,REG
+2,2026-09-17,BUF,DET,Highmark Stadium,REG
+2,2026-09-20,ATL,CAR,Mercedes-Benz Stadium,REG
+2,2026-09-20,BAL,NO,M&T Bank Stadium,REG
+2,2026-09-20,CHI,MIN,Soldier Field,REG
+2,2026-09-20,HOU,CIN,Reliant Stadium,REG
+2,2026-09-20,NE,PIT,Gillette Stadium,REG
+2,2026-09-20,NYJ,GB,MetLife Stadium,REG
+2,2026-09-20,TB,CLE,Raymond James Stadium,REG
+2,2026-09-20,TEN,PHI,Nissan Stadium,REG
+2,2026-09-20,DEN,JAX,Empower Field at Mile High,REG
+2,2026-09-20,LAC,LV,SoFi Stadium,REG
+2,2026-09-20,ARI,SEA,State Farm Stadium,REG
+2,2026-09-20,DAL,WAS,AT&T Stadium,REG
+2,2026-09-20,SF,MIA,Levi's Stadium,REG
+2,2026-09-20,KC,IND,GEHA Field at Arrowhead Stadium,REG
+2,2026-09-21,LA,NYG,SoFi Stadium,REG
+3,2026-09-24,GB,ATL,Lambeau Field,REG
+3,2026-09-27,BUF,LAC,Highmark Stadium,REG
+3,2026-09-27,CLE,CAR,Huntington Bank Field,REG
+3,2026-09-27,DET,NYJ,Ford Field,REG
+3,2026-09-27,IND,HOU,Lucas Oil Stadium,REG
+3,2026-09-27,JAX,NE,EverBank Stadium,REG
+3,2026-09-27,MIA,KC,Hard Rock Stadium,REG
+3,2026-09-27,NYG,TEN,MetLife Stadium,REG
+3,2026-09-27,PIT,CIN,Acrisure Stadium,REG
+3,2026-09-27,WAS,SEA,Northwest Stadium,REG
+3,2026-09-27,SF,ARI,Levi's Stadium,REG
+3,2026-09-27,TB,MIN,Raymond James Stadium,REG
+3,2026-09-27,DAL,BAL,Maracana Stadium,REG
+3,2026-09-27,NO,LV,Caesars Superdome,REG
+3,2026-09-27,DEN,LA,Empower Field at Mile High,REG
+3,2026-09-28,CHI,PHI,Soldier Field,REG
+4,2026-10-01,CLE,PIT,Huntington Bank Field,REG
+4,2026-10-04,WAS,IND,Tottenham Hotspur Stadium,REG
+4,2026-10-04,BAL,TEN,M&T Bank Stadium,REG
+4,2026-10-04,BUF,NE,Highmark Stadium,REG
+4,2026-10-04,CHI,NYJ,Soldier Field,REG
+4,2026-10-04,CIN,JAX,Paycor Stadium,REG
+4,2026-10-04,HOU,DAL,Reliant Stadium,REG
+4,2026-10-04,NYG,ARI,MetLife Stadium,REG
+4,2026-10-04,PHI,LA,Lincoln Financial Field,REG
+4,2026-10-04,TB,GB,Raymond James Stadium,REG
+4,2026-10-04,MIN,MIA,U.S. Bank Stadium,REG
+4,2026-10-04,LV,KC,Allegiant Stadium,REG
+4,2026-10-04,SEA,LAC,Lumen Field,REG
+4,2026-10-04,SF,DEN,Levi's Stadium,REG
+4,2026-10-04,CAR,DET,Bank of America Stadium,REG
+4,2026-10-05,NO,ATL,Caesars Superdome,REG
+5,2026-10-08,DAL,TB,AT&T Stadium,REG
+5,2026-10-11,JAX,PHI,Tottenham Hotspur Stadium,REG
+5,2026-10-11,MIA,CIN,Hard Rock Stadium,REG
+5,2026-10-11,NE,LV,Gillette Stadium,REG
+5,2026-10-11,NO,MIN,Caesars Superdome,REG
+5,2026-10-11,NYJ,CLE,MetLife Stadium,REG
+5,2026-10-11,PIT,IND,Acrisure Stadium,REG
+5,2026-10-11,TEN,HOU,Nissan Stadium,REG
+5,2026-10-11,WAS,NYG,Northwest Stadium,REG
+5,2026-10-11,LAC,DEN,SoFi Stadium,REG
+5,2026-10-11,ARI,DET,State Farm Stadium,REG
+5,2026-10-11,GB,CHI,Lambeau Field,REG
+5,2026-10-11,SEA,SF,Lumen Field,REG
+5,2026-10-11,ATL,BAL,Mercedes-Benz Stadium,REG
+5,2026-10-12,LA,BUF,SoFi Stadium,REG
+6,2026-10-15,DEN,SEA,Empower Field at Mile High,REG
+6,2026-10-18,JAX,HOU,Wembley Stadium,REG
+6,2026-10-18,ATL,CHI,Mercedes-Benz Stadium,REG
+6,2026-10-18,CLE,BAL,Huntington Bank Field,REG
+6,2026-10-18,IND,TEN,Lucas Oil Stadium,REG
+6,2026-10-18,NE,NYJ,Gillette Stadium,REG
+6,2026-10-18,NYG,NO,MetLife Stadium,REG
+6,2026-10-18,PHI,CAR,Lincoln Financial Field,REG
+6,2026-10-18,TB,PIT,Raymond James Stadium,REG
+6,2026-10-18,LA,ARI,SoFi Stadium,REG
+6,2026-10-18,KC,LAC,GEHA Field at Arrowhead Stadium,REG
+6,2026-10-18,LV,BUF,Allegiant Stadium,REG
+6,2026-10-18,GB,DAL,Lambeau Field,REG
+6,2026-10-19,SF,WAS,Levi's Stadium,REG
+7,2026-10-22,CHI,NE,Soldier Field,REG
+7,2026-10-25,NO,PIT,Stade de France,REG
+7,2026-10-25,ATL,SF,Mercedes-Benz Stadium,REG
+7,2026-10-25,BAL,CIN,M&T Bank Stadium,REG
+7,2026-10-25,CAR,TB,Bank of America Stadium,REG
+7,2026-10-25,HOU,NYG,Reliant Stadium,REG
+7,2026-10-25,MIN,IND,U.S. Bank Stadium,REG
+7,2026-10-25,NYJ,MIA,MetLife Stadium,REG
+7,2026-10-25,TEN,CLE,Nissan Stadium,REG
+7,2026-10-25,ARI,DEN,State Farm Stadium,REG
+7,2026-10-25,DET,GB,Ford Field,REG
+7,2026-10-25,LV,LA,Allegiant Stadium,REG
+7,2026-10-25,SEA,KC,Lumen Field,REG
+7,2026-10-26,PHI,DAL,Lincoln Financial Field,REG
+8,2026-10-29,GB,CAR,Lambeau Field,REG
+8,2026-11-01,BUF,BAL,Highmark Stadium,REG
+8,2026-11-01,CIN,TEN,Paycor Stadium,REG
+8,2026-11-01,DAL,ARI,AT&T Stadium,REG
+8,2026-11-01,DET,MIN,Ford Field,REG
+8,2026-11-01,JAX,IND,EverBank Stadium,REG
+8,2026-11-01,NYJ,LV,MetLife Stadium,REG
+8,2026-11-01,PIT,CLE,Acrisure Stadium,REG
+8,2026-11-01,TB,ATL,Raymond James Stadium,REG
+8,2026-11-01,LA,LAC,SoFi Stadium,REG
+8,2026-11-01,DEN,KC,Empower Field at Mile High,REG
+8,2026-11-01,MIA,NE,Hard Rock Stadium,REG
+8,2026-11-01,WAS,PHI,Northwest Stadium,REG
+8,2026-11-02,SEA,CHI,Lumen Field,REG
+9,2026-11-05,BAL,JAX,M&T Bank Stadium,REG
+9,2026-11-08,ATL,CIN,Bernabeu,REG
+9,2026-11-08,CAR,DEN,Bank of America Stadium,REG
+9,2026-11-08,IND,DAL,Lucas Oil Stadium,REG
+9,2026-11-08,KC,NYJ,GEHA Field at Arrowhead Stadium,REG
+9,2026-11-08,MIA,DET,Hard Rock Stadium,REG
+9,2026-11-08,NO,CLE,Caesars Superdome,REG
+9,2026-11-08,PHI,NYG,Lincoln Financial Field,REG
+9,2026-11-08,WAS,LA,Northwest Stadium,REG
+9,2026-11-08,LAC,HOU,SoFi Stadium,REG
+9,2026-11-08,SF,LV,Levi's Stadium,REG
+9,2026-11-08,NE,GB,Gillette Stadium,REG
+9,2026-11-08,SEA,ARI,Lumen Field,REG
+9,2026-11-08,CHI,TB,Soldier Field,REG
+9,2026-11-09,MIN,BUF,U.S. Bank Stadium,REG
+10,2026-11-12,NYG,WAS,MetLife Stadium,REG
+10,2026-11-15,DET,NE,FC Bayern Munich Stadium,REG
+10,2026-11-15,ATL,KC,Mercedes-Benz Stadium,REG
+10,2026-11-15,CLE,HOU,Huntington Bank Field,REG
+10,2026-11-15,GB,MIN,Lambeau Field,REG
+10,2026-11-15,IND,MIA,Lucas Oil Stadium,REG
+10,2026-11-15,NO,CAR,Caesars Superdome,REG
+10,2026-11-15,NYJ,BUF,MetLife Stadium,REG
+10,2026-11-15,TEN,JAX,Nissan Stadium,REG
+10,2026-11-15,ARI,LA,State Farm Stadium,REG
+10,2026-11-15,LV,SEA,Allegiant Stadium,REG
+10,2026-11-15,DAL,SF,AT&T Stadium,REG
+10,2026-11-15,CIN,PIT,Paycor Stadium,REG
+10,2026-11-16,BAL,LAC,M&T Bank Stadium,REG
+11,2026-11-19,HOU,IND,Reliant Stadium,REG
+11,2026-11-22,BUF,MIA,Highmark Stadium,REG
+11,2026-11-22,CAR,BAL,Bank of America Stadium,REG
+11,2026-11-22,CHI,NO,Soldier Field,REG
+11,2026-11-22,DAL,TEN,AT&T Stadium,REG
+11,2026-11-22,DET,TB,Ford Field,REG
+11,2026-11-22,KC,ARI,GEHA Field at Arrowhead Stadium,REG
+11,2026-11-22,NYG,JAX,MetLife Stadium,REG
+11,2026-11-22,LAC,NYJ,SoFi Stadium,REG
+11,2026-11-22,DEN,LV,Empower Field at Mile High,REG
+11,2026-11-22,PHI,PIT,Lincoln Financial Field,REG
+11,2026-11-22,SF,MIN,Estadio Banorte,REG
+11,2026-11-23,WAS,CIN,Northwest Stadium,REG
+12,2026-11-25,LA,GB,SoFi Stadium,REG
+12,2026-11-26,DET,CHI,Ford Field,REG
+12,2026-11-26,DAL,PHI,AT&T Stadium,REG
+12,2026-11-26,BUF,KC,Highmark Stadium,REG
+12,2026-11-27,PIT,DEN,Acrisure Stadium,REG
+12,2026-11-29,CIN,NO,Paycor Stadium,REG
+12,2026-11-29,CLE,LV,Huntington Bank Field,REG
+12,2026-11-29,HOU,BAL,Reliant Stadium,REG
+12,2026-11-29,IND,NYG,Lucas Oil Stadium,REG
+12,2026-11-29,MIA,NYJ,Hard Rock Stadium,REG
+12,2026-11-29,MIN,ATL,U.S. Bank Stadium,REG
+12,2026-11-29,JAX,TEN,EverBank Stadium,REG
+12,2026-11-29,ARI,WAS,State Farm Stadium,REG
+12,2026-11-29,SF,SEA,Levi's Stadium,REG
+12,2026-11-29,LAC,NE,SoFi Stadium,REG
+12,2026-11-30,TB,CAR,Raymond James Stadium,REG
+13,2026-12-03,LA,KC,SoFi Stadium,REG
+13,2026-12-06,ATL,DET,Mercedes-Benz Stadium,REG
+13,2026-12-06,CHI,JAX,Soldier Field,REG
+13,2026-12-06,CLE,CIN,Huntington Bank Field,REG
+13,2026-12-06,NO,GB,Caesars Superdome,REG
+13,2026-12-06,NYG,SF,MetLife Stadium,REG
+13,2026-12-06,TB,LAC,Raymond James Stadium,REG
+13,2026-12-06,TEN,WAS,Nissan Stadium,REG
+13,2026-12-06,ARI,PHI,State Farm Stadium,REG
+13,2026-12-06,DEN,MIA,Empower Field at Mile High,REG
+13,2026-12-06,MIN,CAR,U.S. Bank Stadium,REG
+13,2026-12-06,NE,BUF,Gillette Stadium,REG
+13,2026-12-06,PIT,HOU,Acrisure Stadium,REG
+13,2026-12-07,SEA,DAL,Lumen Field,REG
+14,2026-12-10,NE,MIN,Gillette Stadium,REG
+14,2026-12-13,BAL,TB,M&T Bank Stadium,REG
+14,2026-12-13,CAR,NO,Bank of America Stadium,REG
+14,2026-12-13,CLE,ATL,Huntington Bank Field,REG
+14,2026-12-13,DET,TEN,Ford Field,REG
+14,2026-12-13,MIA,CHI,Hard Rock Stadium,REG
+14,2026-12-13,NYJ,DEN,MetLife Stadium,REG
+14,2026-12-13,PHI,IND,Lincoln Financial Field,REG
+14,2026-12-13,WAS,HOU,Northwest Stadium,REG
+14,2026-12-13,LV,LAC,Allegiant Stadium,REG
+14,2026-12-13,CIN,KC,Paycor Stadium,REG
+14,2026-12-13,SEA,NYG,Lumen Field,REG
+14,2026-12-13,SF,LA,Levi's Stadium,REG
+14,2026-12-13,GB,BUF,Lambeau Field,REG
+14,2026-12-14,JAX,PIT,EverBank Stadium,REG
+15,2026-12-17,LAC,SF,SoFi Stadium,REG
+15,2026-12-19,PHI,SEA,Lincoln Financial Field,REG
+15,2026-12-19,BUF,CHI,Highmark Stadium,REG
+15,2026-12-20,CAR,CIN,Bank of America Stadium,REG
+15,2026-12-20,GB,MIA,Lambeau Field,REG
+15,2026-12-20,HOU,JAX,Reliant Stadium,REG
+15,2026-12-20,NYG,CLE,MetLife Stadium,REG
+15,2026-12-20,PIT,BAL,Acrisure Stadium,REG
+15,2026-12-20,TB,NO,Raymond James Stadium,REG
+15,2026-12-20,TEN,IND,Nissan Stadium,REG
+15,2026-12-20,WAS,ATL,Northwest Stadium,REG
+15,2026-12-20,ARI,NYJ,State Farm Stadium,REG
+15,2026-12-20,LA,DAL,SoFi Stadium,REG
+15,2026-12-20,LV,DEN,Allegiant Stadium,REG
+15,2026-12-20,MIN,DET,U.S. Bank Stadium,REG
+15,2026-12-21,KC,NE,GEHA Field at Arrowhead Stadium,REG
+16,2026-12-24,PHI,HOU,Lincoln Financial Field,REG
+16,2026-12-25,CHI,GB,Soldier Field,REG
+16,2026-12-25,DEN,BUF,Empower Field at Mile High,REG
+16,2026-12-25,SEA,LA,Lumen Field,REG
+16,2026-12-27,ATL,TB,Mercedes-Benz Stadium,REG
+16,2026-12-27,BAL,CLE,M&T Bank Stadium,REG
+16,2026-12-27,IND,CIN,Lucas Oil Stadium,REG
+16,2026-12-27,MIA,LAC,Hard Rock Stadium,REG
+16,2026-12-27,MIN,WAS,U.S. Bank Stadium,REG
+16,2026-12-27,NO,ARI,Caesars Superdome,REG
+16,2026-12-27,NYJ,NE,MetLife Stadium,REG
+16,2026-12-27,PIT,CAR,Acrisure Stadium,REG
+16,2026-12-27,LV,TEN,Allegiant Stadium,REG
+16,2026-12-27,KC,SF,GEHA Field at Arrowhead Stadium,REG
+16,2026-12-27,DAL,JAX,AT&T Stadium,REG
+16,2026-12-28,DET,NYG,Ford Field,REG
+17,2026-12-31,CIN,BAL,Paycor Stadium,REG
+17,2027-01-03,ATL,NO,Mercedes-Benz Stadium,REG
+17,2027-01-03,CAR,SEA,Bank of America Stadium,REG
+17,2027-01-03,CLE,IND,Huntington Bank Field,REG
+17,2027-01-03,DAL,NYG,AT&T Stadium,REG
+17,2027-01-03,JAX,WAS,EverBank Stadium,REG
+17,2027-01-03,LAC,KC,SoFi Stadium,REG
+17,2027-01-03,MIA,BUF,Hard Rock Stadium,REG
+17,2027-01-03,NE,DEN,Gillette Stadium,REG
+17,2027-01-03,NYJ,MIN,MetLife Stadium,REG
+17,2027-01-03,TB,LA,Raymond James Stadium,REG
+17,2027-01-03,TEN,PIT,Nissan Stadium,REG
+17,2027-01-03,ARI,LV,State Farm Stadium,REG
+17,2027-01-03,CHI,DET,Soldier Field,REG
+17,2027-01-03,SF,PHI,Levi's Stadium,REG
+17,2027-01-04,GB,HOU,Lambeau Field,REG
+18,2027-01-10,ARI,SF,State Farm Stadium,REG
+18,2027-01-10,BAL,PIT,M&T Bank Stadium,REG
+18,2027-01-10,BUF,NYJ,Highmark Stadium,REG
+18,2027-01-10,CAR,ATL,Bank of America Stadium,REG
+18,2027-01-10,CIN,CLE,Paycor Stadium,REG
+18,2027-01-10,DEN,LAC,Empower Field at Mile High,REG
+18,2027-01-10,GB,DET,Lambeau Field,REG
+18,2027-01-10,HOU,TEN,Reliant Stadium,REG
+18,2027-01-10,IND,JAX,Lucas Oil Stadium,REG
+18,2027-01-10,KC,LV,GEHA Field at Arrowhead Stadium,REG
+18,2027-01-10,LA,SEA,SoFi Stadium,REG
+18,2027-01-10,MIN,CHI,U.S. Bank Stadium,REG
+18,2027-01-10,NE,MIA,Gillette Stadium,REG
+18,2027-01-10,NO,TB,Caesars Superdome,REG
+18,2027-01-10,NYG,PHI,MetLife Stadium,REG
+18,2027-01-10,WAS,DAL,Northwest Stadium,REG
