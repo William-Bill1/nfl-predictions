@@ -6,6 +6,21 @@ bottom.
 
 ---
 
+## September 2026
+
+- **Player-prop weekly snapshots.** `player_props/predict.py` now targets a
+  season/week (`--season` / `--week`, default: next upcoming week of the current
+  schedule) instead of the hard-coded 2025 file, and writes a write-once frozen
+  snapshot `player_props_predictions_week{W}_{season}.csv` alongside the latest
+  feed. `backtest.py` prefers that frozen file, so the weekly accuracy check is a
+  genuine prospective test instead of scoring the current (possibly
+  hindsight-retrained) predictions. Added `--no-injuries` / `--no-weather`
+  (the ESPN scrape and per-player Open-Meteo lookups are slow/flaky); the nightly
+  runs with both off. Week 1 2026 frozen.
+  Caveat unchanged: prop lines are fixed tiers, not market lines, so the
+  ~65-70% weekly "accuracy" measures line placement, not betting edge, and the
+  confidence distribution skews high.
+
 ## August 2026
 
 - **Pipeline reproducibility.** Seeded every XGBoost/LightGBM estimator with

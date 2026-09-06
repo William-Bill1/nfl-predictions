@@ -102,7 +102,18 @@ jobs:
           python player_props/train_models.py --skip-aggregation
         timeout-minutes: 20
         continue-on-error: true  # Don't fail nightly run if prop retraining fails
-      
+
+      - name: Freeze player-prop predictions for the upcoming week
+        if: steps.season_check.outputs.in_season == 'true'
+        run: |
+          echo "Generating + freezing player-prop predictions for the next week..."
+          # Auto-detects the next upcoming week from the current schedule. The
+          # per-week snapshot is written once and never overwritten, so this is a
+          # genuine prospective record for the weekly accuracy check.
+          python player_props/predict.py --no-injuries --no-weather
+        timeout-minutes: 15
+        continue-on-error: true
+
       - name: Upload updated predictions
         if: steps.season_check.outputs.in_season == 'true'
         uses: actions/upload-artifact@v4

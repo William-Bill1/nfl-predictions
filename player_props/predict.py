@@ -2,6 +2,7 @@
 Player Props Prediction Pipeline
 Generate prop predictions for upcoming NFL games using trained XGBoost models.
 """
+import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -9,6 +10,13 @@ import xgboost as xgb
 from datetime import datetime, timezone
 import warnings
 warnings.filterwarnings('ignore')
+
+try:
+    from season_utils import upcoming_or_current_season
+except ImportError:  # run from inside player_props/
+    import sys as _sys
+    _sys.path.append(str(Path(__file__).parent.parent))
+    from season_utils import upcoming_or_current_season
 
 # Import injury functions
 try:
@@ -28,6 +36,10 @@ except ImportError:
 
 DATA_DIR = Path(__file__).parent.parent / 'data_files'
 MODELS_DIR = Path(__file__).parent / 'models'
+
+
+class _SkipWeather(Exception):
+    """Internal sentinel to bypass the weather-adjustment block."""
 
 # Prop lines matching training configuration - UPDATED TO REALISTIC VALUES
 PROP_LINES = {
@@ -99,35 +111,47 @@ def load_players():
     return pd.read_csv(players_path)[['gsis_id', 'short_name', 'display_name', 'last_name', 'position']]
 
 
-def load_schedule():
-    """Load upcoming games schedule."""
-    schedule_path = DATA_DIR / 'nfl_schedule_2025.csv'
+def load_schedule(season=None, week=None):
+    """Load the games to predict.
+
+    season: NFL season year (default: the current/upcoming season).
+    week:   if given, return exactly that week. Otherwise return the next
+            games by date, falling back to the earliest week that has no
+            'game_date' in the past.
+    """
+    season = season or upcoming_or_current_season()
+    schedule_path = DATA_DIR / f'nfl_schedule_{season}.csv'
     if not schedule_path.exists():
         print(f"❌ Schedule not found: {schedule_path}")
         return None
-    
+
     df = pd.read_csv(schedule_path)
     df['game_date'] = pd.to_datetime(df['date'])
-    
-    # Handle timezone
     if df['game_date'].dt.tz is None:
         df['game_date'] = df['game_date'].dt.tz_localize('UTC')
     else:
         df['game_date'] = df['game_date'].dt.tz_convert('UTC')
-    
-    # Try to get upcoming games
+    df['season'] = season
+
+    if week is not None:
+        wk = df[df['week'] == int(week)].copy()
+        print(f"✅ Week {week}, {season}: {len(wk)} games")
+        return wk
+
     now_utc = pd.Timestamp.now(tz='UTC')
     cutoff = now_utc - pd.Timedelta(hours=12)
     upcoming = df[df['game_date'] >= cutoff].copy()
-    
-    # If no upcoming games, use most recent week for demonstration
-    if upcoming.empty:
-        print("⚠️  No upcoming games. Using most recent week for demonstration...")
-        max_week = df['week'].max()
-        upcoming = df[df['week'] == max_week].copy()
-    
-    print(f"✅ Found {len(upcoming)} games (Week {upcoming['week'].iloc[0] if len(upcoming) > 0 else 'N/A'})")
-    return upcoming
+    if not upcoming.empty:
+        target_week = int(upcoming['week'].min())
+        upcoming = upcoming[upcoming['week'] == target_week].copy()
+        print(f"✅ Next up: Week {target_week}, {season} ({len(upcoming)} games)")
+        return upcoming
+
+    # Whole season already in the past -> earliest week (useful off-season / testing).
+    first_week = int(df['week'].min())
+    wk = df[df['week'] == first_week].copy()
+    print(f"⚠️  No upcoming games for {season}; using Week {first_week} ({len(wk)} games)")
+    return wk
 
 
 def load_player_stats():
@@ -775,18 +799,20 @@ def get_player_performance_tier(player_name, prop_type, all_stats):
     return 'starter'
 
 
-def predict_props_for_game(game_row, all_stats, models):
+def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, skip_weather=False):
     """
     Generate prop predictions for all players in a game.
     """
     predictions = []
-    
+
     teams = [game_row['home_team'], game_row['away_team']]
     game_date = game_row['game_date']
     week = game_row['week']
-    
-    # Load injury data for adjustment
-    injuries_df = get_injury_report()
+    game_season = game_row.get('season', None)
+
+    # Injury adjustment is an optional nudge; the ESPN scrape can hang / fail
+    # on restricted networks, so it is skippable.
+    injuries_df = pd.DataFrame() if skip_injuries else get_injury_report()
     
     for team in teams:
         opponent = game_row['away_team'] if team == game_row['home_team'] else game_row['home_team']
@@ -872,6 +898,7 @@ def predict_props_for_game(game_row, all_stats, models):
                     if prob_over >= MIN_CONFIDENCE or prob_over <= (1 - MIN_CONFIDENCE):
                         prediction = {
                             'week': week,
+                            'season': game_season,
                             'game_date': game_date,
                             'player_name': player_name,
                             'display_name': player_display_name or player_name,  # Use display_name if available, fallback to short_name
@@ -913,8 +940,14 @@ def predict_props_for_game(game_row, all_stats, models):
                                 continue
                             prediction = adjusted_prediction
                         
-                        # Apply weather adjustments for outdoor games
+                        # Apply weather adjustments for outdoor games. Skippable -
+                        # the Open-Meteo lookup is per player/prop and slow/flaky.
+                        if skip_weather:
+                            prediction['weather_adjusted'] = False
+                            prediction['weather_conditions'] = "Skipped"
                         try:
+                            if skip_weather:
+                                raise _SkipWeather()
                             # Ensure game_date is a string
                             game_date_str = str(game_date) if hasattr(game_date, 'strftime') else str(game_date)
                             if len(game_date_str) > 10:  # If it has time component, extract date only
@@ -932,6 +965,8 @@ def predict_props_for_game(game_row, all_stats, models):
                             else:
                                 prediction['weather_adjusted'] = False
                                 prediction['weather_conditions'] = "Dome"
+                        except _SkipWeather:
+                            pass
                         except Exception as e:
                             print(f"⚠️ Weather adjustment failed for {player_name}: {e}")
                             prediction['weather_adjusted'] = False
@@ -951,18 +986,26 @@ def predict_props_for_game(game_row, all_stats, models):
 # MAIN PIPELINE
 # ============================================================================
 
-def generate_predictions():
-    """Main pipeline to generate all prop predictions."""
+def generate_predictions(season=None, week=None, freeze=True,
+                         skip_injuries=False, skip_weather=False):
+    """Main pipeline to generate all prop predictions.
+
+    Writes data_files/player_props_predictions.csv (always, the 'latest' feed)
+    and, when `freeze` is set, a per-week snapshot
+    data_files/player_props_predictions_week{W}_{season}.csv that is written
+    ONCE and never overwritten - that frozen file is what backtest.py scores,
+    so the weekly accuracy check is a genuine prospective test.
+    """
     print("=" * 70)
     print("🎯 NFL Player Props Prediction Pipeline")
     print("=" * 70)
     print()
-    
+
     # Load data
     print("📂 Loading data...")
-    schedule = load_schedule()
+    schedule = load_schedule(season=season, week=week)
     if schedule is None or schedule.empty:
-        print("❌ No upcoming games found")
+        print("❌ No games to predict")
         return
     
     all_stats = load_player_stats()
@@ -982,7 +1025,10 @@ def generate_predictions():
     for idx, game_row in schedule.iterrows():
         print(f"\n📅 {game_row['away_team']} @ {game_row['home_team']} (Week {game_row['week']})")
         
-        game_predictions = predict_props_for_game(game_row, all_stats, models)
+        game_predictions = predict_props_for_game(
+            game_row, all_stats, models,
+            skip_injuries=skip_injuries, skip_weather=skip_weather,
+        )
         all_predictions.extend(game_predictions)
         
         print(f"   Generated {len(game_predictions)} prop predictions")
@@ -994,14 +1040,25 @@ def generate_predictions():
         # Sort by confidence descending
         pred_df = pred_df.sort_values('confidence', ascending=False)
         
-        # Save to CSV
+        # Save 'latest' feed
         output_path = DATA_DIR / 'player_props_predictions.csv'
         pred_df.to_csv(output_path, index=False)
-        
+
         print()
         print("=" * 70)
         print(f"✅ Generated {len(pred_df)} total prop predictions")
         print(f"💾 Saved to: {output_path}")
+
+        # Frozen per-week snapshot (write once, never overwrite)
+        if freeze and 'week' in pred_df.columns and pred_df['week'].notna().any():
+            wk = int(pred_df['week'].dropna().iloc[0])
+            szn = int(pred_df['season'].dropna().iloc[0]) if 'season' in pred_df.columns and pred_df['season'].notna().any() else (season or upcoming_or_current_season())
+            snap_path = DATA_DIR / f'player_props_predictions_week{wk}_{szn}.csv'
+            if snap_path.exists():
+                print(f"🔒 Snapshot already frozen: {snap_path.name} (not overwriting)")
+            else:
+                pred_df.to_csv(snap_path, index=False)
+                print(f"🔒 Froze Week {wk} {szn} snapshot -> {snap_path.name}")
         print()
         
         # Summary statistics
@@ -1031,4 +1088,19 @@ def generate_predictions():
 
 
 if __name__ == '__main__':
-    generate_predictions()
+    ap = argparse.ArgumentParser(description="Generate player-prop predictions")
+    ap.add_argument('--season', type=int, default=None,
+                    help="NFL season year (default: current/upcoming)")
+    ap.add_argument('--week', type=int, default=None,
+                    help="specific week to predict (default: next upcoming week)")
+    ap.add_argument('--no-freeze', action='store_true',
+                    help="do not write the per-week frozen snapshot")
+    ap.add_argument('--no-injuries', action='store_true',
+                    help="skip the ESPN injury scrape (optional nudge; can hang on restricted networks)")
+    ap.add_argument('--no-weather', action='store_true',
+                    help="skip per-player Open-Meteo weather lookups (slow/flaky)")
+    args = ap.parse_args()
+    generate_predictions(
+        season=args.season, week=args.week, freeze=not args.no_freeze,
+        skip_injuries=args.no_injuries, skip_weather=args.no_weather,
+    )
