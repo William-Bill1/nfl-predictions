@@ -502,15 +502,20 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
     print(f"🔍 Running accuracy check for Week {week}, Season {season}")
     print("=" * 60)
 
-    # Load predictions for the week
-    predictions_file = f"data_files/player_props_predictions_week{week}.csv"
-    if not Path(predictions_file).exists():
-        # Try the general predictions file
-        predictions_file = "data_files/player_props_predictions.csv"
-
-    if not Path(predictions_file).exists():
+    # Load predictions for the week. Prefer the frozen per-week snapshot (a true
+    # prospective test); fall back to the season-less name, then the latest feed.
+    candidates = [
+        f"data_files/player_props_predictions_week{week}_{season}.csv",
+        f"data_files/player_props_predictions_week{week}.csv",
+        "data_files/player_props_predictions.csv",
+    ]
+    predictions_file = next((c for c in candidates if Path(c).exists()), None)
+    if predictions_file is None:
         print(f"❌ No predictions file found for week {week}")
         return {}
+    if not predictions_file.endswith(f"week{week}_{season}.csv"):
+        print(f"⚠️  Using {predictions_file} (no frozen Week {week} {season} snapshot) - "
+              f"results are not a clean prospective test")
 
     predictions_df = pd.read_csv(predictions_file)
     print(f"📂 Loaded {len(predictions_df)} predictions")
