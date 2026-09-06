@@ -3,6 +3,8 @@ Player Props Prediction Pipeline
 Generate prop predictions for upcoming NFL games using trained XGBoost models.
 """
 import argparse
+import os
+from functools import lru_cache
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -315,25 +317,69 @@ def load_models():
 # PLAYER IDENTIFICATION
 # ============================================================================
 
-def get_recent_starters(stats_df, team, n_games=3):
+SKILL_POSITIONS = ('QB', 'RB', 'FB', 'WR', 'TE')
+# Opt-in: set PROP_ROSTER_FILTER=1 to drop players who are no longer on an NFL
+# roster. Off by default because the pre-season nflverse roster feed is
+# unreliable early (shuffled teams, missing veterans) and would cut real
+# starters. The plumbing below is ready for when the real rosters publish.
+ROSTER_FILTER_ON = os.getenv('PROP_ROSTER_FILTER', '').lower() in ('1', 'true', 'yes')
+_MIN_SANE_SKILL_IDS = 400  # a real league-wide skill roster is well over this
+
+
+@lru_cache(maxsize=4)
+def load_active_roster(season):
+    """frozenset(player_id) of skill players on the `season` roster, or None.
+
+    Team-agnostic on purpose: early-season roster data has players on the wrong
+    team, so this only answers "is this person still in the league". Returns
+    None (caller then does no filtering) when the flag is off, the fetch fails,
+    or the result looks too small to trust.
+    """
+    if not ROSTER_FILTER_ON:
+        return None
+    try:
+        import nfl_data_py as nfl
+        r = nfl.import_seasonal_rosters([int(season)])
+    except Exception as e:  # offline, season not published yet, etc.
+        print(f"[predict] roster fetch for {season} failed ({e}); no roster filter")
+        return None
+    if r is None or r.empty or 'player_id' not in r.columns:
+        return None
+    ids = frozenset(
+        r.loc[r['position'].isin(SKILL_POSITIONS), 'player_id'].dropna().astype(str)
+    )
+    if len(ids) < _MIN_SANE_SKILL_IDS:
+        print(f"[predict] {season} roster only has {len(ids)} skill players; "
+              "looks incomplete, skipping roster filter")
+        return None
+    return ids
+
+
+def get_recent_starters(stats_df, team, n_games=3, roster_ids=None):
     """
     Get players who have recently played for a team.
     Uses last N games to identify likely starters.
+
+    If `roster_ids` (a set of player_id strings for the current-season roster)
+    is given, players no longer on it are dropped.
     """
     if stats_df is None or stats_df.empty:
         return []
-    
+
     # Filter to this team's recent games
     team_stats = stats_df[stats_df['team'] == team].copy()
-    
+
     if team_stats.empty:
         return []
-    
+
     # Get most recent games
     team_stats = team_stats.sort_values('game_date', ascending=False)
     recent_games = team_stats['game_id'].unique()[:n_games]
     recent_stats = team_stats[team_stats['game_id'].isin(recent_games)]
-    
+
+    if roster_ids is not None and 'player_id' in recent_stats.columns:
+        recent_stats = recent_stats[recent_stats['player_id'].astype(str).isin(roster_ids)]
+
     # Find players with most activity
     player_activity = recent_stats.groupby('player_name', observed=True).agg({
         'game_id': 'nunique',  # Games played
@@ -792,11 +838,17 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
         opponent = game_row['away_team'] if team == game_row['home_team'] else game_row['home_team']
         is_home = team == game_row['home_team']
         
-        # Get recent starters for this team (from any stat type)
+        # Get recent starters for this team (from any stat type). When the
+        # opt-in roster filter is on, players no longer in the league are cut.
+        try:
+            _season = int(game_season) if game_season else upcoming_or_current_season()
+        except (TypeError, ValueError):
+            _season = upcoming_or_current_season()
+        roster_ids = load_active_roster(_season)  # None -> no filter
         all_starters = set()
         for stat_type, stats_df in all_stats.items():
             if stats_df is not None:
-                team_starters = get_recent_starters(stats_df, team)
+                team_starters = get_recent_starters(stats_df, team, roster_ids=roster_ids)
                 all_starters.update(team_starters)
         
         for player_name in all_starters:
