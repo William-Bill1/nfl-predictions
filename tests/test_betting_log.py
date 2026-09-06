@@ -8,6 +8,16 @@ import pytest
 import betting_log as bl
 
 
+@pytest.mark.parametrize("prob,tier", [
+    (0.49, "Lean"), (0.50, "Lean"), (0.549, "Lean"),
+    (0.55, "Good"), (0.589, "Good"),
+    (0.59, "Strong"), (0.649, "Strong"),
+    (0.65, "Elite"), (0.90, "Elite"),
+])
+def test_spread_tier_cutoffs(prob, tier):
+    assert bl._spread_tier(prob) == tier
+
+
 def _preds(rows):
     """Minimal predictions frame with the columns grade_pending / append need."""
     cols = {
@@ -83,13 +93,13 @@ class TestAppendRecommendations:
         preds = _preds([
             dict(game_id="2026_01_A_B", gameday=soon, home_team="B", away_team="A",
                  spread_line=3.0, pred_spreadCovered_optimal=1,
-                 prob_underdogCovered=0.56),
+                 prob_underdogCovered=0.61),
             dict(game_id="2026_08_C_D", gameday=far, home_team="D", away_team="C",
                  spread_line=3.0, pred_spreadCovered_optimal=1,
-                 prob_underdogCovered=0.56),
+                 prob_underdogCovered=0.61),
         ])
         assert bl.append_recommendations(preds, log) == 1
         assert bl.append_recommendations(preds, log) == 0  # idempotent
         out = pd.read_csv(log)
         assert list(out.game_id) == ["2026_01_A_B"]
-        assert out.iloc[0].confidence_tier == "Strong"
+        assert out.iloc[0].confidence_tier == "Strong"  # 0.59-0.65

@@ -125,7 +125,7 @@ def build_rich_html_email(df, logos_dir=None, max_rows: int = 20) -> str:
         if p >= 0.65:
             color = '#ff6b00'  # orange/red for Elite
             label = 'Elite'
-        elif p >= 0.60:
+        elif p >= 0.59:
             color = '#9b59b6'  # purple for Strong
             label = 'Strong'
         elif p >= 0.55:
@@ -183,7 +183,7 @@ def build_rich_html_email(df, logos_dir=None, max_rows: int = 20) -> str:
             
             if p >= 0.65:
                 return ' <span style="background:#ff6b00;color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-size:11px">🔥 ELITE</span>'
-            elif p >= 0.60:
+            elif p >= 0.59:
                 return ' <span style="background:#9b59b6;color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-size:11px">⭐ STRONG</span>'
             elif p >= 0.55:
                 return ' <span style="background:#3498db;color:#fff;padding:2px 6px;border-radius:4px;font-weight:600;font-size:11px">📈 GOOD</span>'

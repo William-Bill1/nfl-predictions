@@ -547,53 +547,45 @@ def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_hei
         return min(calculated_height, max_height)
     return calculated_height
 
+SPREAD_TIER_CUTS = (0.65, 0.59, 0.55, 0.50)  # Elite, Strong, Good, Lean floors
+SPREAD_TIER_LABELS = ('🔥 Elite', '⭐ Strong', '📈 Good', '⚖️ Lean')
+
+
 def add_spread_confidence_tiers(df):
     """
     Add confidence tier labels for spread betting.
-    
-    Tiers:
-    - 🔥 Elite (≥60%): Highest confidence bets
-    - ⭐ Strong (55-60%): Strong conviction bets
-    - 📈 Good (52-55%): Positive edge bets
-    - ⚖️ Lean (50-52%): Slight edge, lower units
-    
+
+    Cutoffs are anchored to the actual `prob_underdogCovered` distribution of
+    bet signals, not round numbers. The EV threshold means live bets almost
+    never sit below ~0.545, so the "Lean" band (0.50-0.55) is mostly a
+    "shown but sub-threshold" bucket. The model does reach into the 0.65+
+    "Elite" band, but only for ~1 signal in 7.
+    - 🔥 Elite (≥65%)
+    - ⭐ Strong (59-65%)
+    - 📈 Good  (55-59%)
+    - ⚖️ Lean  (50-55%, typically below the EV threshold)
+
     Args:
         df: DataFrame with prob_underdogCovered column
-        
+
     Returns:
         DataFrame with added confidence tier columns
     """
     df = df.copy()
-    
-    # Create tier column
+    e, s, g, ln = SPREAD_TIER_CUTS
+
     conditions = [
-        df['prob_underdogCovered'] >= 0.60,
-        (df['prob_underdogCovered'] >= 0.55) & (df['prob_underdogCovered'] < 0.60),
-        (df['prob_underdogCovered'] >= 0.52) & (df['prob_underdogCovered'] < 0.55),
-        (df['prob_underdogCovered'] >= 0.50) & (df['prob_underdogCovered'] < 0.52),
+        df['prob_underdogCovered'] >= e,
+        (df['prob_underdogCovered'] >= s) & (df['prob_underdogCovered'] < e),
+        (df['prob_underdogCovered'] >= g) & (df['prob_underdogCovered'] < s),
+        (df['prob_underdogCovered'] >= ln) & (df['prob_underdogCovered'] < g),
     ]
-    
-    choices = ['🔥 Elite', '⭐ Strong', '📈 Good', '⚖️ Lean']
-    
-    df['spread_confidence_tier'] = np.select(conditions, choices, default='')
-    
-    # Add recommended bet sizing
-    # Elite: 3-5% of bankroll
-    # Strong: 2-3% of bankroll
-    # Good: 1-2% of bankroll
-    # Lean: 0.5-1% of bankroll
-    
-    unit_conditions = [
-        df['prob_underdogCovered'] >= 0.60,
-        (df['prob_underdogCovered'] >= 0.55) & (df['prob_underdogCovered'] < 0.60),
-        (df['prob_underdogCovered'] >= 0.52) & (df['prob_underdogCovered'] < 0.55),
-        (df['prob_underdogCovered'] >= 0.50) & (df['prob_underdogCovered'] < 0.52),
-    ]
-    
+    df['spread_confidence_tier'] = np.select(conditions, list(SPREAD_TIER_LABELS), default='')
+
+    # Recommended bet sizing per tier (fraction of bankroll)
     unit_choices = ['3-5%', '2-3%', '1-2%', '0.5-1%']
-    
-    df['recommended_bet_size'] = np.select(unit_conditions, unit_choices, default='')
-    
+    df['recommended_bet_size'] = np.select(conditions, unit_choices, default='')
+
     return df
 
 # Function to automatically update completed game results
@@ -2061,10 +2053,10 @@ def home_page():
             (predictions_df.get('prob_overHit', 0) >= 0.65)
         ]
 
-        # Filter for strong bets (60-65% confidence) that haven't been notified yet
+        # Filter for strong bets (Strong tier, below Elite) not yet notified
         strong_bets = predictions_df[
-            ((predictions_df.get('prob_underdogWon', 0) >= 0.60) & (predictions_df.get('prob_underdogWon', 0) < 0.65)) | 
-            ((predictions_df.get('prob_underdogCovered', 0) >= 0.60) & (predictions_df.get('prob_underdogCovered', 0) < 0.65)) |
+            ((predictions_df.get('prob_underdogWon', 0) >= 0.60) & (predictions_df.get('prob_underdogWon', 0) < 0.65)) |
+            ((predictions_df.get('prob_underdogCovered', 0) >= 0.59) & (predictions_df.get('prob_underdogCovered', 0) < 0.65)) |
             ((predictions_df.get('prob_overHit', 0) >= 0.60) & (predictions_df.get('prob_overHit', 0) < 0.65))
         ]
 
@@ -3358,12 +3350,13 @@ def home_page():
                                 )
 
                     # Summary statistics
-                    st.success(f"""
-                    **📊 PERFORMANCE BY CONFIDENCE LEVEL:**
-                    - **Elite (≥60%)**: Expected 60%+ win rate, highest ROI potential
-                    - **Strong (55-60%)**: Expected 55-60% win rate, strong value
-                    - **Good (52-55%)**: Expected 52-55% win rate, positive edge
-                    - **Lean (50-52%)**: Expected 50-52% win rate, slight edge
+                    st.info(f"""
+                    **📊 CONFIDENCE TIERS** (model P(underdog covers), *not* a promised win rate —
+                    the model is only lightly calibrated and out-of-time AUC is ~0.58):
+                    - **🔥 Elite (≥65%)**: strongest signals, ~1 in 7 bets
+                    - **⭐ Strong (59-65%)**
+                    - **📈 Good (55-59%)**
+                    - **⚖️ Lean (50-55%)**: usually below the EV threshold — shown for context, not a bet
 
                     **Total Opportunities**: {len(spread_bets_all)} games across all tiers
                     """)

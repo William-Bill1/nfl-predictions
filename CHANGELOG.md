@@ -38,6 +38,17 @@ bottom.
   `python betting_log.py` after the pipeline, so the Model Performance tab and
   weekly backtest get data without anyone opening the app.
 
+- **Spread confidence tiers recalibrated + copy sweep.** New cutoffs
+  (`SPREAD_TIER_CUTS`) Elite ≥0.65 / Strong 0.59–0.65 / Good 0.55–0.59 / Lean
+  0.50–0.55, anchored to the real `prob_underdogCovered` signal distribution
+  (median ≈0.57) instead of round numbers. The old Good/Lean split (0.52/0.50)
+  covered almost no live bets — the EV threshold means signals rarely sit below
+  ~0.545. `betting_log._spread_tier` and `emailer.py` now mirror the same cuts
+  (they had drifted apart: 0.60/0.55/0.52 vs 0.65/0.60/0.55). Spread-tab tier
+  box changed from a green "PERFORMANCE BY CONFIDENCE LEVEL … Expected 60%+ win
+  rate" `st.success` to a neutral `st.info` that says these are model
+  probabilities, not promised win rates (out-of-time AUC ~0.58).
+
 - **Prop roster filter (opt-in, `PROP_ROSTER_FILTER=1`).** `predict.py` can now
   drop players who are no longer on an NFL roster before it picks "recent
   starters", via `nfl_data_py.import_seasonal_rosters`. Left **off by default**:
