@@ -8,6 +8,31 @@ bottom.
 
 ## September 2026
 
+- **CI `Tests` workflow was red for 10 days — fixed.** `pytest -q` (the bare
+  console script, which is what CI runs) errored at collection with
+  `ModuleNotFoundError: No module named 'season_utils'` on every run since the
+  workflow was added — only `python -m pytest` worked (that form prepends CWD to
+  `sys.path`). Fix: `pythonpath = .` in `pytest.ini`. Also verified a full
+  `build_and_train_pipeline.py` run end-to-end (schedule + historical fetch +
+  train): clean, artifacts byte-identical to committed apart from an odds
+  refresh on ~10 games.
+
+- **Fixed an infinite rerun loop.** The `st.experimental_rerun()` → `st.rerun()`
+  swap activated a latent loop: `streamlit run predictions.py` re-executes the
+  whole file each rerun, resetting the module-level
+  `historical_game_level_data = None` / `predictions_df = None`; the startup
+  poll block then reloaded the data and called `st.rerun()` again, forever
+  (~0.6 s/cycle). The two non-button rerun sites (post-background-load
+  auto-refresh; `?run_pipeline=1` URL trigger) are now one-shot, guarded by
+  `st.session_state` (which survives reruns; module globals do not).
+
+- **Spread signal experiment (rejected).** Tried QB new-starter flags
+  (`home/awayTeamNewStarterQB`, `qbNewStarterEdge`, leak-free from
+  `home_qb_name` / `away_qb_name`) as a spread feature. Converged out-of-sample:
+  179 bets, 53.1% acc, **+1.3% ROI** vs the +2.9% baseline; validation ROI
+  worse (−12.8% vs −5.2%). No durable edge, and it is 0 for every upcoming game
+  anyway. Not merged; logged in `docs/SPREAD_MODEL_INVESTIGATION.md`.
+
 - **Player props: reliable-only by default + cleared stale history.** The
   Player Props page now defaults to "Show only props from tested (reliable)
   models" (uncheck to see everything) - so the top of the list is the ~240

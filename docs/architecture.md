@@ -15,11 +15,21 @@ Step 1 — build/train  (python build_and_train_pipeline.py):
         ↓  create-nfl-historical.py   → data_files/nfl_games_historical.csv
                                         (all games incl. the unplayed schedule)
         ↓  nfl-gather-data.py  (~90s, no network, deterministic)
-             feature engineering (all rows) → temporal train/test on PLAYED rows
+             feature engineering (all rows) → 3-way temporal split on PLAYED rows
+             (train ~60% / validation ~20% / test ~20%): models on train, EV+F1
+             thresholds on validation, reported metrics on test
              → data_files/nfl_games_historical_with_predictions.csv   (all rows)
-               data_files/model_metrics.json
+               data_files/model_metrics.json  (incl. Spread_EV_Analysis /
+                                               Spread_OOS_Test)
                data_files/model_feature_importances.csv
                data_files/best_features_spread.txt  (fixed point)
+
+Results tracking  (python betting_log.py ; python scripts/weekly_spread_report.py):
+    nfl_games_historical_with_predictions.csv
+        → betting_log.py            → data_files/betting_recommendations_log.csv
+                                      (append next ~10d of signals; grade finished)
+        → weekly_spread_report.py   → data_files/spread_performance.json
+                                      (season-to-date / per-week / per-tier ROI)
 
 Player props  (python player_props/train_models.py ; python player_props/predict.py):
     PBP → aggregators.py → player_{passing,rushing,receiving}_stats.csv
@@ -107,29 +117,37 @@ All features are pre-game only (zero data leakage):
 ## API Integrations
 | Source | Purpose | Notes |
 |--------|---------|-------|
-| nfl_data_py | Schedule, play-by-play | Local, no key needed |
-| ESPN scores | Completed game scores | Runtime, public API |
+| nfl_data_py | Schedule, play-by-play, final scores | Local, no key; final scores arrive via the regenerated predictions CSV |
+| Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
+| ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
-No runtime API calls except ESPN scores for completed games.
+The dashboard makes **no runtime API calls**. `update_completed_games` is now a
+thin delegator to `betting_log.grade_pending`, which grades against the
+nflverse-sourced scores already in the predictions CSV — the old ESPN runtime
+score fetch is gone.
 
 ## Key Components
 - `build_and_train_pipeline.py` — `update_schedule` → `create-nfl-historical` → `nfl-gather-data`
-- `nfl-gather-data.py` — feature engineering + train (played rows) + predict (all rows)
+- `nfl-gather-data.py` — feature engineering + 3-way temporal split + train + predict (all rows)
 - `create-nfl-historical.py` — schedule + game fetch via nfl_data_py
 - `season_utils.py` — `upcoming_or_current_season()` (schedules) / `latest_pbp_season()` (PBP); one source of truth for the season year
-- `player_props/train_models.py` — prop model training
-- `player_props/predict.py` — prop predictions + frozen weekly snapshot
+- `betting_log.py` — headless owner of `betting_recommendations_log.csv` (`append_recommendations`, `grade_pending`); `predictions.py` delegates to it
+- `player_props/train_models.py` — prop model training (temporal hold-out)
+- `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
+- `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
+- `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
 - `scripts/send_rich_email_now.py` — SMTP email sender
 - `scripts/generate_rss.py` — `alerts_feed.xml` RSS feed
 
 ## Storage
 All data in `data_files/` (committed to git):
 - `nfl_games_historical_with_predictions.csv` — games (played + upcoming) + spread/market probabilities
-- `model_metrics.json`, `model_feature_importances.csv`, `best_features_spread.txt` — model eval + selected features
+- `model_metrics.json` (incl. `Spread_EV_Analysis` / `Spread_OOS_Test`), `model_feature_importances.csv`, `best_features_spread.txt` — model eval + selected features
 - `player_props_predictions.csv` — latest prop feed; `player_props_predictions_week{W}_{season}.csv` — frozen weekly snapshots
-- `betting_recommendations_log.csv` — spread recs, appended by the running app
+- `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
+- `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed
 - `data_files/exports/` — PDF exports
 
