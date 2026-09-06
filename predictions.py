@@ -512,154 +512,15 @@ def start_background_loader():
 
 # Function to automatically log betting recommendations
 def log_betting_recommendations(predictions_df):
-    """Automatically log betting recommendations to CSV for tracking"""
-    if predictions_df is None:
-        return
-    
-    log_path = path.join(DATA_DIR, 'betting_recommendations_log.csv')
-    
-    # Filter for upcoming games only (future games) - USE VIEW, NOT COPY
-    if 'gameday' in predictions_df.columns:
-        # `today` was not defined previously; use current local date instead.
-        predictions_df = predictions_df.copy()
-        predictions_df['gameday'] = pd.to_datetime(predictions_df['gameday'], errors='coerce')
-        today_dt = pd.to_datetime(datetime.now().date())
-        upcoming_df = predictions_df[predictions_df['gameday'] > today_dt]
-    else:
-        upcoming_df = predictions_df.copy()
-
-    if len(upcoming_df) == 0:
-        return  # No upcoming games to log
-    
-    # Prepare records for both moneyline and spread bets
-    records = []
-    
-    # Moneyline bets (underdog)
-    if 'pred_underdogWon_optimal' in upcoming_df.columns:
-        # Filter for moneyline bets - USE VIEW, NOT COPY
-        moneyline_bets = upcoming_df[upcoming_df['pred_underdogWon_optimal'] == 1]
-        
-        for _, row in moneyline_bets.iterrows():
-            # Determine underdog team
-            if pd.notna(row.get('spread_line')):
-                if row['spread_line'] < 0:
-                    recommended_team = row['home_team']  # Home is underdog
-                elif row['spread_line'] > 0:
-                    recommended_team = row['away_team']  # Away is underdog
-                else:
-                    recommended_team = 'Pick'
-            else:
-                recommended_team = 'Unknown'
-            
-            # Determine confidence tier
-            prob = row.get('prob_underdogWon', 0)
-            if prob >= 0.75:
-                confidence = 'Elite'
-            elif prob >= 0.65:
-                confidence = 'Strong'
-            elif prob >= 0.54:
-                confidence = 'Good'
-            else:
-                confidence = 'Standard'
-            
-            records.append({
-                'log_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'season': row.get('season', current_year),
-                'week': row.get('week', ''),
-                'game_id': row.get('game_id', ''),
-                'gameday': row.get('gameday', ''),
-                'home_team': row.get('home_team', ''),
-                'away_team': row.get('away_team', ''),
-                'bet_type': 'moneyline_underdog',
-                'recommended_team': recommended_team,
-                'spread_line': row.get('spread_line', ''),
-                'total_line': row.get('total_line', ''),
-                'moneyline_odds': row.get('away_moneyline' if recommended_team == row.get('away_team') else 'home_moneyline', ''),
-                'model_probability': row.get('prob_underdogWon', ''),
-                'edge': row.get('edge_underdog_ml', ''),
-                'confidence_tier': confidence,
-                'actual_home_score': '',
-                'actual_away_score': '',
-                'bet_result': 'pending',
-                'bet_profit': ''
-            })
-    
-    # Spread bets
-    if 'pred_spreadCovered_optimal' in upcoming_df.columns:
-        # Filter for spread bets - USE VIEW, NOT COPY
-        spread_bets = upcoming_df[upcoming_df['pred_spreadCovered_optimal'] == 1]
-        
-        for _, row in spread_bets.iterrows():
-            # Determine underdog team for spread
-            if pd.notna(row.get('spread_line')):
-                if row['spread_line'] < 0:
-                    recommended_team = row['home_team']  # Home is underdog
-                elif row['spread_line'] > 0:
-                    recommended_team = row['away_team']  # Away is underdog
-                else:
-                    recommended_team = 'Pick'
-            else:
-                recommended_team = 'Unknown'
-            
-            # Determine confidence tier
-            prob = row.get('prob_underdogCovered', 0)
-            if prob >= 0.75:
-                confidence = 'Elite'
-            elif prob >= 0.65:
-                confidence = 'Strong'
-            elif prob >= 0.54:
-                confidence = 'Good'
-            else:
-                confidence = 'Standard'
-            
-            records.append({
-                'log_date': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                'season': row.get('season', current_year),
-                'week': row.get('week', ''),
-                'game_id': row.get('game_id', ''),
-                'gameday': row.get('gameday', ''),
-                'home_team': row.get('home_team', ''),
-                'away_team': row.get('away_team', ''),
-                'bet_type': 'spread',
-                'recommended_team': recommended_team,
-                'spread_line': row.get('spread_line', ''),
-                'total_line': row.get('total_line', ''),
-                'moneyline_odds': '',
-                'model_probability': row.get('prob_underdogCovered', ''),
-                'edge': row.get('edge_underdog_spread', ''),
-                'confidence_tier': confidence,
-                'actual_home_score': '',
-                'actual_away_score': '',
-                'bet_result': 'pending',
-                'bet_profit': ''
-            })
-    
-    if len(records) == 0:
-        return  # No bets to log
-    
-    # Convert to DataFrame
-    new_records_df = pd.DataFrame(records)
-    
-    # Load existing log or create new one
-    if os.path.exists(log_path):
-        existing_log = pd.read_csv(log_path)
-        # Avoid duplicate entries: check if game_id + bet_type already exists with pending status
-        existing_pending = existing_log[existing_log['bet_result'] == 'pending']
-        
-        # Filter out records that already exist as pending
-        new_records_df = new_records_df[
-            ~new_records_df.apply(
-                lambda x: ((existing_pending['game_id'] == x['game_id']) & 
-                          (existing_pending['bet_type'] == x['bet_type'])).any(),
-                axis=1
-            )
-        ]
-        
-        if len(new_records_df) > 0:
-            combined_log = pd.concat([existing_log, new_records_df], ignore_index=True)
-            combined_log.to_csv(log_path, index=False)
-    else:
-        new_records_df.to_csv(log_path, index=False)
+    """Append spread recommendations for upcoming games to the tracking log."""
+    try:
+        from betting_log import append_recommendations
+        append_recommendations(predictions_df)
+    except Exception as e:
+        try:
+            print(f"[WARN] log_betting_recommendations failed: {e}", file=sys.stderr)
+        except Exception:
+            pass
 
 def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
     """
@@ -736,125 +597,16 @@ def add_spread_confidence_tiers(df):
     return df
 
 # Function to automatically update completed game results
-def update_completed_games():
-    """Fetch scores from ESPN API and update betting log for completed games"""
-    log_path = path.join(DATA_DIR, 'betting_recommendations_log.csv')
-    
-    if not os.path.exists(log_path):
-        return  # No log to update
-    
-    log_df = pd.read_csv(log_path)
-    
-    # Filter for pending bets only
-    pending_bets = log_df[log_df['bet_result'] == 'pending']
-    
-    if len(pending_bets) == 0:
-        return  # No pending bets to update
-    
-    # Convert gameday to datetime
-    pending_bets['gameday'] = pd.to_datetime(pending_bets['gameday'], errors='coerce')
-    
-    # Only check games that should be completed (game day has passed)
-    today = pd.to_datetime(datetime.now().date())
-    completed_games = pending_bets[pending_bets['gameday'] < today]
-    
-    if len(completed_games) == 0:
-        return  # No games to check - they are all future games
-    
-    # Team name mapping for matching ESPN full names to our abbreviations
-    team_abbrev_to_full = {
-        'ARI': 'Arizona Cardinals', 'ATL': 'Atlanta Falcons', 'BAL': 'Baltimore Ravens',
-        'BUF': 'Buffalo Bills', 'CAR': 'Carolina Panthers', 'CHI': 'Chicago Bears',
-        'CIN': 'Cincinnati Bengals', 'CLE': 'Cleveland Browns', 'DAL': 'Dallas Cowboys',
-        'DEN': 'Denver Broncos', 'DET': 'Detroit Lions', 'GB': 'Green Bay Packers',
-        'HOU': 'Houston Texans', 'IND': 'Indianapolis Colts', 'JAX': 'Jacksonville Jaguars',
-        'KC': 'Kansas City Chiefs', 'LV': 'Las Vegas Raiders', 'LAC': 'Los Angeles Chargers',
-        'LA': 'Los Angeles Rams', 'LAR': 'Los Angeles Rams', 'MIA': 'Miami Dolphins', 'MIN': 'Minnesota Vikings',
-        'NE': 'New England Patriots', 'NO': 'New Orleans Saints', 'NYG': 'New York Giants',
-        'NYJ': 'New York Jets', 'PHI': 'Philadelphia Eagles', 'PIT': 'Pittsburgh Steelers',
-        'SF': 'San Francisco 49ers', 'SEA': 'Seattle Seahawks', 'TB': 'Tampa Bay Buccaneers',
-        'TEN': 'Tennessee Titans', 'WAS': 'Washington Commanders'
-    }
-    
-    # Fetch scores from ESPN API for each completed game
-    updates_made = False
-    
-    for idx, bet in completed_games.iterrows():
-        season = int(bet['season']) if pd.notna(bet['season']) else current_year
-        week = int(bet['week']) if pd.notna(bet['week']) else 1
-        
+def update_completed_games(predictions_df=None):
+    """Grade pending spread bets in the log against final scores."""
+    try:
+        from betting_log import grade_pending
+        grade_pending(predictions_df)
+    except Exception as e:
         try:
-            # Fetch ESPN data for that week. Try regular season first (seasontype=2),
-            # then postseason (seasontype=3) so playoff games are captured.
-            data = None
-            for seasontype in (2, 3):
-                espn_url = (
-                    f"https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard?seasontype={seasontype}&year={season}&week={week}"
-                )
-                try:
-                    response = requests.get(espn_url, timeout=5)
-                except Exception:
-                    response = None
-
-                if response is not None and response.status_code == 200:
-                    payload = response.json()
-                    # If ESPN returns events for this request, use them; otherwise try next seasontype
-                    if payload.get('events'):
-                        data = payload
-                        break
-
-            if data is None:
-                # No data found for either regular or postseason for this week
-                continue
-                
-                # Convert our team abbreviations to full names for matching
-                bet_home_full = team_abbrev_to_full.get(str(bet['home_team']).upper(), str(bet['home_team']))
-                bet_away_full = team_abbrev_to_full.get(str(bet['away_team']).upper(), str(bet['away_team']))
-                
-                # Find matching game by team names
-                for event in data.get("events", []):
-                    comp = event.get("competitions", [{}])[0]
-                    competitors = comp.get("competitors", [])
-                    
-                    if len(competitors) >= 2:
-                        # ESPN format: competitors[0] is home, competitors[1] is away
-                        home_team = competitors[0].get("team", {}).get("displayName", "")
-                        away_team = competitors[1].get("team", {}).get("displayName", "")
-                        
-                        # Match by team names (case-insensitive)
-                        if (home_team.lower() == bet_home_full.lower() and 
-                            away_team.lower() == bet_away_full.lower()):
-                            
-                            # Check if game is completed
-                            status = event.get("status", {}).get("type", {}).get("completed", False)
-                            
-                            if status:
-                                # Get scores
-                                home_score = int(competitors[0].get("score", 0))
-                                away_score = int(competitors[1].get("score", 0))
-                                
-                                # Update the log dataframe
-                                log_df.at[idx, 'actual_home_score'] = home_score
-                                log_df.at[idx, 'actual_away_score'] = away_score
-                                
-                                # Determine bet result based on bet type
-                                bet_type = bet['bet_type']
-                                recommended_team = bet['recommended_team']
-                                
-                                if bet_type == 'moneyline_underdog':
-                                    # Moneyline: did underdog win?
-                                    if recommended_team == bet['home_team']:
-                                        bet_won = home_score > away_score
-                                    else:
-                                        bet_won = away_score > home_score
-                                    
-                                    # Calculate profit
+            print(f"[WARN] update_completed_games failed: {e}", file=sys.stderr)
         except Exception:
-            # Silently continue if ESPN API fails for a particular week
-            continue
-
-    if updates_made:
-        log_df.to_csv(log_path, index=False)
+            pass
 
 def load_data():
     file_path = path.join(DATA_DIR, 'nfl_play_by_play_historical.csv.gz')
@@ -1046,11 +798,10 @@ schedule = None
 def home_page():
     """Main NFL predictions dashboard (home page)."""
     global predictions_df
-    # Automatically log recommendations when predictions are loaded
+    # Automatically log spread recommendations and grade finished ones.
     if predictions_df is not None:
         log_betting_recommendations(predictions_df)
-        # Update completed games with scores
-        update_completed_games()
+        update_completed_games(predictions_df)
 
     # Display header (logo lives in the sidebar navigation panel)
     st.header('NFL Game Outcome Predictor')
