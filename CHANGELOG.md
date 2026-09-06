@@ -26,6 +26,18 @@ bottom.
   - Removed the disabled **Underdog Bets** and **Over/Under Bets** tabs (9 → 7).
   - `nfl_schedule_2026.csv` populated (272 games).
 
+- **Results tracking actually works now (`betting_log.py`).** New headless module
+  owns `betting_recommendations_log.csv`: `append_recommendations` logs spread
+  signals for games in the next ~10 days (so each week's recorded edge reflects
+  that week's model), `grade_pending` fills `actual_*_score` / `bet_result` /
+  `bet_profit` from the `underdogCovered` / `spreadPush` labels once a game has a
+  real (non 0-0) final score and its date is past. `predictions.py`'s
+  `log_betting_recommendations` and `update_completed_games` are now thin
+  delegators — the latter was dead code (a `continue` made the grading block
+  unreachable and it only ever handled moneyline). The nightly workflow runs
+  `python betting_log.py` after the pipeline, so the Model Performance tab and
+  weekly backtest get data without anyone opening the app.
+
 - **Player-prop weekly snapshots.** `player_props/predict.py` now targets a
   season/week (`--season` / `--week`, default: next upcoming week of the current
   schedule) instead of the hard-coded 2025 file, and writes a write-once frozen

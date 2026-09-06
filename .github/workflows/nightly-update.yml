@@ -76,8 +76,8 @@ jobs:
           restore-keys: |
             pbp-historical-2020-2024-
       
-      # Note: completed-game scores/odds from ESPN are refreshed inside the app
-      # (predictions.py::update_completed_games), not by a standalone script.
+      # Note: final scores come from the regenerated predictions CSV (nflverse),
+      # and betting_log.py (a step below) grades finished bets against them.
       # The old `python fetch_espn_weekly_scores.py` step referenced a file that
       # no longer exists and only ever passed because of continue-on-error.
 
@@ -112,6 +112,15 @@ jobs:
           # genuine prospective record for the weekly accuracy check.
           python player_props/predict.py --no-injuries --no-weather
         timeout-minutes: 15
+        continue-on-error: true
+
+      - name: Update the betting-recommendations log
+        if: steps.season_check.outputs.in_season == 'true'
+        run: |
+          # Append spread signals for upcoming games and grade any finished
+          # bets against the freshly-regenerated predictions CSV. Runs headless -
+          # the log no longer depends on someone opening the Streamlit app.
+          python betting_log.py
         continue-on-error: true
 
       - name: Upload updated predictions

@@ -1,1 +1,5 @@
 log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_team,spread_line,total_line,moneyline_odds,model_probability,edge,confidence_tier,actual_home_score,actual_away_score,bet_result,bet_profit
+2026-09-06 08:39:19,2026,1,2026_01_NE_SEA,2026-09-09,SEA,NE,spread,NE,3.5,44.5,,0.5490811382302344,0.0141974173000019,Good,,,pending,
+2026-09-06 08:39:19,2026,1,2026_01_NO_DET,2026-09-13,DET,NO,spread,NO,7.0,49.5,,0.6114876352322542,0.0876781114227304,Elite,,,pending,
+2026-09-06 08:39:19,2026,1,2026_01_ATL_PIT,2026-09-13,PIT,ATL,spread,ATL,3.5,42.5,,0.5461786364087164,0.0048942327389916,Good,,,pending,
+2026-09-06 08:39:19,2026,1,2026_01_GB_MIN,2026-09-13,MIN,GB,spread,GB,1.5,45.5,,0.5668426346063049,0.038540747813852,Strong,,,pending,
