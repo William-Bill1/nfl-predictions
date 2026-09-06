@@ -38,6 +38,21 @@ bottom.
   `python betting_log.py` after the pipeline, so the Model Performance tab and
   weekly backtest get data without anyone opening the app.
 
+- **Player-prop honesty pass.** `player_props/models.py` now holds out the most
+  recent season (temporal split) instead of a random one, so `model_metrics.csv`
+  is out-of-time. Each record gains `base_rate` / `roc_auc` / `reliable`; only
+  ~5/26 models clear the bar (AUC ≥ 0.58 **and** accuracy above the majority
+  base rate) — the skewed-line tiers that used to report 65-75% "accuracy" were
+  mostly just predicting the majority class. All TD props are force-flagged
+  `reliable = False` (every tier collapses to the same 0.5 line; ~coin-flip
+  out-of-time). `predict.py` carries the flag through as a `model_reliable`
+  column; the Player Props / Parlay pages mark unreliable rows "display only"
+  and no longer show a "Defense Rank" column. `opponent_def_rank` deleted
+  end-to-end — its aggregator averaged a stat over the whole dataset (leaked
+  future games) and then clipped to a constant `1` for every row, so it was
+  pure noise. Dropped two dead model files (`passing_tds_high/over.json`) and
+  git-ignored the `_lgbm.txt` sidecars (inference only uses the XGB `.json`).
+
 - **Player-prop weekly snapshots.** `player_props/predict.py` now targets a
   season/week (`--season` / `--week`, default: next upcoming week of the current
   schedule) instead of the hard-coded 2025 file, and writes a write-once frozen

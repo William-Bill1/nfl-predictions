@@ -246,7 +246,9 @@ def add_matchup_features(df: pd.DataFrame, stat_type: str, all_stats: Dict[str, 
       Falls back to 0 when a match cannot be found.
     - days_rest: calendar days between this game and the player's previous game
       (capped at 21; defaults to 7 for season openers).
-    - opponent_def_rank: rolling opponent defensive rank for the stat category.
+
+    (opponent_def_rank was removed - its implementation averaged a stat over the
+    whole dataset, which both leaked future games and clipped to a constant.)
 
     Args:
         df: Player stats DataFrame (must include game_id, team, season, week)
@@ -289,62 +291,7 @@ def add_matchup_features(df: pd.DataFrame, stat_type: str, all_stats: Dict[str, 
     else:
         df['days_rest'] = 7.0
 
-    # ------------------------------------------------------------------
-    # opponent_def_rank: rolling defense rank for this stat category
-    # ------------------------------------------------------------------
-    df['opponent_def_rank'] = df.apply(
-        lambda row: get_opponent_defense_rank_static(row['opponent'], stat_type, all_stats),
-        axis=1
-    )
-
     return df
-
-
-def get_opponent_defense_rank_static(opponent: str, stat_type: str, all_stats: Dict[str, pd.DataFrame]) -> int:
-    """
-    Calculate opponent's defensive ranking for a stat type (static version for training).
-    Lower rank = better defense (harder matchup).
-    """
-    if stat_type == 'passing':
-        stats_df = all_stats.get('passing')
-        if stats_df is None or stats_df.empty:
-            return 16  # Default to league average
-        
-        # Get all passing yards allowed by this opponent
-        opp_games = stats_df[stats_df['opponent'] == opponent]
-        if opp_games.empty:
-            return 16
-        
-        avg_allowed = opp_games['passing_yards'].mean()
-        # Simple ranking based on average allowed
-        # In real implementation, this would be more sophisticated
-        return min(32, max(1, int(avg_allowed / 200)))  # Rough ranking
-    
-    elif stat_type == 'rushing':
-        stats_df = all_stats.get('rushing')
-        if stats_df is None or stats_df.empty:
-            return 16
-        
-        opp_games = stats_df[stats_df['opponent'] == opponent]
-        if opp_games.empty:
-            return 16
-        
-        avg_allowed = opp_games['rushing_yards'].mean()
-        return min(32, max(1, int(avg_allowed / 100)))
-    
-    elif stat_type == 'receiving':
-        stats_df = all_stats.get('receiving')
-        if stats_df is None or stats_df.empty:
-            return 16
-        
-        opp_games = stats_df[stats_df['opponent'] == opponent]
-        if opp_games.empty:
-            return 16
-        
-        avg_allowed = opp_games['receiving_yards'].mean()
-        return min(32, max(1, int(avg_allowed / 200)))
-    
-    return 16  # Default
 
 
 def aggregate_all_stats(

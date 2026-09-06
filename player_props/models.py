@@ -5,7 +5,6 @@ Train baseline models for predicting player prop over/under outcomes.
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
 import xgboost as xgb
 try:
@@ -74,6 +73,32 @@ PROP_LINES = {
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
 MIN_GAMES_PLAYED = 5  # Minimum games to have reliable rolling stats
+MIN_TEST_ROWS = 40    # need at least this many held-out rows to report a metric
+
+# A metric is only marked "reliable" if the model clears these out-of-time bars
+# on the held-out season. TD props never clear them (see note below) so they are
+# force-flagged unreliable regardless.
+RELIABLE_MIN_AUC = 0.58
+RELIABLE_MIN_ACC_EDGE = 0.01   # accuracy must beat the majority-class base rate by this
+TD_NOTE = ("TD props are ~coin-flip out-of-time (all tiers collapse to the same "
+           "0.5 line); kept for display only, not a betting signal.")
+
+
+def temporal_holdout(df):
+    """Return (train_df, test_df, holdout_season).
+
+    Hold out the most recent season present so reported metrics are out-of-time
+    instead of the optimistic random split. Falls back to a date-ordered last-20%
+    cut if only one season is available.
+    """
+    if 'season' in df.columns and df['season'].nunique() >= 2:
+        holdout = int(df['season'].max())
+        return df[df['season'] < holdout], df[df['season'] >= holdout], holdout
+    order = [c for c in ('season', 'week') if c in df.columns]
+    if order:
+        df = df.sort_values(order)
+    cut = int(len(df) * (1 - TEST_SIZE))
+    return df.iloc[:cut], df.iloc[cut:], None
 
 # ============================================================================
 # DATA PREPARATION
@@ -175,9 +200,10 @@ def prepare_training_features(df, stat_type='passing'):
     feature_cols.extend(extra_cols)
     
     # Add matchup and situational features
+    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
+    # (leaky) average that clipped to a constant 1 for every row.
     matchup_cols = [
-        'opponent_def_rank',
-        'is_home', 
+        'is_home',
         'days_rest'
     ]
     
@@ -227,9 +253,10 @@ def prepare_td_training_features(df, stat_type='passing'):
         ]
     
     # Add matchup and situational features
+    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
+    # (leaky) average that clipped to a constant 1 for every row.
     matchup_cols = [
-        'opponent_def_rank',
-        'is_home', 
+        'is_home',
         'days_rest'
     ]
     
@@ -271,9 +298,10 @@ def prepare_receptions_training_features(df):
     ]
     
     # Add matchup and situational features
+    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
+    # (leaky) average that clipped to a constant 1 for every row.
     matchup_cols = [
-        'opponent_def_rank',
-        'is_home', 
+        'is_home',
         'days_rest'
     ]
     
@@ -303,14 +331,14 @@ def train_prop_model(df, features, target_col, model_name):
     Returns:
         Trained XGB model (primary), metrics dict
     """
-    # Remove rows with missing features or target
-    df_clean = df[features + [target_col]].dropna()
+    # Remove rows with missing features or target (keep season/week for the split)
+    split_cols = [c for c in ('season', 'week') if c in df.columns]
+    df_clean = df[features + [target_col] + split_cols].dropna()
 
     if len(df_clean) < 100:
         print(f"Warning: Not enough data for {target_col}: {len(df_clean)} rows")
         return None, None
 
-    X = df_clean[features]
     y = df_clean[target_col]
 
     # Check class balance
@@ -324,13 +352,20 @@ def train_prop_model(df, features, target_col, model_name):
         print(f"Warning: Skipping {target_col}: too imbalanced")
         return None, None
 
-    # Train/test split
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y
-    )
+    # Temporal train/test split - hold out the most recent season so the
+    # reported metrics are genuinely out-of-time (the old random split let the
+    # model see games from the same weeks it was scored on).
+    train_df, test_df, holdout_season = temporal_holdout(df_clean)
+    X_train, y_train = train_df[features], train_df[target_col]
+    X_test, y_test = test_df[features], test_df[target_col]
+
+    if len(X_test) < MIN_TEST_ROWS or y_test.nunique() < 2 or y_train.nunique() < 2:
+        print(f"Warning: Skipping {target_col}: held-out season too small/degenerate "
+              f"({len(X_test)} rows)")
+        return None, None
 
     # Calculate scale_pos_weight for imbalanced classes
-    scale_pos_weight = (y_train == 0).sum() / (y_train == 1).sum()
+    scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
 
     # ------------------------------------------------------------------
     # XGBoost model
@@ -369,26 +404,42 @@ def train_prop_model(df, features, target_col, model_name):
 
     y_pred = (ensemble_proba >= 0.5).astype(int)
 
+    accuracy = float(accuracy_score(y_test, y_pred))
+    roc_auc = float(roc_auc_score(y_test, ensemble_proba))
+    base_rate = float(max(y_test.mean(), 1 - y_test.mean()))
+    is_td = '_tds_' in model_name
+    reliable = bool(
+        not is_td
+        and roc_auc >= RELIABLE_MIN_AUC
+        and accuracy >= base_rate + RELIABLE_MIN_ACC_EDGE
+    )
+
     # Metrics computed on ensemble output
     metrics = {
         'model_name': model_name,
         'target': target_col,
+        'split': 'temporal',
+        'holdout_season': holdout_season,
         'train_samples': int(len(X_train)),
         'test_samples': int(len(X_test)),
-        'accuracy': float(accuracy_score(y_test, y_pred)),
+        'base_rate': base_rate,
+        'accuracy': accuracy,
         'precision': float(precision_score(y_test, y_pred, zero_division=0)),
         'recall': float(recall_score(y_test, y_pred, zero_division=0)),
         'f1': float(f1_score(y_test, y_pred, zero_division=0)),
-        'roc_auc': float(roc_auc_score(y_test, ensemble_proba)),
-        'ensemble': LGBM_AVAILABLE
+        'roc_auc': roc_auc,
+        'ensemble': LGBM_AVAILABLE,
+        'reliable': reliable,
+        'note': TD_NOTE if is_td else ('' if reliable else 'No out-of-time edge over the base rate.'),
     }
 
-    print(f"\n{model_name} Results (ensemble={LGBM_AVAILABLE}):")
-    print(f"   Accuracy: {metrics['accuracy']:.3f}")
+    print(f"\n{model_name} Results (ensemble={LGBM_AVAILABLE}, holdout={holdout_season}):")
+    print(f"   Accuracy: {metrics['accuracy']:.3f}  (base rate {base_rate:.3f})")
     print(f"   Precision: {metrics['precision']:.3f}")
     print(f"   Recall: {metrics['recall']:.3f}")
     print(f"   F1: {metrics['f1']:.3f}")
     print(f"   ROC-AUC: {metrics['roc_auc']:.3f}")
+    print(f"   Reliable: {reliable}")
 
     # Persist XGB model (always present)
     model_path = MODELS_DIR / f'{model_name}.json'
@@ -621,9 +672,14 @@ def train_all_models():
 
         # Print summary table
         print("\n" + "=" * 70)
-        print("📊 MODEL PERFORMANCE SUMMARY")
+        print("📊 MODEL PERFORMANCE SUMMARY (out-of-time hold-out)")
         print("=" * 70)
-        print(metrics_df[['model_name', 'accuracy', 'f1', 'roc_auc']].to_string(index=False))
+        cols = [c for c in ['model_name', 'base_rate', 'accuracy', 'roc_auc', 'reliable']
+                if c in metrics_df.columns]
+        print(metrics_df[cols].to_string(index=False))
+        n_reliable = int(metrics_df['reliable'].sum()) if 'reliable' in metrics_df.columns else 0
+        print(f"\n{n_reliable}/{len(metrics_df)} models clear the out-of-time bar "
+              f"(AUC>={RELIABLE_MIN_AUC}, accuracy > base rate).")
     
     print("\n" + "=" * 70)
     print("✅ Training Complete!")

@@ -194,11 +194,11 @@ def load_player_props_predictions():
                 df['display_name'] = df['display_name'].fillna(df['player_name'])  # Fallback to short_name if no display_name
             df = df.drop('short_name', axis=1, errors='ignore')
     
-    # Ensure opponent_def_rank column exists (for backward compatibility)
-    if 'opponent_def_rank' not in df.columns:
-        st.warning("⚠️ opponent_def_rank column missing from predictions. Please regenerate predictions.")
-        df['opponent_def_rank'] = 16.0  # Default to league average
-    
+    # opponent_def_rank was removed (leaky, constant). Older snapshots may still
+    # carry it; newer ones carry model_reliable instead.
+    if 'model_reliable' not in df.columns:
+        df['model_reliable'] = True
+
     # Ensure injury_note column exists (for backward compatibility)
     if 'injury_note' not in df.columns:
         df['injury_note'] = None
@@ -430,10 +430,10 @@ def main():
                 display_df['Last 3 Avg'] = display_df['avg_L3'].apply(lambda x: f"{x:.1f}")
                 display_df['Last 5 Avg'] = display_df['avg_L5'].apply(lambda x: f"{x:.1f}")
                 display_df['Last 10 Avg'] = display_df['avg_L10'].apply(lambda x: f"{x:.1f}")
-                display_df['Defense Rank'] = display_df['opponent_def_rank'].apply(
-                    lambda x: f"#{int(x)}/32" + (" 🛡️" if x <= 8 else (" ⚠️" if x >= 24 else ""))
+                display_df['Model'] = display_df['model_reliable'].apply(
+                    lambda x: '✅ tested' if x else '⚠️ display only'
                 )
-                
+
                 # Add injury information if available
                 if 'injury_note' in display_df.columns:
                     display_df['Injury Status'] = display_df['injury_note'].fillna('')
@@ -442,7 +442,7 @@ def main():
                 
                 # Select columns to show
                 show_cols = [
-                    'display_name', 'position', 'team', 'opponent', 'Defense Rank', 'trend', 'prop_type', 
+                    'display_name', 'position', 'team', 'opponent', 'Model', 'trend', 'prop_type',
                     'Recommendation', 'Confidence', 'Tier', 'Last 3 Avg', 'Last 5 Avg', 'Last 10 Avg', 'weather_conditions', 'Injury Status'
                 ]
                 
@@ -748,7 +748,6 @@ def main():
                                 features['targets_L10'] = recent_games.head(10)['targets'].mean() if 'targets' in recent_games.columns else 0
                         
                         # Add matchup features (defaults)
-                        features['opponent_def_rank'] = 16.0
                         features['is_home'] = 1
                         features['days_rest'] = 7
                         
