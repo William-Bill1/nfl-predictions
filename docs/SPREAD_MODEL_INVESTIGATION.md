@@ -175,3 +175,37 @@ Pick **one** convention and carry it end to end.
 - `README.md` — "Major Performance Breakthrough", "Spread Model Fixed ... 3.6% to 91.9%"
 - `docs/MODEL_FIX_PLAN.md`, `docs/SPREAD_THRESHOLD_CHANGE.md`,
   `scripts/test_inversion_fix.py`, `scripts/verify_spread_fix.py`
+
+---
+
+## Signal experiments log
+
+Things tried to move the spread model off ~break-even out-of-sample. The
+honest measurement is `model_metrics.json::Spread_OOS_Test` (EV threshold fitted
+on the validation slice, scored on a later untouched test slice) plus
+`Spread_EV_Analysis` (validation slice).
+
+Baseline (main, Sep 2026): OOS 141 bets, 76-65, **53.9%** acc, **+2.9% ROI**;
+validation theoretical ROI **-5.2%**; raw 0.5-cutoff directional acc 48.2%.
+
+### QB new-starter flags — REJECTED (Sep 2026, `experiment/spread-qb-features`)
+
+Added `homeTeamNewStarterQB` / `awayTeamNewStarterQB` / `qbNewStarterEdge`
+(1 when a team starts a different QB than in its most recent prior game; built
+leak-free from `home_qb_name` / `away_qb_name`, chronologically). Added to the
+candidate list and to `best_features_spread.txt`.
+
+- Monte-Carlo kept only `awayTeamNewStarterQB` (importance ~0.14, second to
+  `spread_line`); dropped the home flag and the edge.
+- **Converged** OOS (runs 2-3, byte-stable): 179 bets, 95-84, **53.1%** acc,
+  **+1.3% ROI**. Validation theoretical ROI **-12.8%** (worse). Raw directional
+  acc rose to 51.8%, but the EV filter just triggered more bets (179 vs 141) and
+  diluted back to break-even.
+- Also 0 for every upcoming game (`nfl_games_historical.csv` has no projected
+  QB for unplayed games), so it could not affect live picks even if it helped.
+
+Net: shuffles the numbers, no durable edge. Not merged.
+
+Not attempted (data not available historically): opening→closing line movement
+(only the closing `spread_line` is in the feed); injury-count differential
+(`player_props/injuries.py` is a live ESPN scrape with no history).
