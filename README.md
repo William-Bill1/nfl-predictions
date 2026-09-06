@@ -36,54 +36,69 @@ streamlit run predictions.py    # opens http://localhost:8501
 On Windows you can instead run `./run-local.ps1`. If port 8501 is busy:
 `streamlit run predictions.py --server.port 8502`.
 
-To run the test suite: `pip install pytest && pytest -q`.
+To run the test suite: `pip install -r requirements-dev.txt && pytest -q`.
 
 ---
 
 ## What it does
 
-### Dashboard (`predictions.py` + `pages/`)
+### Dashboard `predictions.py` — 7 tabs
 
-| Page / tab | Contents |
+| Tab | Contents |
 |---|---|
-| **Predictions** (main) | Model predictions vs. actual results; upcoming-game probabilities & edges (model % − implied %); betting-performance metrics |
-| **Underdog Bets** | Market implied probability that the underdog wins outright. The moneyline *model* is disabled — no out-of-time edge — so no bets are generated here. |
-| **Spread Bets** | High-confidence spread picks, confidence-tiered |
-| **Over/Under Bets** | Market implied P(over). The totals *model* is disabled — no out-of-time edge — so no bets are generated here. |
-| **Betting Log** | Auto-logged recommendations with timestamps and outcomes |
-| **Historical Data** page | Filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination |
-| **Player Props** page | Per-player predictions + interactive **DK Pick 6 calculator** (enter a line, get OVER/UNDER with confidence tier; ML model or Laplace-smoothed historical fallback) |
-| **Parlay Builder** page | Combine bets, compute parlay odds |
-| **Model Performance** page | Accuracy, calibration, weekly tracking |
+| Model Predictions | model vs. actual results for completed games |
+| Probabilities & Edges | upcoming-game probabilities (spread / market-implied moneyline & totals) and edges (model % − implied %) |
+| Betting Performance | win-rate / ROI on the spread signal, held-out test set only |
+| Spread Bets | confidence-tiered upcoming spread picks (the only live bet signal) |
+| Betting Log | auto-logged spread recommendations with outcomes |
+| Model Performance | accuracy, calibration, weekly tracking from the betting log |
+| Bankroll Management | Kelly-style position sizing for the elite spread bets |
+
+The Underdog Bets and Over/Under Bets tabs were removed — the moneyline and
+totals models are disabled (see below); their probabilities still show, as
+market-implied columns, on the Probabilities & Edges tab.
+
+### `pages/`
+
+| Page | Contents |
+|---|---|
+| `1_Historical_Data.py` | filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination |
+| `2_Player_Props.py` | per-player prop predictions + interactive **DK Pick 6 calculator** (enter a line → OVER/UNDER + confidence tier; ML model or Laplace-smoothed historical fallback) |
+| `3_Parlay_Builder.py` | combine bets, compute parlay odds |
+| `4_Model_Performance.py` | model evaluation and calibration metrics |
 
 ### Models
 
 Three binary classifiers in `nfl-gather-data.py`, each a
 `CalibratedClassifierCV(XGBClassifier, isotonic)` optionally soft-voted with a
-LightGBM twin. Training is seeded and single-threaded, so the pipeline is
-byte-reproducible.
+LightGBM twin. Every estimator is seeded (`RANDOM_STATE=42`) and single-threaded
+(`n_jobs=1`) and the feature lists are `sorted()`, so `python nfl-gather-data.py`
+**byte-reproduces its own artifacts**. Train/test is a **temporal** split — the
+last 20% of *played* games by (season, week); the current season's unplayed
+schedule flows through for prediction but is never trained or scored on.
 
-| Target | Predicts | Ships? |
+| Target | Predicts | Ships a bet signal? |
 |---|---|---|
-| `spreadCovered` | favorite covers the spread | **yes** — EV-based threshold |
-| `underdogWon` | underdog wins outright | **no** — no out-of-time edge; `prob_underdogWon` ships the market implied probability instead |
-| `overHit` | total goes over | **no** — no out-of-time edge; `prob_overHit` ships the market implied P(over) instead |
+| `spreadCovered` | favorite covers the spread | **yes** — `prob_underdogCovered = 1 − P(favorite covers)`, EV-based threshold |
+| `underdogWon` | underdog wins outright | **no** — `prob_underdogWon` ships the market implied probability |
+| `overHit` | total goes over | **no** — `prob_overHit` ships the market implied P(over) |
 
-All three are still trained (for the accuracy/calibration diagnostics on the
-Model Performance page); only the spread model's probability drives a bet signal.
+All three still train (for the diagnostics on the Model Performance page); only
+the spread model drives a bet.
 
-Performance on the **temporal** hold-out (last 20% of games by date, 339 games):
+Temporal hold-out (last 20% of played games ≈ 338):
 
-| | test AUC | verdict |
+| | test | verdict |
 |---|---|---|
-| Spread | ~0.58 | ships — +EV bet subset (~13 games) backtests around +17% theoretical ROI |
-| Moneyline | ~0.56 | **disabled** — worse-calibrated than the 33% base rate; "edges" anti-predictive; backtest −4% ROI |
-| Totals | ~0.50 | **disabled** — coin flip; worse than the P(over) base rate; backtest −5% ROI |
+| Spread | acc ~0.55 | ships — ~78 of 338 games clear the +EV bar; that subset ~66% cover, ~+27% theoretical ROI (in-sample to threshold selection) |
+| Moneyline | AUC ~0.56 | **disabled** — worse-calibrated than the 33% base rate; "edges" anti-predictive; backtest −4% ROI |
+| Totals | AUC ~0.50 | **disabled** — coin flip; backtest −5% ROI |
 
-The spread model is trained on "favorite covers" and its probability is then
-inverted (`1 − p`); see
-[`docs/SPREAD_MODEL_INVESTIGATION.md`](docs/SPREAD_MODEL_INVESTIGATION.md) for
-what that fix actually does and what remains fragile.
+`model_spread` is trained on "favorite covers"; the underdog probability is the
+complement, computed once. This is a change of convention, not a fix for a
+"backwards" model — see
+[`docs/SPREAD_MODEL_INVESTIGATION.md`](docs/SPREAD_MODEL_INVESTIGATION.md)
+(resolved).
 
 ### Feature engineering
 
@@ -117,27 +132,34 @@ degrades gracefully if it's missing.
 ### Run the full pipeline locally
 
 ```bash
-python build_and_train_pipeline.py     # update_schedule → create-nfl-historical → nfl-gather-data  (~5 min)
+python build_and_train_pipeline.py     # update_schedule → create-nfl-historical → nfl-gather-data
 ```
 
-Or step by step:
+Steps individually:
 
 ```bash
-python update_schedule.py              # refresh data_files/nfl_schedule_<year>.csv
-python create-nfl-historical.py        # nflverse schedules → data_files/nfl_games_historical.csv
-python nfl-gather-data.py              # feature engineering + train + predict → *_with_predictions.csv, model_metrics.json
+python update_schedule.py              # refresh data_files/nfl_schedule_<year>.csv  (network)
+python create-nfl-historical.py        # nflverse schedules → data_files/nfl_games_historical.csv  (network)
+python nfl-gather-data.py              # feature engineering + train + predict  (~90s, no network)
 python update_pbp_smart.py             # refresh the play-by-play LFS file (only downloads when stale)
 ```
 
 ### Retrain models
 
-- **Game models:** `python nfl-gather-data.py` (reads the committed
-  `nfl_games_historical.csv`; no network needed). Writes
+- **Game models:** `python nfl-gather-data.py` — reads the committed
+  `nfl_games_historical.csv`, no network. Writes
   `nfl_games_historical_with_predictions.csv`, `model_metrics.json`,
-  `model_feature_importances.csv`.
+  `model_feature_importances.csv`, `best_features_spread.txt`. Deterministic:
+  running it twice produces byte-identical output.
 - **Player-prop models:** `python player_props/train_models.py`
-  (add `--skip-aggregation` to reuse cached per-player game logs). Writes
-  `player_props/models/*.json` + `model_metrics.json`.
+  (`--skip-aggregation` reuses cached per-player game logs). Writes
+  `player_props/models/*.json` + `model_metrics.csv/json`.
+- **Player-prop predictions:** `python player_props/predict.py`
+  — predicts the next upcoming week of the current schedule and writes a
+  **write-once** frozen snapshot `player_props_predictions_week{W}_{season}.csv`
+  that `player_props/backtest.py` scores. Flags: `--week N` / `--season YYYY`,
+  and `--no-injuries` / `--no-weather` (the ESPN scrape and per-player
+  Open-Meteo lookups are slow and network-fragile).
 
 ### Add a feature or data source
 
@@ -168,15 +190,17 @@ python update_pbp_smart.py             # refresh the play-by-play LFS file (only
 
 | Workflow | Schedule | Purpose |
 |---|---|---|
-| `nightly-update.yml` | 03:00 UTC, Sep–Feb | refresh PBP, run pipeline, retrain prop models, commit results |
+| `nightly-update.yml` | 03:00 UTC, Sep–Feb | refresh PBP, run pipeline, retrain prop models, **freeze the week's prop snapshot**, `export_best_bets.py`, commit |
 | `weekly-model-performance.yml` | Mondays 06:00 UTC, Sep–Feb | backtest last week, persist `accuracy_results_*.json` |
 | `update-schedule.yml` | daily 06:00 UTC | refresh `nfl_schedule_<year>.csv` |
+| `tests.yml` | on push / PR | `pytest -q` on Python 3.12 and 3.13 |
 | `send_predictions_schedule.yml` | Wed evenings (in season) | email predictions |
 | `rss_test.yml` | on push | regenerate + link-check `alerts_feed.xml` |
 | `keep-alive.yml` | twice daily | ping the deployed app so Streamlit Cloud doesn't sleep |
 
-All pin Python 3.12 and check out with `lfs: false` (data is regenerated in the
-run). Trigger any of them manually from the Actions tab.
+Most pin Python 3.12 and check out with `lfs: false` (data is regenerated in the
+run). Trigger any manually from the Actions tab. The nightly commits back to
+`main` — `git fetch` before pushing local work.
 
 ---
 
@@ -206,7 +230,10 @@ manager (`st.secrets`), not a `.env` file.
 | `KeyError: Features not in index` | Feature lists drifted between training and the app — rerun `python nfl-gather-data.py`. |
 | Historical Data page shows garbage / no columns | The PBP file is **tab-separated**; every `read_csv` of it needs `sep='\t'`. |
 | Dashboard won't load / port in use | `streamlit run predictions.py --server.port 8502` (check for stragglers: `tasklist | findstr streamlit`). |
-| Betting sections show 2020 games | Fixed — each section reloads fresh data and filters `gameday > today`. Rerun with latest code. |
+| `model_metrics.json` shows terrible mid-season numbers | Fixed — `nfl-gather-data.py` now excludes the unplayed schedule (`_played` mask). Rerun with latest code. |
+| "Generate Predictions" button errors with `ModuleNotFoundError` | Fixed — it now runs `sys.executable`, not bare `python`. Rerun with latest code. |
+| No moneyline / totals bets anywhere | Expected — both models are disabled. Only the Spread Bets tab produces signals. |
+| Player-prop predictions all "high confidence" | Expected — prop lines are fixed tiers, not market lines. The weekly hit rate measures line placement, not edge. |
 | Slow load / high memory | Expected ~1.5 GB and 10–30 s on first load; use the Historical Data filters, and `@st.cache_data` handles re-runs. |
 
 ---

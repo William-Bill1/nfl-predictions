@@ -8,6 +8,24 @@ bottom.
 
 ## September 2026
 
+- **Pre-season readiness sweep.**
+  - `nfl-gather-data.py` now masks to `_played` games for training / the temporal
+    split / metrics / season-long team rates. The unplayed schedule (272 rows
+    once the season is set) had been landing in the test set and tanking every
+    metric (spread acc 0.55 → 0.40); the nightly had committed polluted
+    artifacts. Upcoming games still get probabilities written.
+  - "🔄 Generate Predictions" button + `?run_pipeline` trigger now run
+    `sys.executable` with a UTF-8 env (was bare `python` → wrong interpreter
+    under a venv-launched app → `ModuleNotFoundError`).
+  - `scripts/export_best_bets.py` reads `nfl_games_historical_with_predictions.csv`
+    directly (was reading a log only the running app writes → the nightly feed
+    was empty all season).
+  - Betting Performance tab no longer `UnboundLocalError`s when moneyline/totals
+    produce zero bets; `betting_recommendations_log.csv` truncated to header for
+    a clean 2026 start; Spread Bets tab filters `spread_line != 0`.
+  - Removed the disabled **Underdog Bets** and **Over/Under Bets** tabs (9 → 7).
+  - `nfl_schedule_2026.csv` populated (272 games).
+
 - **Player-prop weekly snapshots.** `player_props/predict.py` now targets a
   season/week (`--season` / `--week`, default: next upcoming week of the current
   schedule) instead of the hard-coded 2025 file, and writes a write-once frozen

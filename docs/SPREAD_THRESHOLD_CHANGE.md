@@ -1,3 +1,7 @@
+> **Superseded.** The spread threshold is now EV-based in P(underdog covers)
+> space (`spread_ev_threshold`, ~0.545, pushes excluded), on a temporal
+> hold-out. The fixed-50% / 52.4% history below no longer applies.
+
 # Spread Betting Threshold Change - December 13, 2025
 
 ## What Changed
