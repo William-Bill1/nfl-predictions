@@ -43,8 +43,15 @@ Step 2 — UI:
   Features and the probability write cover **all** rows so upcoming games get
   predictions; the train/test split, EV threshold, accuracy/MAE and season-long
   team-rate features use **played rows only**.
-- Train/test is a temporal split (`temporal_split`): last 20% of played rows by
-  (season, week). Not random — the earlier random split inflated every metric.
+- Split is a **three-way** temporal split (`temporal_split_3way`), ordered by
+  (season, week): earliest ~60% trains the models, next ~20% is the
+  **validation** slice that fits the EV / F1 betting thresholds, last ~20% is
+  the **test** slice for all reported metrics. The threshold is no longer picked
+  on the same games it is scored on — `model_metrics.json` carries both
+  `Spread_EV_Analysis` (validation) and `Spread_OOS_Test` (test). On current
+  data the honest out-of-sample spread result is ~break-even (~+3% ROI over
+  ~140 bets, 54% accuracy vs 52.4% breakeven), not the +25%+ the old 2-way
+  split implied.
 
 ## ML Models
 Three XGBoost classifiers (binary):

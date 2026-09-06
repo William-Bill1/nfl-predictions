@@ -50,6 +50,29 @@ def temporal_split(X, y, test_frac=0.2):
     return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
 
+def temporal_split_3way(X, y, val_frac=0.2, test_frac=0.2):
+    """Chronological train / validation / test hold-out.
+
+    Rows are assumed already ordered by (season, week). The last `test_frac` of
+    rows are the TEST set - used only for the reported metrics (accuracy, win
+    rate, ROI) and never touched while tuning. The `val_frac` immediately before
+    it is the VALIDATION set - used to pick the EV / F1 betting thresholds.
+    Everything earlier trains the models. Every validation game occurs on-or-
+    after every training game, and every test game on-or-after every validation
+    game, so the reported ROI is a genuine out-of-sample number rather than the
+    same slice the threshold was fitted on.
+    """
+    n = len(X)
+    n_test = int(np.ceil(n * test_frac))
+    n_val = int(np.ceil(n * val_frac))
+    cut_val = n - n_test - n_val
+    cut_test = n - n_test
+    return (
+        X.iloc[:cut_val], X.iloc[cut_val:cut_test], X.iloc[cut_test:],
+        y.iloc[:cut_val], y.iloc[cut_val:cut_test], y.iloc[cut_test:],
+    )
+
+
 def implied_prob(odds):
     """American moneyline odds -> implied win probability. odds == 0 -> NaN."""
     odds = np.array(odds, dtype=float)
@@ -343,19 +366,27 @@ def main():
     assert _season_week.equals(_season_week.sort_values(['season', 'week'], kind='stable')), \
         "nfl_games_historical.csv rows must be ordered by (season, week) for the temporal split"
 
-    X_train_spread, X_test_spread, y_spread_train, y_spread_test = temporal_split(X_spread[_played], y_spread[_played])
+    # Three-way chronological split: train (earliest ~60%) / validation (~20%) /
+    # test (latest ~20%). The EV + F1 betting thresholds are fitted on the
+    # VALIDATION slice; accuracy / win-rate / ROI are reported on the TEST slice
+    # the tuning never saw. (Was a 2-way split that picked the threshold on the
+    # same games it then scored - optimistic by construction.)
+    X_train_spread, X_val_spread, X_test_spread, y_spread_train, y_spread_val, y_spread_test = \
+        temporal_split_3way(X_spread[_played], y_spread[_played])
 
     X_moneyline = historical_game_level_data[best_features_moneyline].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_moneyline) - set(X_moneyline.columns):
         print(f"Warning: Dropped non-numeric features for moneyline: {set(best_features_moneyline) - set(X_moneyline.columns)}")
     y_moneyline = historical_game_level_data['underdogWon']
-    X_train_ml, X_test_ml, y_train_ml, y_test_ml = temporal_split(X_moneyline[_played], y_moneyline[_played])
+    X_train_ml, X_val_ml, X_test_ml, y_train_ml, y_val_ml, y_test_ml = \
+        temporal_split_3way(X_moneyline[_played], y_moneyline[_played])
 
     X_totals = historical_game_level_data[best_features_totals].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_totals) - set(X_totals.columns):
         print(f"Warning: Dropped non-numeric features for totals: {set(best_features_totals) - set(X_totals.columns)}")
     y_totals = historical_game_level_data[target_overunder]
-    X_train_tot, X_test_tot, y_train_tot, y_test_tot = temporal_split(X_totals[_played], y_totals[_played])
+    X_train_tot, X_val_tot, X_test_tot, y_train_tot, y_val_tot, y_test_tot = \
+        temporal_split_3way(X_totals[_played], y_totals[_played])
 
 
     print('y_spread_train value counts:')
@@ -461,16 +492,18 @@ def main():
     # Optimize thresholds using F1-score for all three models
     from sklearn.metrics import f1_score
 
-    # Moneyline threshold optimization
-    y_moneyline_proba = _blend_proba(model_moneyline, lgbm_moneyline, X_test_ml)
+    # Moneyline threshold optimization - fitted on the VALIDATION slice.
+    y_moneyline_proba_val = _blend_proba(model_moneyline, lgbm_moneyline, X_val_ml)
     thresholds = np.arange(0.1, 0.6, 0.02)
     f1_scores = []
     for threshold in thresholds:
-        y_pred_thresh = (y_moneyline_proba >= threshold).astype(int)
-        f1 = f1_score(y_test_ml, y_pred_thresh, zero_division=0)
+        y_pred_thresh = (y_moneyline_proba_val >= threshold).astype(int)
+        f1 = f1_score(y_val_ml, y_pred_thresh, zero_division=0)
         f1_scores.append(f1)
     best_threshold = thresholds[np.argmax(f1_scores)]
     optimal_moneyline_threshold = best_threshold
+    # Test-set probabilities, used for the reported diagnostics further down.
+    y_moneyline_proba = _blend_proba(model_moneyline, lgbm_moneyline, X_test_ml)
 
     def spread_ev_threshold(probs, y_true, min_edge=0.02):
         """EV-based spread threshold, computed in P(underdog covers) space.
@@ -519,26 +552,60 @@ def main():
         return analysis['threshold'], analysis
 
 
-    # EV threshold in the same convention the bets use: P(underdog covers), on the
-    # held-out test games, with pushes removed.
-    print("\nCalculating EV-based threshold for spread betting")
+    # EV threshold in the same convention the bets use: P(underdog covers).
+    # FITTED ON THE VALIDATION SLICE - never the test games it is later scored on.
+    print("\nCalculating EV-based threshold for spread betting (validation slice)")
+    _sp_val_idx = X_val_spread.index
+    _sp_prob_fav_val = _blend_proba(model_spread, lgbm_spread, X_val_spread)
+    _sp_prob_ud_val = 1.0 - _sp_prob_fav_val
+    _sp_true_ud_val = historical_game_level_data.loc[_sp_val_idx, 'underdogCovered'].to_numpy()
+    _sp_push_val = historical_game_level_data.loc[_sp_val_idx, 'spreadPush'].to_numpy().astype(bool)
+    optimal_spread_threshold, spread_ev_analysis = spread_ev_threshold(
+        _sp_prob_ud_val[~_sp_push_val], _sp_true_ud_val[~_sp_push_val], min_edge=0.02
+    )
+    spread_ev_analysis['slice'] = 'validation'
+
+    # Held-out test games (for the reported metrics below - the tuning above
+    # never saw these).
     _sp_test_idx = X_test_spread.index
     _sp_prob_ud_test = 1.0 - _sp_prob_fav_test
     _sp_true_ud_test = historical_game_level_data.loc[_sp_test_idx, 'underdogCovered'].to_numpy()
     _sp_push_test = historical_game_level_data.loc[_sp_test_idx, 'spreadPush'].to_numpy().astype(bool)
-    optimal_spread_threshold, spread_ev_analysis = spread_ev_threshold(
-        _sp_prob_ud_test[~_sp_push_test], _sp_true_ud_test[~_sp_push_test], min_edge=0.02
-    )
 
-    # Totals threshold optimization
-    y_totals_proba = _blend_proba(model_totals, lgbm_totals, X_test_tot)
+    # Apply the validation-fitted threshold to the untouched test slice - this is
+    # the honest out-of-sample answer for "does the spread edge survive?".
+    _oos_mask = ((_sp_prob_ud_test >= optimal_spread_threshold)
+                 & (_sp_prob_ud_test > 0.5238) & ~_sp_push_test)
+    _oos_n = int(_oos_mask.sum())
+    if _oos_n:
+        _oos_wins = int(_sp_true_ud_test[_oos_mask].sum())
+        _oos_losses = _oos_n - _oos_wins
+        _oos_roi = (_oos_wins * 90.91 - _oos_losses * 100) / (_oos_n * 100) * 100
+        spread_oos = {
+            'slice': 'test', 'threshold': float(optimal_spread_threshold),
+            'bets': _oos_n, 'wins': _oos_wins, 'losses': _oos_losses,
+            'accuracy_pct': _oos_wins / _oos_n * 100.0, 'roi_pct': _oos_roi,
+        }
+        print(f"   OUT-OF-SAMPLE (test slice, val-fitted threshold "
+              f"{optimal_spread_threshold:.3f}): {_oos_n} bets, "
+              f"{_oos_wins}-{_oos_losses}, {spread_oos['accuracy_pct']:.1f}% acc, "
+              f"{_oos_roi:+.1f}% ROI")
+    else:
+        spread_oos = {'slice': 'test', 'threshold': float(optimal_spread_threshold),
+                      'bets': 0}
+        print(f"   OUT-OF-SAMPLE (test slice): no bets clear the "
+              f"{optimal_spread_threshold:.3f} threshold")
+
+    # Totals threshold optimization - fitted on the VALIDATION slice.
+    y_totals_proba_val = _blend_proba(model_totals, lgbm_totals, X_val_tot)
     f1_scores_totals = []
     for threshold in thresholds:
-        y_pred_thresh = (y_totals_proba >= threshold).astype(int)
-        f1 = f1_score(y_test_tot, y_pred_thresh, zero_division=0)
+        y_pred_thresh = (y_totals_proba_val >= threshold).astype(int)
+        f1 = f1_score(y_val_tot, y_pred_thresh, zero_division=0)
         f1_scores_totals.append(f1)
     best_totals_threshold = thresholds[np.argmax(f1_scores_totals)]
     optimal_totals_threshold = best_totals_threshold
+    y_totals_proba = _blend_proba(model_totals, lgbm_totals, X_test_tot)
 
     # Predict probabilities for all data.
     # The spread model is trained on `spreadCovered` = P(the FAVORITE covers).
@@ -726,11 +793,10 @@ def main():
         lambda row: calculate_betting_return(row, 'totals'), axis=1
     )
 
-    # Betting simulation on the held-out TEST games only. Scoring the whole
-    # dataset (as this block did before) counts games the models trained on and
-    # makes the win rate / ROI look far better than they are. After the temporal
-    # split the three targets share one test index, so X_test_spread.index covers
-    # all of them.
+    # Betting simulation on the held-out TEST games only - the last ~20%, which
+    # neither model training nor threshold fitting touched. `pred_*_optimal` uses
+    # the validation-fitted `optimal_spread_threshold`, so the spread ROI here is
+    # a genuine out-of-sample figure. The three targets share one test index.
     test_games = historical_game_level_data.loc[X_test_spread.index]
     print(f"\nBetting Analysis (held-out test set: {len(test_games)} games):")
     print(f"Games with optimal underdog predictions: {(test_games['pred_underdogWon_optimal'] == 1).sum()}")
@@ -909,9 +975,11 @@ def main():
         "Optimal Totals Threshold": float(optimal_totals_threshold),
         "Spread Note": (
             "prob_underdogCovered = 1 - P(favorite covers) from model_spread "
-            "(a change of convention, not an inversion fix). Spread Accuracy/MAE "
-            "and the EV threshold are all in P(underdog covers) space on the "
-            "held-out test set with push games excluded."
+            "(a change of convention, not an inversion fix). Three-way temporal "
+            "split: models trained on the earliest ~60%, the EV threshold fitted "
+            "on the next ~20% (validation), and Spread Accuracy/MAE plus "
+            "Spread_OOS_Test below reported on the last ~20% (test) that tuning "
+            "never saw. All in P(underdog covers) space, pushes excluded."
         ),
         "Moneyline Note": (
             "prob_underdogWon is the market implied probability. model_moneyline "
@@ -927,7 +995,11 @@ def main():
     }
     # Include EV analysis if available
     try:
-        metrics['Spread_EV_Analysis'] = spread_ev_analysis
+        metrics['Spread_EV_Analysis'] = spread_ev_analysis      # validation slice (threshold fit)
+    except Exception:
+        pass
+    try:
+        metrics['Spread_OOS_Test'] = spread_oos                 # test slice (honest out-of-sample)
     except Exception:
         pass
     with open(path.join(DATA_DIR, 'model_metrics.json'), 'w') as f:

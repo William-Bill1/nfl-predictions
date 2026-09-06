@@ -38,6 +38,22 @@ bottom.
   `python betting_log.py` after the pipeline, so the Model Performance tab and
   weekly backtest get data without anyone opening the app.
 
+- **Honest spread backtest — threshold and evaluation are now separate
+  slices.** `nfl-gather-data.py` moved from a 2-way temporal split to
+  `temporal_split_3way` (60% train / 20% validation / 20% test). The EV
+  threshold and the moneyline/totals F1 thresholds are fitted on the
+  **validation** slice; Spread Accuracy/MAE and the betting simulation are
+  reported on the **test** slice the tuning never touched. `model_metrics.json`
+  now carries `Spread_EV_Analysis` (validation) *and* `Spread_OOS_Test`
+  (test). The result: the spread edge is **~break-even out-of-sample** — 141
+  bets, 76–65, 53.9% accuracy, +2.9% ROI (breakeven 52.4%), vs −5.2% on the
+  validation slice it fits and vs the +25%+ the old same-slice split implied.
+  Raw directional accuracy at a 0.5 cutoff is 48.2% on the test slice. The
+  Model Performance tab shows this as an `st.warning` ("treat spread bets as
+  roughly break-even, not a proven edge"). Models retrain on 60% now, so all
+  shipped probabilities / feature importances regenerated; pipeline still
+  byte-reproduces (`best_features_spread.txt` converged).
+
 - **Spread confidence tiers recalibrated + copy sweep.** New cutoffs
   (`SPREAD_TIER_CUTS`) Elite ≥0.65 / Strong 0.59–0.65 / Good 0.55–0.59 / Lean
   0.50–0.55, anchored to the real `prob_underdogCovered` signal distribution
