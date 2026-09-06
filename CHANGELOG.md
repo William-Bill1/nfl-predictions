@@ -38,6 +38,16 @@ bottom.
   `python betting_log.py` after the pipeline, so the Model Performance tab and
   weekly backtest get data without anyone opening the app.
 
+- **Prop roster filter (opt-in, `PROP_ROSTER_FILTER=1`).** `predict.py` can now
+  drop players who are no longer on an NFL roster before it picks "recent
+  starters", via `nfl_data_py.import_seasonal_rosters`. Left **off by default**:
+  the pre-season nflverse roster feed is unreliable this early (players listed
+  on the wrong team, veterans like DeAndre Hopkins / Tyler Lockett missing
+  entirely), so an always-on filter would cut real Week 1 starters. The
+  plumbing (`load_active_roster`, `get_recent_starters(roster_ids=...)`, a
+  size-sanity guard, tests) is ready for when the real rosters publish. Week 1
+  2026 snapshot left as-is (unfiltered).
+
 - **Player-prop honesty pass.** `player_props/models.py` now holds out the most
   recent season (temporal split) instead of a random one, so `model_metrics.csv`
   is out-of-time. Each record gains `base_rate` / `roc_auc` / `reliable`; only
