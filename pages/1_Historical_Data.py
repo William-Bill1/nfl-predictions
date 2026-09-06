@@ -358,7 +358,7 @@ if 'historical_data' not in st.session_state or st.session_state.get('historical
                 except Exception:
                     pass
                 try:
-                    st.experimental_rerun()
+                    st.rerun()
                 except Exception:
                     pass
         except Exception as e:
