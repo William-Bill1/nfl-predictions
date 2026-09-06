@@ -33,3 +33,47 @@ jobs:
 
       - name: Run tests
         run: pytest -q
+
+  pipeline-smoke:
+    # Exercises the batch pipeline itself (pytest never does). Runs
+    # nfl-gather-data.py against the committed nfl_games_historical.csv - no
+    # network - then sanity-checks the outputs and asserts the run is
+    # deterministic (same artifacts on a second run).
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run the model pipeline
+        run: python nfl-gather-data.py
+
+      - name: Sanity-check the outputs
+        run: python scripts/check_pipeline_outputs.py
+
+      - name: Assert determinism (second run == first run)
+        run: |
+          for f in nfl_games_historical_with_predictions.csv model_metrics.json best_features_spread.txt; do
+            cp "data_files/$f" "/tmp/$f.run1"
+          done
+          python nfl-gather-data.py
+          for f in nfl_games_historical_with_predictions.csv model_metrics.json best_features_spread.txt; do
+            if ! diff -q "/tmp/$f.run1" "data_files/$f" > /dev/null; then
+              echo "::error::$f changed between two identical pipeline runs (non-deterministic)"
+              diff "/tmp/$f.run1" "data_files/$f" | head -40
+              exit 1
+            fi
+          done
+          echo "pipeline is deterministic across two runs"

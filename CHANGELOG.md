@@ -8,6 +8,24 @@ bottom.
 
 ## September 2026
 
+- **Removed dead `st.experimental_rerun()` + deprecation cleanup.**
+  `st.experimental_rerun()` was removed from Streamlit in 1.37; the app pins
+  1.62, so all 8 call sites (7 in `predictions.py`, 1 in
+  `pages/1_Historical_Data.py`) were an `AttributeError` waiting on a button
+  press — swapped to `st.rerun()`. Replaced `pd.Timedelta(days=7)` /
+  `pd.Timedelta(hours=12)` with `datetime.timedelta` (the pandas form raises a
+  numpy "generic unit" `DeprecationWarning` with numpy 2.x).
+
+- **CI pipeline smoke test.** New `pipeline-smoke` job in `tests.yml` runs
+  `python nfl-gather-data.py` against the committed
+  `nfl_games_historical.csv` (no network), then `scripts/check_pipeline_outputs.py`
+  sanity-checks the artifacts (required columns, probabilities in [0,1], a
+  non-empty + non-degenerate signal set, the `Spread_EV_Analysis` /
+  `Spread_OOS_Test` keys), and finally asserts the run is **deterministic** —
+  a second run must byte-reproduce `nfl_games_historical_with_predictions.csv`,
+  `model_metrics.json` and `best_features_spread.txt`. `pytest -q` never
+  exercised the batch pipeline.
+
 - **Pre-season readiness sweep.**
   - `nfl-gather-data.py` now masks to `_played` games for training / the temporal
     split / metrics / season-long team rates. The unplayed schedule (272 rows

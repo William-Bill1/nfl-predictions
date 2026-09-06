@@ -41,7 +41,7 @@ except Exception as _e:
     except Exception:
         pass
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from streamlit.components.v1 import html as components_html
 import re
 import requests
@@ -842,7 +842,7 @@ def home_page():
                             except Exception:
                                 pass
                             try:
-                                st.experimental_rerun()
+                                st.rerun()
                             except Exception:
                                 pass
                         else:
@@ -1858,7 +1858,7 @@ def home_page():
                         pass
                     # Re-run the Streamlit script so the fresh data is picked up in UI
                     try:
-                        st.experimental_rerun()
+                        st.rerun()
                     except Exception:
                         # If rerun isn't allowed in this context, just break and allow
                         # the user to interact/refresh manually.
@@ -2171,7 +2171,7 @@ def home_page():
                             except Exception:
                                 pass
                             try:
-                                st.experimental_rerun()
+                                st.rerun()
                             except Exception:
                                 pass
                     except Exception as e:
@@ -2358,11 +2358,11 @@ def home_page():
                     with col1:
                         if st.button("Red Zone", key='quickfilter_redzone'):
                             st.session_state['quickfilter_yardline_100'] = (0, 20)
-                            st.experimental_rerun()
+                            st.rerun()
                     with col2:
                         if st.button("2-Minute Drill", key='quickfilter_2min'):
                             st.session_state['quickfilter_game_seconds_remaining_lt'] = 120
-                            st.experimental_rerun()
+                            st.rerun()
 
                     with st.expander("🛠️ Dev Tools (dev only)", expanded=False):
                         if st.button("Clear Quick Filters", key='dev_clear_quickfilters'):
@@ -2374,7 +2374,7 @@ def home_page():
                             ]:
                                 st.session_state.pop(k, None)
                             st.success("Cleared quick filters and dev filter keys")
-                            st.experimental_rerun()
+                            st.rerun()
 
                         if st.button("Set Example Filters", key='dev_set_example_filters'):
                             st.session_state['quickfilter_yardline_100'] = (0, 20)
@@ -2382,7 +2382,7 @@ def home_page():
                             st.session_state['filter_epa_range'] = (-1.5, 1.5)
                             st.session_state['filter_wp_range'] = (0.25, 0.75)
                             st.success("Applied example quick filters")
-                            st.experimental_rerun()
+                            st.rerun()
                 except Exception:
                     # Non-fatal: continue even if enhanced UI fails
                     pass
@@ -2933,7 +2933,7 @@ def home_page():
                     display_cols.append('favored_team')
             predictions_df['gameday'] = pd.to_datetime(predictions_df['gameday'], errors='coerce')
             today = pd.to_datetime(datetime.now().date())
-            next_week = today + pd.Timedelta(days=7)
+            next_week = today + timedelta(days=7)  # stdlib: avoids pandas' numpy-generic-unit DeprecationWarning
             mask = (predictions_df['gameday'] >= today) & (predictions_df['gameday'] < next_week)
             predictions_df = predictions_df[mask]
 

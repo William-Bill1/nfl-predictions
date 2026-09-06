@@ -9,7 +9,7 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 import xgboost as xgb
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -141,7 +141,7 @@ def load_schedule(season=None, week=None):
         return wk
 
     now_utc = pd.Timestamp.now(tz='UTC')
-    cutoff = now_utc - pd.Timedelta(hours=12)
+    cutoff = now_utc - timedelta(hours=12)  # stdlib: avoids pandas' numpy-generic-unit DeprecationWarning
     upcoming = df[df['game_date'] >= cutoff].copy()
     if not upcoming.empty:
         target_week = int(upcoming['week'].min())
