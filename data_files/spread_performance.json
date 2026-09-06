@@ -1,0 +1,60 @@
+{
+  "generated_at": "2026-09-06T13:29:00",
+  "source": "betting_recommendations_log.csv",
+  "note": "Spread bets only, -110 (win +90.91 / loss -100 / push 0). ROI = profit / (settled non-push bets * 100).",
+  "overall": {
+    "pending": 9,
+    "settled": 0,
+    "win": 0,
+    "loss": 0,
+    "push": 0,
+    "win_rate": null,
+    "profit": 0.0,
+    "roi_pct": null
+  },
+  "by_week": [
+    {
+      "week": 1,
+      "pending": 9,
+      "settled": 0,
+      "win": 0,
+      "loss": 0,
+      "push": 0,
+      "win_rate": null,
+      "profit": 0.0,
+      "roi_pct": null
+    }
+  ],
+  "by_tier": {
+    "Elite": {
+      "pending": 1,
+      "settled": 0,
+      "win": 0,
+      "loss": 0,
+      "push": 0,
+      "win_rate": null,
+      "profit": 0.0,
+      "roi_pct": null
+    },
+    "Strong": {
+      "pending": 1,
+      "settled": 0,
+      "win": 0,
+      "loss": 0,
+      "push": 0,
+      "win_rate": null,
+      "profit": 0.0,
+      "roi_pct": null
+    },
+    "Good": {
+      "pending": 7,
+      "settled": 0,
+      "win": 0,
+      "loss": 0,
+      "push": 0,
+      "win_rate": null,
+      "profit": 0.0,
+      "roi_pct": null
+    }
+  }
+}

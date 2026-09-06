@@ -807,6 +807,41 @@ def home_page():
     except Exception:
         pass
 
+    # Honest, up-front reality check on the one live signal. The spread model's
+    # EV threshold is fitted on a validation slice and scored on a later
+    # held-out slice; that out-of-sample result is roughly break-even.
+    try:
+        _mpath = path.join(DATA_DIR, 'model_metrics.json')
+        _oos = {}
+        if os.path.exists(_mpath):
+            with open(_mpath) as _f:
+                _oos = (json.load(_f).get('Spread_OOS_Test') or {})
+        _std = {}
+        _spath = path.join(DATA_DIR, 'spread_performance.json')
+        if os.path.exists(_spath):
+            with open(_spath) as _f:
+                _std = json.load(_f).get('overall') or {}
+        if _oos.get('bets'):
+            _msg = (
+                f"**Reality check.** The spread model is the only live bet signal, and out-of-sample "
+                f"it is roughly break-even: **{_oos['bets']} test bets, {_oos.get('accuracy_pct', 0):.1f}% "
+                f"correct, {_oos.get('roi_pct', 0):+.1f}% ROI** (breakeven 52.4%). Treat these picks as "
+                f"market context, not a proven edge — see the Model Performance tab."
+            )
+            if _std.get('settled'):
+                _wr = _std.get('win_rate')
+                _roi = _std.get('roi_pct')
+                _wr_str = 'n/a' if _wr is None else f'{_wr:.0%}'
+                _roi_str = 'n/a' if _roi is None else f'{_roi:+.1f}%'
+                _push_str = f"–{_std['push']}P" if _std.get('push') else ''
+                _msg += (
+                    f"\n\nSeason to date (logged picks): "
+                    f"**{_std['win']}–{_std['loss']}{_push_str}, {_wr_str} win, {_roi_str} ROI**."
+                )
+            st.warning(_msg)
+    except Exception:
+        pass
+
 
     # If the app was opened with an alert query param, render the per-item alert page
     # Use the stable API `st.query_params` instead of the experimental function.
@@ -3461,7 +3496,7 @@ def home_page():
                     st.write("#### 🎯 Performance by Confidence Tier")
 
                     tier_stats = []
-                    for tier in ['Elite', 'Strong', 'Good', 'Standard']:
+                    for tier in ['Elite', 'Strong', 'Good', 'Lean']:  # match betting_log._spread_tier
                         tier_bets = filtered_log[
                             (filtered_log['confidence_tier'] == tier) & 
                             (filtered_log['bet_result'] != 'pending')

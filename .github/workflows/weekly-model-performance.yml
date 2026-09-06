@@ -46,27 +46,42 @@ jobs:
           "
         continue-on-error: true
 
+      - name: Grade finished spread bets
+        run: |
+          # Belt-and-suspenders: the nightly already runs this, but grade here
+          # too against whatever predictions CSV is on main so a missed nightly
+          # doesn't leave finished bets ungraded before the weekly rollup.
+          python betting_log.py
+        continue-on-error: true
+
+      - name: Weekly spread scorecard
+        run: |
+          echo "Rolling up the spread betting log..."
+          python scripts/weekly_spread_report.py
+        continue-on-error: true
+
       - name: Upload accuracy results
         uses: actions/upload-artifact@v4
         with:
           name: model-accuracy-week-${{ github.run_number }}
           path: |
             data_files/accuracy_results_*.json
+            data_files/spread_performance.json
             player_props/models/model_metrics.json
           retention-days: 30
 
-      - name: Commit accuracy results
+      - name: Commit accuracy + spread results
         if: github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add data_files/accuracy_results_*.json
+          git add data_files/accuracy_results_*.json data_files/spread_performance.json data_files/betting_recommendations_log.csv
 
           if git diff --staged --quiet; then
-            echo "No new accuracy results to commit"
+            echo "No new results to commit"
           else
-            git commit -m "Weekly model accuracy update [skip ci]"
+            git commit -m "Weekly model + spread performance update [skip ci]"
             git push
           fi
         continue-on-error: true
@@ -75,3 +90,5 @@ jobs:
         run: |
           echo "Weekly model performance check complete."
           ls -la data_files/accuracy_results_*.json 2>/dev/null || echo "No accuracy result files found."
+          echo "--- spread scorecard ---"
+          cat data_files/spread_performance.json 2>/dev/null || echo "No spread_performance.json"
