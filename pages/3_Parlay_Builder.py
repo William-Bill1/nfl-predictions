@@ -39,9 +39,10 @@ def load_player_props_predictions():
                 df['display_name'] = df['display_name'].fillna(df['player_name'])  # Fallback to short_name if no display_name
             df = df.drop('short_name', axis=1, errors='ignore')
 
-    # Ensure opponent_def_rank column exists (for backward compatibility)
-    if 'opponent_def_rank' not in df.columns:
-        df['opponent_def_rank'] = 16.0  # Default to league average
+    # opponent_def_rank was removed (leaky, constant); newer snapshots carry
+    # model_reliable instead.
+    if 'model_reliable' not in df.columns:
+        df['model_reliable'] = True
 
     # Ensure injury_note column exists (for backward compatibility)
     if 'injury_note' not in df.columns:

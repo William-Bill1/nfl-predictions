@@ -8,7 +8,7 @@ Workflow:
     1. Load play-by-play data (historical CSV from data_files/)
     2. Aggregate to game-level player stats (passing, rushing, receiving)
     3. Calculate exponentially-weighted rolling averages
-    4. Add matchup features (is_home, days_rest, opponent_def_rank)
+    4. Add matchup features (is_home, days_rest)
     5. Train XGBoost + LightGBM ensemble for each prop category
     6. Save models to player_props/models/ and metrics to player_props/models/model_metrics.json
 """
@@ -142,7 +142,7 @@ def _aggregate_and_roll(pbp: pd.DataFrame) -> dict:
         print(f"Saved {len(receiving_df):,} receiving records -> {out}")
 
     # ------------------------------------------------------------------ #
-    # 4. Matchup features (is_home, days_rest, opponent_def_rank)
+    # 4. Matchup features (is_home, days_rest)
     # ------------------------------------------------------------------ #
     if not passing_df.empty:
         passing_df = add_matchup_features(passing_df, 'passing', all_stats)

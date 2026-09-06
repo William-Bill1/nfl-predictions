@@ -176,9 +176,27 @@ def load_player_stats():
     return stats
 
 
+def _load_reliability():
+    """model_name -> bool, from the training metrics (temporal hold-out).
+
+    TD props and any model with no out-of-time edge come back False. Missing
+    file / key defaults to False so nothing is over-sold.
+    """
+    import json
+    path = MODELS_DIR / 'model_metrics.json'
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return {m['model_name']: bool(m.get('reliable', False))
+                for m in data.get('models', [])}
+    except Exception:
+        return {}
+
+
 def load_models():
     """Load trained XGBoost models."""
     models = {}
+    reliability = _load_reliability()
     
     # Map model names to their configurations
     model_configs = [
@@ -258,7 +276,8 @@ def load_models():
                 'stat_type': stat_type,
                 'stat_col': stat_col,
                 'line_type': line_type,
-                'line_value': PROP_LINES[prop_type][line_type]
+                'line_value': PROP_LINES[prop_type][line_type],
+                'reliable': reliability.get(model_name, False),
             }
         else:
             print(f"⚠️  Model {model_name} not found, skipping")
@@ -454,12 +473,9 @@ def get_player_features(stats_df, player_name, team, prop_type, opponent=None, i
     if pd.isna(features[f'{stat_col}_L3']):
         return None
     
-    # Add matchup and situational features
-    if opponent and all_stats:
-        features['opponent_def_rank'] = get_opponent_defense_rank(opponent, stat_type, all_stats)
-    else:
-        features['opponent_def_rank'] = 16  # Default league average
-    
+    # Add matchup and situational features. (opponent_def_rank was removed - the
+    # training-side feature was a leaky dataset-wide average that clipped to a
+    # constant, so it is no longer part of the model schema.)
     features['is_home'] = 1 if is_home else 0
     
     # Calculate days rest (simplified - would need player's last game date for accuracy)
@@ -469,48 +485,6 @@ def get_player_features(stats_df, player_name, team, prop_type, opponent=None, i
         features['days_rest'] = 7  # Default
     
     return features, latest, player_stats
-
-
-def get_opponent_defense_rank(opponent, stat_type, all_stats):
-    """
-    Calculate opponent's defensive ranking for a stat type.
-    Lower rank = better defense (harder matchup).
-    """
-    if stat_type == 'passing':
-        # Get all QBs' passing yards against this defense
-        stats_df = all_stats.get('passing')
-        if stats_df is None or stats_df.empty:
-            return 16  # Default to league average
-        
-        # Calculate average passing yards allowed by each defense
-        avg_allowed = stats_df.groupby('opponent', observed=True)['passing_yards'].mean()
-        # Rank defenses (1 = stingiest, 32 = most generous)
-        defense_ranks = avg_allowed.rank(method='min')
-        return defense_ranks.get(opponent, 16)  # Default to league average
-    
-    elif stat_type == 'rushing':
-        # Get all RBs' rushing yards against this defense
-        stats_df = all_stats.get('rushing')
-        if stats_df is None or stats_df.empty:
-            return 16
-        
-        # Calculate average rushing yards allowed by each defense
-        avg_allowed = stats_df.groupby('opponent', observed=True)['rushing_yards'].mean()
-        defense_ranks = avg_allowed.rank(method='min')
-        return defense_ranks.get(opponent, 16)
-    
-    elif stat_type == 'receiving':
-        # Get all WRs/TEs' receiving yards against this defense
-        stats_df = all_stats.get('receiving')
-        if stats_df is None or stats_df.empty:
-            return 16
-        
-        # Calculate average receiving yards allowed by each defense
-        avg_allowed = stats_df.groupby('opponent', observed=True)['receiving_yards'].mean()
-        defense_ranks = avg_allowed.rank(method='min')
-        return defense_ranks.get(opponent, 16)
-    
-    return 16  # Default middle rank
 
 
 def calculate_days_rest(game_date):
@@ -913,7 +887,7 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             'prob_under': 1 - prob_over,
                             'recommendation': 'OVER' if prob_over >= MIN_CONFIDENCE else 'UNDER',
                             'confidence': max(prob_over, 1 - prob_over),
-                            'opponent_def_rank': features.get('opponent_def_rank', 16),  # Add defensive ranking
+                            'model_reliable': model_info.get('reliable', False),
                             'avg_L3': features.get(f"{model_info['stat_col']}_L3"),
                             'avg_L5': features.get(f"{model_info['stat_col']}_L5"),
                             'avg_L10': features.get(f"{model_info['stat_col']}_L10")

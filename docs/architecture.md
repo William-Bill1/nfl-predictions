@@ -71,14 +71,21 @@ underdog-covers space. This is a change of convention, not a fix for a
 (favorite-covers probability fed into underdog-covers bet logic).
 
 ### Player Props (`player_props/`)
-XGBoost + LightGBM soft-voting ensembles per (stat, player-tier). Models in
-`player_props/models/*.json`. `predict.py` targets `--season`/`--week` (default:
-next upcoming week of the current schedule) and writes a **write-once** frozen
-snapshot `player_props_predictions_week{W}_{season}.csv`; `backtest.py` scores
-that snapshot, so `run_weekly_accuracy_check` is a genuine prospective test.
-`train_models.py` still uses a *random* split, so `model_metrics.csv` is
-optimistic. Prop lines are fixed tiers (275, 250, …) not market lines — the
-weekly hit rate reflects line placement, not betting edge.
+XGBoost + LightGBM soft-voting ensembles per (stat, player-tier) at training
+time; **inference loads the XGB `.json` only** (the `_lgbm.txt` sidecars are
+git-ignored). `predict.py` targets `--season`/`--week` (default: next upcoming
+week of the current schedule) and writes a **write-once** frozen snapshot
+`player_props_predictions_week{W}_{season}.csv`; `backtest.py` scores that
+snapshot, so `run_weekly_accuracy_check` is a genuine prospective test.
+`models.py` uses a **temporal hold-out** (most recent season) — each metrics
+record carries `base_rate`, `roc_auc` and a `reliable` flag; only ~5/26 models
+clear an out-of-time bar (AUC ≥ 0.58 and accuracy above the majority base rate).
+All TD props are force-flagged `reliable = False` (every tier collapses to the
+same 0.5 line and they are ~coin-flip out-of-time); `predict.py` carries the
+flag through as `model_reliable` and the UI marks unreliable rows "display
+only". `opponent_def_rank` was removed (a dataset-wide leaky average that
+clipped to a constant). Prop lines are still fixed tiers (275, 250, …) not
+market lines — the weekly hit rate reflects line placement, not betting edge.
 
 ## Feature Engineering
 All features are pre-game only (zero data leakage):
