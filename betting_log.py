@@ -41,12 +41,13 @@ LOSS_PROFIT = -100.0
 
 
 def _spread_tier(prob: float) -> str:
-    """Matches predictions.py::add_spread_confidence_tiers."""
-    if prob >= 0.60:
+    """Mirror of predictions.py::SPREAD_TIER_CUTS (kept local so this stays
+    importable without the Streamlit module)."""
+    if prob >= 0.65:
         return "Elite"
-    if prob >= 0.55:
+    if prob >= 0.59:
         return "Strong"
-    if prob >= 0.52:
+    if prob >= 0.55:
         return "Good"
     return "Lean"
 

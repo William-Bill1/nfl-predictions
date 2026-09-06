@@ -76,8 +76,10 @@ are backwards / -90%→+60% ROI" framing was a variable mix-up, not a model bug.
 - **Moneyline / Totals**: `pred_underdogWon_optimal` and `pred_overHit_optimal`
   are hard-coded to 0. `prob_underdogWon` / `prob_overHit` are the market
   implied probabilities, not model output.
-- Spread confidence tiers (`add_spread_confidence_tiers`): Elite ≥0.60,
-  Strong 0.55–0.60, Good 0.52–0.55, Lean 0.50–0.52.
+- Spread confidence tiers (`add_spread_confidence_tiers` / `SPREAD_TIER_CUTS`):
+  Elite ≥0.65, Strong 0.59–0.65, Good 0.55–0.59, Lean 0.50–0.55 (anchored to the
+  signal distribution; Lean is below the ~0.545 EV threshold). `betting_log`
+  and `emailer.py` mirror these.
 
 ### UI Patterns
 ```python

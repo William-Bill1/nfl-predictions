@@ -54,9 +54,12 @@ Three XGBoost classifiers (binary):
 | Moneyline | trained on `underdogWon`; **not shipped** — ships market implied prob (no out-of-time edge) | — | — |
 | Totals | trained on `overHit`; **not shipped** — ships market implied P(over) (coin flip out-of-time) | — | — |
 
-Spread confidence tiers (`add_spread_confidence_tiers`): Elite ≥0.60, Strong
-0.55–0.60, Good 0.52–0.55, Lean 0.50–0.52. The EV threshold (`spread_ev_threshold`,
-in P(underdog covers) space, pushes excluded) is ~0.545.
+Spread confidence tiers (`add_spread_confidence_tiers`, `SPREAD_TIER_CUTS`):
+Elite ≥0.65, Strong 0.59–0.65, Good 0.55–0.59, Lean 0.50–0.55. Anchored to the
+actual `prob_underdogCovered` signal distribution (median ≈0.57, p90 ≈0.70).
+The EV threshold (`spread_ev_threshold`, in P(underdog covers) space, pushes
+excluded) is ~0.545, so the Lean band sits mostly below it — shown for context,
+not a bet. `betting_log._spread_tier` and `emailer.py` mirror these cutoffs.
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 
