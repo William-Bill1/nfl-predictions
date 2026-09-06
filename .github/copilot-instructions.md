@@ -72,7 +72,10 @@ are backwards / -90%→+60% ROI" framing was a variable mix-up, not a model bug.
 - **Spread** is the only live signal. `pred_spreadCovered_optimal == 1` when
   `prob_underdogCovered >= optimal_spread_threshold` (EV-based, ~0.545, computed
   by `spread_ev_threshold` in P(underdog covers) space with pushes excluded) AND
-  `ev_spread > 0`.
+  `ev_spread > 0`. Threshold is fitted on the **validation** slice of the
+  three-way `temporal_split_3way` (60/20/20); the reported ROI/accuracy come
+  from the **test** slice. `model_metrics.json` → `Spread_OOS_Test` is the
+  honest number (~break-even on current data).
 - **Moneyline / Totals**: `pred_underdogWon_optimal` and `pred_overHit_optimal`
   are hard-coded to 0. `prob_underdogWon` / `prob_overHit` are the market
   implied probabilities, not model output.

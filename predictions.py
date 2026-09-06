@@ -3898,15 +3898,28 @@ def home_page():
                     }
                 )
 
+                # Honest out-of-sample spread result: EV threshold fitted on a
+                # validation slice, then applied to a later test slice it never saw.
+                oos = metrics.get('Spread_OOS_Test') or {}
+                ev = metrics.get('Spread_EV_Analysis') or {}
+                if oos.get('bets'):
+                    st.warning(
+                        f"**Spread edge, out-of-sample:** applying the "
+                        f"validation-fitted {oos['threshold']:.1%} threshold to a "
+                        f"later, untouched test slice gives **{oos['bets']} bets, "
+                        f"{oos['wins']}–{oos['losses']}, {oos['accuracy_pct']:.1f}% "
+                        f"accuracy, {oos['roi_pct']:+.1f}% ROI** (breakeven is 52.4%). "
+                        f"On the validation slice it fits, the same rule is "
+                        f"{ev.get('theoretical_roi_pct', float('nan')):+.1f}% ROI. "
+                        f"Treat spread bets as roughly break-even, not a proven edge."
+                    )
+
                 # Add helpful explanation
                 st.info("""
                 **📌 Quick Guide:**
-                - **Accuracy**: How often the model correctly predicts outcomes on unseen data
-                - **MAE**: Average prediction error (lower = better calibration)
-                - **Betting Threshold**: Minimum probability to trigger a bet (optimized for F1-score, NOT 50%)
-
-                💡 **Why thresholds aren't 50%**: These are optimized to maximize the F1-score (balance of precision and recall), 
-                which produces better long-term betting results than simple 50% cutoffs.
+                - **Accuracy**: how often the model is right on the held-out test slice (the last ~20% by date, never trained or tuned on)
+                - **MAE**: average prediction error (lower = better calibration)
+                - **Betting Threshold**: minimum probability to trigger a bet, fitted on a separate validation slice
                 """)
 
         else:
