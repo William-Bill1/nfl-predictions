@@ -3,16 +3,19 @@
 ## Overview
 Multi-page Streamlit app for NFL betting analytics. XGBoost+LightGBM models for
 spread / moneyline / totals plus a per-stat player-prop system. All data/models
-are batch-computed into `data_files/`; no runtime API calls except ESPN score
-fetching. **Only the spread model drives a bet signal** — moneyline and totals
-show market-implied probabilities (their models have no out-of-time edge and are
-kept for diagnostics only).
+are batch-computed into `data_files/`; the dashboard makes **no runtime API
+calls** (final scores come from the regenerated predictions CSV). **Only the
+spread model drives a bet signal** — and out-of-sample it is ~break-even
+(`model_metrics.json` → `Spread_OOS_Test`); moneyline and totals show
+market-implied probabilities (their models have no out-of-time edge and are kept
+for diagnostics only).
 
 ## Architecture & Data Flow
 **Data Pipeline (`python build_and_train_pipeline.py`, ~90s, deterministic)**:
 1. `update_schedule.py` → `nfl_schedule_<year>.csv`
 2. `create-nfl-historical.py` → `nfl_games_historical.csv` (all games incl. the unplayed schedule)
-3. `nfl-gather-data.py` → features on all rows, temporal train/test on **played** rows, predict all rows → `nfl_games_historical_with_predictions.csv`, `model_metrics.json`, `best_features_spread.txt`
+3. `nfl-gather-data.py` → features on all rows, **3-way temporal split** on **played** rows (`temporal_split_3way`, 60 train / 20 validation / 20 test), predict all rows → `nfl_games_historical_with_predictions.csv`, `model_metrics.json`, `best_features_spread.txt`
+4. `betting_log.py` (nightly) → append/grade `betting_recommendations_log.csv`; `scripts/weekly_spread_report.py` (weekly) → `spread_performance.json`
 
 **UI Layer**:
 - `predictions.py` → Main dashboard, 7 tabs (Underdog Bets / Over-Under Bets removed with the disabled models)
@@ -135,7 +138,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   - training only: `python nfl-gather-data.py` (no network; byte-reproducible)
   - retrain prop models: `python player_props/train_models.py --skip-aggregation`
   - prop predictions + weekly freeze: `python player_props/predict.py`
-    (`--week N` / `--season YYYY` / `--no-injuries --no-weather`)
+    (`--week N` / `--season YYYY` / `--no-injuries --no-weather` / `--no-freeze`;
+    env `PROP_ROSTER_FILTER=1` to drop off-roster players, opt-in)
+  - results tracking: `python betting_log.py` then `python scripts/weekly_spread_report.py`
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
@@ -168,13 +173,13 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 
   Developer notes:
   - Models are loaded with `@st.cache_data` to avoid repeated heavy loads.
-  - Feature extraction uses L3/L5/L10 rolling stats plus auxiliary features (TDs, attempts, completions, targets) and basic matchup defaults (`opponent_def_rank`, `is_home`, `days_rest`).
+  - Feature extraction uses L3/L5/L10 rolling stats plus auxiliary features (TDs, attempts, completions, targets) and matchup defaults (`is_home`, `days_rest`). `opponent_def_rank` was removed (leaky + constant).
   - Retrain prop models with `python player_props/train_models.py`; generate/freeze predictions with `python player_props/predict.py`.
   - **Tier Selection Pattern**: Choose model tier based on season average performance (e.g., elite_qb for ≥280 passing yards).
   - **Fallback Pattern**: Use Laplace-smoothed historical hit rate (games_over + 1) / (total_games + 2) when model unavailable.
   - **Position-Based UI**: Auto-suggest stat categories based on player position (QB: Passing Yards/TDs, RB: Rushing/Receiving, WR/TE: Receiving).
 - **Parlay Builder**: In `pages/3_🎲_Parlay_Builder.py`, combine bets from predictions_df, calculate parlay odds = product of individual probabilities
-- **Betting logic**: Confidence tiers—Elite (≥65%), Strong (60-65%), Good (55-60%), Standard (50-55%).
+- **Betting logic**: spread confidence tiers (`SPREAD_TIER_CUTS`, mirrored by `betting_log._spread_tier` / `emailer.py`) — Elite ≥0.65, Strong 0.59-0.65, Good 0.55-0.59, Lean 0.50-0.55 (Lean sits below the ~0.545 EV threshold).
 - **File Path Handling**: Use `from pathlib import Path; root = Path(__file__).parent.parent; sys.path.append(str(root))` for project-relative imports.
 - **DataFrame Optimization**: Immediately convert dtypes after CSV loads: `df['float_col'].astype('float32')`, `df['int_col'].astype('Int32')` to reduce memory 50%.
 - **UI Layout Patterns**: Use `col1, col2 = st.columns([2,1])` for asymmetric inputs, dynamic dataframe heights with `height=get_dataframe_height(df)`.
@@ -185,9 +190,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **PBP file** (`nfl_play_by_play_historical.csv.gz`) is TAB-separated — every `read_csv` needs `sep='\t'`.
 
 ## Integration Points
-- **External data**: All historical/play-by-play data is pre-fetched and stored in `data_files/`. No runtime API calls except ESPN scores for completed games.
-- **Feature importances/metrics**: Stored in `model_feature_importances.csv` and `model_metrics.json`.
-- **Automated workflows**: GitHub Actions run nightly updates during NFL season (Sept-Feb), including ESPN scores, smart play-by-play data updates, model predictions, and nightly player prop retraining. A new weekly workflow also runs model backtests and persists accuracy reports.
+- **External data**: All historical/play-by-play data is pre-fetched and stored in `data_files/`. The dashboard makes no runtime API calls; completed-game scores come from the regenerated predictions CSV (nflverse), graded by `betting_log.grade_pending`.
+- **Feature importances/metrics**: Stored in `model_feature_importances.csv` and `model_metrics.json` (spread eval: `Spread_EV_Analysis` = validation slice, `Spread_OOS_Test` = held-out test slice).
+- **Automated workflows**: `nightly-update.yml` (Sept-Feb) — smart PBP update, run the pipeline, retrain prop models, freeze the week's prop snapshot, `betting_log.py`, `export_best_bets.py`, commit. `weekly-model-performance.yml` (Mondays) — prop backtest + `betting_log.py` + `weekly_spread_report.py` → `spread_performance.json`. `tests.yml` — `pytest -q` on 3.12/3.13 plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces).
 - **Email notifications**: `scripts/preview_email.py` / `scripts/send_rich_email_now.py`, SMTP via `emailer.py` (Gmail App Passwords). Spread bets only now.
 - **RSS feed**: `scripts/generate_rss.py` → `alerts_feed.xml`, base URL from `app_config.json`.
 - **best_bets_today.json**: `scripts/export_best_bets.py` reads the predictions
@@ -198,12 +203,19 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.
 - PBP file is TAB-separated.
 - `pytest` writes nothing to `data_files/` now (`pytest.ini` scopes to `tests/`).
+  `pytest.ini` also sets `pythonpath = .` so a bare `pytest` collects (without it
+  only `python -m pytest` worked — this failed CI for 10 days).
 - `nfl-gather-data.py` has a hyphen → import via `runpy`/`importlib`, not `import`.
-- Player-prop `models.py` still uses a random split; `opponent_def_rank` is leaky
-  and near-constant; prop lines are fixed tiers, not market lines.
+- `predictions.py` re-executes top-to-bottom on every `st.rerun()`, which resets
+  module-level `historical_game_level_data`/`predictions_df = None` — non-button
+  `st.rerun()` must be one-shot via `st.session_state`, or it loops forever.
+- Prop lines are fixed tiers, not market lines, so prop "accuracy" ≠ edge. Only
+  ~5/26 prop models are `reliable`; every TD prop is flagged unreliable.
 
 ## References
 - `README.md` — setup + current model status
-- `CHANGELOG.md` — dated history (the Aug/Sep 2026 entries cover the reproducibility,
-  temporal-split, disabled-models, spread-convention and player-prop-snapshot work)
-- `docs/architecture.md`, `docs/SPREAD_MODEL_INVESTIGATION.md` (resolved)
+- `CHANGELOG.md` — dated history (Sep 2026: honest 3-way-split backtest,
+  headless `betting_log.py` results tracking, weekly spread scorecard, spread
+  tier recalibration, player-prop reliability flags, rerun-loop + CI fixes)
+- `docs/architecture.md`, `docs/SPREAD_MODEL_INVESTIGATION.md` (resolved; carries
+  a "Signal experiments log" of rejected features)
