@@ -8,6 +8,17 @@ bottom.
 
 ## September 2026
 
+- **Player props: reliable-only by default + cleared stale history.** The
+  Player Props page now defaults to "Show only props from tested (reliable)
+  models" (uncheck to see everything) - so the top of the list is the ~240
+  yards props whose models cleared the out-of-time bar, not the ~640 TD /
+  skewed-line props. `player_props/backtest.py` carries `model_reliable` into
+  each graded result and reports a reliable-only hit rate + ROI
+  (`reliable_accuracy`, `by_reliable`, `roi_analysis_reliable`). Deleted the 12
+  committed `accuracy_results_week*_20260110_*.json` files - those were 2025
+  playoff backtests that would have contaminated the 2026 weekly accuracy
+  history until enough real weeks accumulated.
+
 - **Weekly spread scorecard + up-front honesty banner.** `weekly-model-performance.yml`
   only backtested player props — it never graded the spread betting log or
   summarised it. It now runs `betting_log.py` (grade finished bets) then
