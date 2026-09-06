@@ -1087,7 +1087,12 @@ def home_page():
                 with st.spinner('Running prediction pipeline from URL trigger...'):
                     try:
                         import subprocess
-                        result = subprocess.run(["python", "build_and_train_pipeline.py"], capture_output=True, text=True, timeout=1200)
+                        result = subprocess.run(
+                            [sys.executable, "build_and_train_pipeline.py"],
+                            capture_output=True, text=True, timeout=1200,
+                            encoding="utf-8", errors="replace",
+                            env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
+                        )
                         if result.returncode == 0:
                             try:
                                 st.success("✅ Predictions generated successfully via URL trigger. Refreshing page...")
@@ -3053,10 +3058,13 @@ def home_page():
                                             import subprocess
                                             try:
                                                 result = subprocess.run(
-                                                    ["python", "build_and_train_pipeline.py"],
+                                                    [sys.executable, "build_and_train_pipeline.py"],
                                                     capture_output=True,
                                                     text=True,
-                                                    timeout=600
+                                                    timeout=1200,
+                                                    encoding="utf-8",
+                                                    errors="replace",
+                                                    env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
                                                 )
                                                 if result.returncode == 0:
                                                     st.success("✅ Predictions generated successfully! Refreshing page...")
