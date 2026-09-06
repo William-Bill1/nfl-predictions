@@ -82,6 +82,15 @@ def main():
     """
     historical_game_level_data = pd.read_csv(path.join(DATA_DIR, 'nfl_games_historical.csv'), sep='\t')
 
+    # Rows with a final score. Unplayed future games (this season's remaining
+    # schedule) still flow through the whole pipeline so their pre-game features
+    # and probabilities are computed and written, but they are NEVER trained or
+    # evaluated on - their score-derived labels (spreadCovered, overHit, ...) are
+    # meaningless zeros.
+    _played = (historical_game_level_data['home_score'].notna()
+               & historical_game_level_data['away_score'].notna())
+    print(f"Games: {len(historical_game_level_data)} total, {int(_played.sum())} played, "
+          f"{int((~_played).sum())} upcoming (predicted but not trained on)")
 
     historical_game_level_data['gameLineAccuracy'] = (historical_game_level_data['home_score'] - historical_game_level_data['away_score']).abs() / historical_game_level_data['spread_line'].abs()
     historical_game_level_data['overUnderAccuracy'] = (historical_game_level_data['total'] - (historical_game_level_data['home_score'] + historical_game_level_data['away_score'])).abs() / historical_game_level_data['total'].abs()
@@ -221,16 +230,19 @@ def main():
     historical_game_level_data['awayTeamAvgPointSpread'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'spread_line')
     historical_game_level_data['homeTeamAvgTotal'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'total')
     historical_game_level_data['awayTeamAvgTotal'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'total')
-    historical_game_level_data['homeTeamFavoredPct'] = historical_game_level_data['home_team'].map(historical_game_level_data.groupby('home_team')['homeFavored'].mean())
-    historical_game_level_data['awayTeamFavoredPct'] = historical_game_level_data['away_team'].map(historical_game_level_data.groupby('away_team')['awayFavored'].mean())
-    historical_game_level_data['homeTeamSpreadCoveredPct'] = historical_game_level_data['home_team'].map(historical_game_level_data.groupby('home_team')['spreadCovered'].mean())
-    historical_game_level_data['awayTeamSpreadCoveredPct'] = historical_game_level_data['away_team'].map(historical_game_level_data.groupby('away_team')['spreadCovered'].mean())
-    historical_game_level_data['homeTeamOverHitPct'] = historical_game_level_data['home_team'].map(historical_game_level_data.groupby('home_team')['overHit'].mean())
-    historical_game_level_data['awayTeamOverHitPct'] = historical_game_level_data['away_team'].map(historical_game_level_data.groupby('away_team')['overHit'].mean())
-    historical_game_level_data['homeTeamUnderHitPct'] = historical_game_level_data['home_team'].map(historical_game_level_data.groupby('home_team')['underHit'].mean())
-    historical_game_level_data['awayTeamUnderHitPct'] = historical_game_level_data['away_team'].map(historical_game_level_data.groupby('away_team')['underHit'].mean())
-    historical_game_level_data['homeTeamTotalHitPct'] = historical_game_level_data['home_team'].map(historical_game_level_data.groupby('home_team')['totalHit'].mean())
-    historical_game_level_data['awayTeamTotalHitPct'] = historical_game_level_data['away_team'].map(historical_game_level_data.groupby('away_team')['totalHit'].mean())
+    # Season-long team rates: average over PLAYED games only, or the 272 unplayed
+    # rows (all-zero labels) drag every rate toward 0.
+    _pg = historical_game_level_data[_played]
+    historical_game_level_data['homeTeamFavoredPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['homeFavored'].mean())
+    historical_game_level_data['awayTeamFavoredPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['awayFavored'].mean())
+    historical_game_level_data['homeTeamSpreadCoveredPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['spreadCovered'].mean())
+    historical_game_level_data['awayTeamSpreadCoveredPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['spreadCovered'].mean())
+    historical_game_level_data['homeTeamOverHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['overHit'].mean())
+    historical_game_level_data['awayTeamOverHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['overHit'].mean())
+    historical_game_level_data['homeTeamUnderHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['underHit'].mean())
+    historical_game_level_data['awayTeamUnderHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['underHit'].mean())
+    historical_game_level_data['homeTeamTotalHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['totalHit'].mean())
+    historical_game_level_data['awayTeamTotalHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['totalHit'].mean())
 
     # Add momentum features - last 3 games performance
     print("Calculating momentum features (last 3 games)...")
@@ -316,6 +328,9 @@ def main():
     # Prepare data using best features for each target
     print('underdogCovered value counts:')
     print(historical_game_level_data['underdogCovered'].value_counts())
+    # X_* keeps ALL rows (used later to predict probabilities for upcoming games).
+    # The train/test split uses only PLAYED rows - `_played` masks out the
+    # unplayed schedule whose labels are meaningless.
     X_spread = historical_game_level_data[best_features_spread].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_spread) - set(X_spread.columns):
         print(f"Warning: Dropped non-numeric features for spread: {set(best_features_spread) - set(X_spread.columns)}")
@@ -324,23 +339,23 @@ def main():
     # The three targets share one chronological cut-off (a temporal split can't be
     # stratified per target the way the old random split was). Guard the ordering
     # the split relies on.
-    _season_week = historical_game_level_data[['season', 'week']]
+    _season_week = historical_game_level_data.loc[_played, ['season', 'week']]
     assert _season_week.equals(_season_week.sort_values(['season', 'week'], kind='stable')), \
         "nfl_games_historical.csv rows must be ordered by (season, week) for the temporal split"
 
-    X_train_spread, X_test_spread, y_spread_train, y_spread_test = temporal_split(X_spread, y_spread)
+    X_train_spread, X_test_spread, y_spread_train, y_spread_test = temporal_split(X_spread[_played], y_spread[_played])
 
     X_moneyline = historical_game_level_data[best_features_moneyline].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_moneyline) - set(X_moneyline.columns):
         print(f"Warning: Dropped non-numeric features for moneyline: {set(best_features_moneyline) - set(X_moneyline.columns)}")
     y_moneyline = historical_game_level_data['underdogWon']
-    X_train_ml, X_test_ml, y_train_ml, y_test_ml = temporal_split(X_moneyline, y_moneyline)
+    X_train_ml, X_test_ml, y_train_ml, y_test_ml = temporal_split(X_moneyline[_played], y_moneyline[_played])
 
     X_totals = historical_game_level_data[best_features_totals].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_totals) - set(X_totals.columns):
         print(f"Warning: Dropped non-numeric features for totals: {set(best_features_totals) - set(X_totals.columns)}")
     y_totals = historical_game_level_data[target_overunder]
-    X_train_tot, X_test_tot, y_train_tot, y_test_tot = temporal_split(X_totals, y_totals)
+    X_train_tot, X_test_tot, y_train_tot, y_test_tot = temporal_split(X_totals[_played], y_totals[_played])
 
 
     print('y_spread_train value counts:')
