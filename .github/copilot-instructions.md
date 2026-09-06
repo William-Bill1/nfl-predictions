@@ -1,26 +1,35 @@
 # Copilot Instructions: NFL Predictions Project
 
 ## Overview
-Multi-page Streamlit app for NFL betting predictions using XGBoost models. Predicts outcomes for spread, moneyline, over/under markets, and player props (passing/rushing/receiving yards, TDs). All data and models are pre-computed locally; no runtime API calls except ESPN score fetching.
+Multi-page Streamlit app for NFL betting analytics. XGBoost+LightGBM models for
+spread / moneyline / totals plus a per-stat player-prop system. All data/models
+are batch-computed into `data_files/`; no runtime API calls except ESPN score
+fetching. **Only the spread model drives a bet signal** — moneyline and totals
+show market-implied probabilities (their models have no out-of-time edge and are
+kept for diagnostics only).
 
 ## Architecture & Data Flow
-**Data Pipeline (Sequential)**:
-1. `create-nfl-historical.py` → Fetches NFL schedule/game data via `nfl_data_py` → `nfl_games_historical.csv`
-2. `nfl-gather-data.py` → Feature engineering + XGBoost training + predictions → `nfl_games_historical_with_predictions.csv`
-3. Run both via: `python build_and_train_pipeline.py` (~5 min runtime)
+**Data Pipeline (`python build_and_train_pipeline.py`, ~90s, deterministic)**:
+1. `update_schedule.py` → `nfl_schedule_<year>.csv`
+2. `create-nfl-historical.py` → `nfl_games_historical.csv` (all games incl. the unplayed schedule)
+3. `nfl-gather-data.py` → features on all rows, temporal train/test on **played** rows, predict all rows → `nfl_games_historical_with_predictions.csv`, `model_metrics.json`, `best_features_spread.txt`
 
 **UI Layer**:
-- `predictions.py` → Main dashboard (betting tabs, metrics, PDF exports)
-- `pages/1_📊_Historical_Data.py` → Advanced filtering over 196k+ play-by-play records
-- `pages/2_🎯_Player_Props.py` → Player performance predictions (yards, TDs)
+- `predictions.py` → Main dashboard, 7 tabs (Underdog Bets / Over-Under Bets removed with the disabled models)
+- `pages/1_Historical_Data.py` → filtering over ~290k play-by-play records
+- `pages/2_Player_Props.py` → player prop predictions (yards, TDs, receptions)
   - **New**: includes a `DK Pick 6 Calculator` tab for entering DraftKings Pick 6 over/under lines and receiving an OVER/UNDER recommendation. The calculator uses cached ensemble models located in `player_props/models` and falls back to a Laplace-smoothed historical hit rate when a model/tier is unavailable.
   - The player props system now supports XGBoost + LightGBM soft-voting ensembles and includes usage features like `target_share` to improve receiving predictions.
-- `pages/3_🎲_Parlay_Builder.py` → Multi-bet parlay construction and analysis
-- `pages/4_📈_Model_Performance.py` → Model evaluation and calibration metrics
+- `pages/3_Parlay_Builder.py` → Multi-bet parlay construction
+- `pages/4_Model_Performance.py` → Model evaluation and calibration metrics
 - All data loaded via `@st.cache_data` decorators (never at module level)
-- Feature lists (`best_features_*.txt`) must stay synchronized between training and UI
 
-**Critical Constraint**: All features must be pre-game only (zero data leakage). Rolling stats exclude current game.
+**Critical Constraints**:
+- Features must be pre-game only (rolling stats exclude the current game).
+- Every XGB/LGBM estimator gets `**_XGB_KW` / `**_LGBM_KW` (seed + `n_jobs=1`);
+  keep `sorted()` on the feature lists. Otherwise the pipeline stops being
+  byte-reproducible.
+- Train/score on `_played` rows only; never on the unplayed schedule.
 
 ## Critical Conventions
 
@@ -59,11 +68,16 @@ EV threshold, Spread Accuracy/MAE and `predictedSpreadCovered` are all in
 underdog-covers space. Do **not** re-invert anywhere else. (The old "predictions
 are backwards / -90%→+60% ROI" framing was a variable mix-up, not a model bug.)
 
-### Betting Thresholds
-- **Spread**: 50% (natural decision boundary for binary classification), warnings below 45%
-- **Moneyline**: 28% (F1-optimized for underdogs)
-- **Totals**: F1-optimized thresholds
-- Confidence tiers: Elite (≥65%), Strong (60-65%), Good (55-60%), Standard (50-55%)
+### Bet signals
+- **Spread** is the only live signal. `pred_spreadCovered_optimal == 1` when
+  `prob_underdogCovered >= optimal_spread_threshold` (EV-based, ~0.545, computed
+  by `spread_ev_threshold` in P(underdog covers) space with pushes excluded) AND
+  `ev_spread > 0`.
+- **Moneyline / Totals**: `pred_underdogWon_optimal` and `pred_overHit_optimal`
+  are hard-coded to 0. `prob_underdogWon` / `prob_overHit` are the market
+  implied probabilities, not model output.
+- Spread confidence tiers (`add_spread_confidence_tiers`): Elite ≥0.60,
+  Strong 0.55–0.60, Good 0.52–0.55, Lean 0.50–0.52.
 
 ### UI Patterns
 ```python
@@ -87,16 +101,17 @@ with tab1:
     if predictions_df is not None:
         st.dataframe(predictions_df, width='stretch')
 
-# In-app pipeline trigger
-```python
-# The Upcoming Games expander shows a "🔄 Generate Predictions" button
-# when scheduled games lack model outputs. The button runs the local
-# pipeline (`build_and_train_pipeline.py`) and refreshes the UI on success.
-if tbd_count > 0:
-  if st.button("🔄 Generate Predictions"):
-    subprocess.run(["python", "build_and_train_pipeline.py"])  # run locally
+# In-app pipeline trigger — the "🔄 Generate Predictions" button. Must use
+# sys.executable (not bare "python" - that picks a different interpreter under a
+# venv-launched Streamlit) and a UTF-8 env (emoji prints crash a cp1252 pipe).
+result = subprocess.run(
+    [sys.executable, "build_and_train_pipeline.py"],
+    capture_output=True, text=True, timeout=1200,
+    encoding="utf-8", errors="replace",
+    env={**os.environ, "PYTHONUTF8": "1", "PYTHONIOENCODING": "utf-8"},
+)
 ```
-```
+
 
 ### PDF Export Pattern
 ```python
@@ -111,13 +126,17 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 
 ## Developer Workflow
 - **Run app**: `streamlit run predictions.py`
-- **Generate predictions / Build & Train (single-step)**: `python build_and_train_pipeline.py` (takes ~5 min)
-  - To run training only (features + models): `python nfl-gather-data.py`
-  - To retrain player prop models: `python player_props/train_models.py --skip-aggregation`
-- **Python version**: Must use 3.12
-- **Local testing**: Activate venv, run above commands
-- **Deployment**: Streamlit Cloud, all data files committed
-- **Performance**: `.streamlit/config.toml` increases timeouts/message size for large data
+- **Build & train**: `python build_and_train_pipeline.py` (~90s)
+  - training only: `python nfl-gather-data.py` (no network; byte-reproducible)
+  - retrain prop models: `python player_props/train_models.py --skip-aggregation`
+  - prop predictions + weekly freeze: `python player_props/predict.py`
+    (`--week N` / `--season YYYY` / `--no-injuries --no-weather`)
+- **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
+  `pytest.ini` keeps `scripts/test_*.py` out).
+- **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
+- **Windows**: run pipeline scripts with `PYTHONUTF8=1` (emoji prints).
+- **Deployment**: Streamlit Cloud, all data files committed. The fork's nightly
+  Action commits to `main` — `git fetch` before pushing.
 
 ### Developer Scripts & Checks
 - When creating new helper or check scripts (for model diagnostics, calibration checks, or data validation), create them as Python files and place them in the `scripts/` folder (e.g., `scripts/check_moneyline_calibration.py`, `scripts/analyze_underdog_impact.py`).
@@ -145,7 +164,7 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   Developer notes:
   - Models are loaded with `@st.cache_data` to avoid repeated heavy loads.
   - Feature extraction uses L3/L5/L10 rolling stats plus auxiliary features (TDs, attempts, completions, targets) and basic matchup defaults (`opponent_def_rank`, `is_home`, `days_rest`).
-  - If you need to regenerate player prop models, run `python player_props/predict.py` per the pipeline.
+  - Retrain prop models with `python player_props/train_models.py`; generate/freeze predictions with `python player_props/predict.py`.
   - **Tier Selection Pattern**: Choose model tier based on season average performance (e.g., elite_qb for ≥280 passing yards).
   - **Fallback Pattern**: Use Laplace-smoothed historical hit rate (games_over + 1) / (total_games + 2) when model unavailable.
   - **Position-Based UI**: Auto-suggest stat categories based on player position (QB: Passing Yards/TDs, RB: Rushing/Receiving, WR/TE: Receiving).
@@ -155,70 +174,31 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **DataFrame Optimization**: Immediately convert dtypes after CSV loads: `df['float_col'].astype('float32')`, `df['int_col'].astype('Int32')` to reduce memory 50%.
 - **UI Layout Patterns**: Use `col1, col2 = st.columns([2,1])` for asymmetric inputs, dynamic dataframe heights with `height=get_dataframe_height(df)`.
 - **Feature Engineering**: Rolling stats exclude current game: `prior_games = df[(df['team']==team) & ((df['season']<season) | ((df['season']==season) & (df['week']<week)))]`.
+- **Adding an estimator**: pass `**_XGB_KW` / `**_LGBM_KW` or it reintroduces
+  run-to-run drift.
+- **Season year**: `from season_utils import upcoming_or_current_season, latest_pbp_season` — don't compute it inline.
+- **PBP file** (`nfl_play_by_play_historical.csv.gz`) is TAB-separated — every `read_csv` needs `sep='\t'`.
 
 ## Integration Points
 - **External data**: All historical/play-by-play data is pre-fetched and stored in `data_files/`. No runtime API calls except ESPN scores for completed games.
 - **Feature importances/metrics**: Stored in `model_feature_importances.csv` and `model_metrics.json`.
 - **Automated workflows**: GitHub Actions run nightly updates during NFL season (Sept-Feb), including ESPN scores, smart play-by-play data updates, model predictions, and nightly player prop retraining. A new weekly workflow also runs model backtests and persists accuracy reports.
-- **Email notifications**: Enhanced HTML emails with clear betting recommendations:
-  - Format: "**TEN +2.5** to cover (69.1%) 🔥 ELITE" instead of cryptic probabilities
-  - Individual confidence badges per bet (ELITE ≥65%, STRONG 60-65%, GOOD 55-60%)
-  - Smart filtering (Spread ≥50%, Moneyline ≥28%, Totals ≥50%)
-  - Preview: `python scripts/preview_email.py`
-  - Send: `python scripts/send_rich_email_now.py`
-  - Uses SMTP via `emailer.py` (Gmail App Passwords supported)
-- **RSS feed**: `scripts/generate_rss.py` generates `alerts_feed.xml` with per-game links using base URL from `app_config.json`.
+- **Email notifications**: `scripts/preview_email.py` / `scripts/send_rich_email_now.py`, SMTP via `emailer.py` (Gmail App Passwords). Spread bets only now.
+- **RSS feed**: `scripts/generate_rss.py` → `alerts_feed.xml`, base URL from `app_config.json`.
+- **best_bets_today.json**: `scripts/export_best_bets.py` reads the predictions
+  CSV directly (`pred_spreadCovered_optimal == 1`, today's games) — independent
+  of the app / `betting_recommendations_log.csv`.
 
-## Known Issues
-- Python 3.13 not supported
-- Module-level data loading causes silent crashes—always use lazy pattern
-- Large CSVs: Use tab-separated, cache with `@st.cache_data`
-- **RESOLVED**: Memory resource limits on Streamlit Cloud - implemented dtype optimizations, DataFrame views, and pagination
+## Known Issues / gotchas
+- Module-level data loading → silent Cloud crashes; always `@st.cache_data`.
+- PBP file is TAB-separated.
+- `pytest` writes nothing to `data_files/` now (`pytest.ini` scopes to `tests/`).
+- `nfl-gather-data.py` has a hyphen → import via `runpy`/`importlib`, not `import`.
+- Player-prop `models.py` still uses a random split; `opponent_def_rank` is leaky
+  and near-constant; prop lines are fixed tiers, not market lines.
 
 ## References
-- See `README.md` for project summary and local setup
-- See `ROADMAP.md` for planned features
-- See `data_files/` for all model/data artifacts
-
-## Recent Changes (Dec 13, 2025)
-
-### Critical Model Fix: Prediction Inversion 🎉
-- **Issue**: Spread model predictions were inverted (low confidence = high accuracy, high confidence = low accuracy)
-- **Root Cause**: Target variable `underdogCovered` definition had incorrect logic
-- **Fix**: Applied `prob_underdogCovered = 1 - prob_underdogCovered` in `nfl-gather-data.py` after predictions
-- **Impact**: 
-  - ROI: -90% → +60%
-  - Profitable games: 0 → 62 (out of 63 remaining)
-  - Max confidence: 48% → 89.5%
-  - Calibration error: 45% → 28%
-
-### New Features Added
-- **Momentum features** (8): Last 3 games win%, scoring averages, point differential trends
-- **Rest advantage features** (5): Rest day differences, well-rested/short-rest flags (≥10 days, ≤6 days)
-- **Weather impact features** (3): Cold weather (≤32°F), windy (≥15mph), extreme conditions
-- **Total new features**: 18 (calculated without data leakage using rolling windows)
-
-### UI Improvements
-- **EV explanation**: Added expandable section explaining Expected Value concept
-- **Spread bet sorting**: Changed to date ascending (earliest games first) instead of confidence descending
-- **Fixed Unicode issues**: Removed emoji characters causing encoding errors in training output
-
-### Documentation
-- Created `MODEL_FIX_PLAN.md`: Comprehensive analysis of calibration issues and solutions
-- Created `NEW_FEATURES_DEC13.md`: Details on momentum/rest/weather features
-- Updated `SPREAD_THRESHOLD_CHANGE.md`: Documents threshold evolution (50% → 52.4% → 45% with EV warnings)
-
-### Technical Notes
-- Model is now **profitable and functional** - optional improvements (hyperparameter tuning, ensemble methods) documented for future enhancement
-- Momentum features will become more impactful as 2025 season progresses (currently early-season with limited data)
-- All analysis scripts preserved in repo: `analyze_model_issues.py`, `test_inversion_fix.py`, `check_remaining_games.py`
-
-### Spread Threshold Fix (Jan 26, 2026)
-- **Issue**: Spread betting threshold was too conservative (52.4%), resulting in zero actionable bets
-- **Root Cause**: EV-based threshold required >52.4% confidence, but model rarely achieved this
-- **Fix**: Changed to fixed 50% threshold (natural decision boundary for binary classification)
-- **Impact**:
-  - Spread bets triggered: 0 → 36.3% of games (123/339 test games)
-  - Historical accuracy: 46.3% on 50%+ confidence bets
-  - Expected ROI: 1.4% per bet
-  - Full simulation ROI: 76.7% (92.6% win rate on 685 bets)
+- `README.md` — setup + current model status
+- `CHANGELOG.md` — dated history (the Aug/Sep 2026 entries cover the reproducibility,
+  temporal-split, disabled-models, spread-convention and player-prop-snapshot work)
+- `docs/architecture.md`, `docs/SPREAD_MODEL_INVESTIGATION.md` (resolved)

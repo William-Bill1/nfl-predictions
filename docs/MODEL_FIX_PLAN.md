@@ -1,3 +1,7 @@
+> **Historical (Dec 2025).** The "spread predictions are inverted" framing here
+> was later shown to be a variable mix-up, not a model bug — see
+> `SPREAD_MODEL_INVESTIGATION.md` (resolved) and the CHANGELOG. Kept for context.
+
 # Model Improvement Plan - December 13, 2025
 
 ## Critical Issues Identified

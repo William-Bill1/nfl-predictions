@@ -1,30 +1,50 @@
 # NFL Predictions — Architecture
 
 ## Overview
-Multi-page Streamlit app for NFL betting predictions using XGBoost models. Predicts outcomes for spread, moneyline, over/under markets, and player props. All data and models are pre-computed locally.
+Multi-page Streamlit app for NFL betting analytics. Three XGBoost+LightGBM
+game-outcome models (spread / moneyline / totals) and a per-stat player-prop
+system, all batch-computed into `data_files/`; the app only reads those files.
+**Only the spread model currently drives a bet signal** — moneyline and totals
+show market-implied probabilities (their models have no out-of-time edge).
 
-## Two-Step Pipeline
+## Pipeline
 ```
-Step 1 (~5 min, run first):
-    nfl_data_py library
-        ↓
-    create-nfl-historical.py → data_files/nfl_games_historical.csv
-        ↓
-    nfl-gather-data.py → Feature Engineering + XGBoost Training
-        ↓
-    data_files/nfl_games_historical_with_predictions.csv
-    data_files/model_feature_importances.csv
-    data_files/model_metrics.json
+Step 1 — build/train  (python build_and_train_pipeline.py):
+    nfl_data_py
+        ↓  update_schedule.py         → data_files/nfl_schedule_<year>.csv
+        ↓  create-nfl-historical.py   → data_files/nfl_games_historical.csv
+                                        (all games incl. the unplayed schedule)
+        ↓  nfl-gather-data.py  (~90s, no network, deterministic)
+             feature engineering (all rows) → temporal train/test on PLAYED rows
+             → data_files/nfl_games_historical_with_predictions.csv   (all rows)
+               data_files/model_metrics.json
+               data_files/model_feature_importances.csv
+               data_files/best_features_spread.txt  (fixed point)
 
-    (Run both via: python build_and_train_pipeline.py)
+Player props  (python player_props/train_models.py ; python player_props/predict.py):
+    PBP → aggregators.py → player_{passing,rushing,receiving}_stats.csv
+        → models.py            → player_props/models/*.json
+        → predict.py           → player_props_predictions.csv  (latest)
+                               + player_props_predictions_week{W}_{season}.csv  (frozen, write-once)
 
 Step 2 — UI:
-    predictions.py (main dashboard)
-    pages/1_📊_Historical_Data.py
-    pages/2_🎯_Player_Props.py  [includes DK Pick 6 Calculator]
-    pages/3_🎲_Parlay_Builder.py
-    pages/4_📈_Model_Performance.py
+    predictions.py                 (7 tabs; Underdog/Over-Under tabs removed)
+    pages/1_Historical_Data.py
+    pages/2_Player_Props.py        [includes the DK Pick 6 calculator]
+    pages/3_Parlay_Builder.py
+    pages/4_Model_Performance.py
 ```
+
+## Determinism & mid-season
+- Every XGB/LGBM estimator takes `RANDOM_STATE=42` + `n_jobs=1` (via `_XGB_KW` /
+  `_LGBM_KW`); feature lists are `sorted()` on load and `best_features_spread.txt`
+  is written sorted. `python nfl-gather-data.py` byte-reproduces its own outputs.
+- `nfl-gather-data.py` computes a `_played` mask (rows with both final scores).
+  Features and the probability write cover **all** rows so upcoming games get
+  predictions; the train/test split, EV threshold, accuracy/MAE and season-long
+  team-rate features use **played rows only**.
+- Train/test is a temporal split (`temporal_split`): last 20% of played rows by
+  (season, week). Not random — the earlier random split inflated every metric.
 
 ## ML Models
 Three XGBoost classifiers (binary):
@@ -34,7 +54,9 @@ Three XGBoost classifiers (binary):
 | Moneyline | trained on `underdogWon`; **not shipped** — ships market implied prob (no out-of-time edge) | — | — |
 | Totals | trained on `overHit`; **not shipped** — ships market implied P(over) (coin flip out-of-time) | — | — |
 
-Confidence tiers: Elite ≥65%, Strong 60–65%, Good 55–60%, Standard 50–55%
+Spread confidence tiers (`add_spread_confidence_tiers`): Elite ≥0.60, Strong
+0.55–0.60, Good 0.52–0.55, Lean 0.50–0.52. The EV threshold (`spread_ev_threshold`,
+in P(underdog covers) space, pushes excluded) is ~0.545.
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 
@@ -49,7 +71,14 @@ underdog-covers space. This is a change of convention, not a fix for a
 (favorite-covers probability fed into underdog-covers bet logic).
 
 ### Player Props (`player_props/`)
-XGBoost + LightGBM soft-voting ensembles per stat category. Models in `player_props/models/*.json`. DK Pick 6 Calculator in `pages/2_🎯_Player_Props.py`.
+XGBoost + LightGBM soft-voting ensembles per (stat, player-tier). Models in
+`player_props/models/*.json`. `predict.py` targets `--season`/`--week` (default:
+next upcoming week of the current schedule) and writes a **write-once** frozen
+snapshot `player_props_predictions_week{W}_{season}.csv`; `backtest.py` scores
+that snapshot, so `run_weekly_accuracy_check` is a genuine prospective test.
+`train_models.py` still uses a *random* split, so `model_metrics.csv` is
+optimistic. Prop lines are fixed tiers (275, 250, …) not market lines — the
+weekly hit rate reflects line placement, not betting edge.
 
 ## Feature Engineering
 All features are pre-game only (zero data leakage):
@@ -68,18 +97,22 @@ All features are pre-game only (zero data leakage):
 No runtime API calls except ESPN scores for completed games.
 
 ## Key Components
-- `build_and_train_pipeline.py` — runs both pipeline steps (~5 min)
-- `nfl-gather-data.py` — feature engineering + XGBoost training
-- `create-nfl-historical.py` — historical data fetch via nfl_data_py
-- `player_props/train_models.py` — player prop model training
-- `scripts/export_best_bets.py` — `best_bets_today.json` writer
+- `build_and_train_pipeline.py` — `update_schedule` → `create-nfl-historical` → `nfl-gather-data`
+- `nfl-gather-data.py` — feature engineering + train (played rows) + predict (all rows)
+- `create-nfl-historical.py` — schedule + game fetch via nfl_data_py
+- `season_utils.py` — `upcoming_or_current_season()` (schedules) / `latest_pbp_season()` (PBP); one source of truth for the season year
+- `player_props/train_models.py` — prop model training
+- `player_props/predict.py` — prop predictions + frozen weekly snapshot
+- `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/send_rich_email_now.py` — SMTP email sender
 - `scripts/generate_rss.py` — `alerts_feed.xml` RSS feed
 
 ## Storage
 All data in `data_files/` (committed to git):
-- `nfl_games_historical_with_predictions.csv` — main dataset + predictions
-- `model_feature_importances.csv`, `model_metrics.json` — model eval
+- `nfl_games_historical_with_predictions.csv` — games (played + upcoming) + spread/market probabilities
+- `model_metrics.json`, `model_feature_importances.csv`, `best_features_spread.txt` — model eval + selected features
+- `player_props_predictions.csv` — latest prop feed; `player_props_predictions_week{W}_{season}.csv` — frozen weekly snapshots
+- `betting_recommendations_log.csv` — spread recs, appended by the running app
 - `best_bets_today.json` — Sports Picks Grid feed
 - `data_files/exports/` — PDF exports
 
