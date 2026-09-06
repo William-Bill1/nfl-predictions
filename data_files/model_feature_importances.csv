@@ -2,11 +2,11 @@ feature,importance_mean,model
 awayTeamSpreadCoveredPct,0.13243015,spread
 homeTeamAvgPointDiff,0.13203998,spread
 awayTeamWinPct,0.12626868,spread
-homeTeamSpreadCoveredPct,0.12521268,spread
-homeTeamBlowoutPct,0.1246788,spread
-homeTeamWinPct,0.12453736,spread
+homeTeamSpreadCoveredPct,0.1252127,spread
+homeTeamBlowoutPct,0.12467881,spread
+homeTeamWinPct,0.12453738,spread
 awayTeamBlowoutPct,0.12184906,spread
-spread_line,0.11298329,spread
+spread_line,0.112983294,spread
 spread_line,0.16612357,moneyline
 homeTeamWinPct,0.12918387,moneyline
 homeTeamSpreadCoveredPct,0.12400292,moneyline
@@ -14,7 +14,7 @@ homeTeamAvgTotal,0.12081861,moneyline
 awayTeamWinPct,0.11897109,moneyline
 awayTeamGamesPlayed,0.11851957,moneyline
 homeTeamBlowoutPct,0.11341692,moneyline
-homeTeamOverHitPct,0.10896349,moneyline
+homeTeamOverHitPct,0.1089635,moneyline
 homeTeamOverHitPct,0.16752438,totals
 awayTeamAvgTotal,0.15385304,totals
 homeTeamAvgPointSpread,0.14368378,totals
