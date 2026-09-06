@@ -219,6 +219,7 @@ def calculate_hit_rate(predictions_df: pd.DataFrame, actuals_df: pd.DataFrame) -
             'actual_value': actual_value,
             'hit': hit,
             'confidence': confidence,
+            'model_reliable': bool(row.get('model_reliable', True)),
             'team': row.get('team', ''),
             'week': row.get('week_pred', 0)
         })
@@ -253,14 +254,30 @@ def calculate_hit_rate(predictions_df: pd.DataFrame, actuals_df: pd.DataFrame) -
     # Calculate accuracy by prop type
     by_prop_type = results_df.groupby('prop_type', observed=True)['hit'].mean()
 
+    # Accuracy split by whether the model cleared the out-of-time reliability
+    # bar (models.py). The "reliable-only" number is the one worth quoting -
+    # the rest are display-only tiers / TD props.
+    _rel = results_df.groupby('model_reliable', observed=True)['hit'].agg(['mean', 'count'])
+    by_reliable = {
+        str(bool(k)): {'hit_rate': float(v['mean']), 'n': int(v['count'])}
+        for k, v in _rel.iterrows()
+    }
+    reliable_hit_rate = by_reliable.get('True', {}).get('hit_rate')
+    reliable_n = by_reliable.get('True', {}).get('n', 0)
+
     print(f"📊 Accuracy Analysis Complete:")
     print(f"   Total predictions evaluated: {len(results_df)}")
     print(f"   Overall hit rate: {overall_hit_rate:.1%}")
+    if reliable_n:
+        print(f"   Reliable-model props only ({reliable_n}): {reliable_hit_rate:.1%}")
 
     return {
         'overall_accuracy': overall_hit_rate,
+        'reliable_accuracy': reliable_hit_rate,
+        'reliable_predictions': reliable_n,
         'by_confidence_tier': by_confidence,
         'by_prop_type': by_prop_type,
+        'by_reliable': by_reliable,
         'total_predictions': len(results_df),
         'detailed_results': results_df
     }
@@ -532,13 +549,22 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
 
     # Calculate ROI analysis
     if accuracy_metrics['total_predictions'] > 0:
-        roi_metrics = calculate_roi(accuracy_metrics['detailed_results'])
+        detailed = accuracy_metrics['detailed_results']
+        roi_metrics = calculate_roi(detailed)
         accuracy_metrics['roi_analysis'] = roi_metrics
 
         print(f"💰 ROI Analysis (at -110 odds):")
         print(f"   Hit Rate: {roi_metrics['hit_rate']:.1%}")
         print(f"   ROI: {roi_metrics['roi']:.1f}%")
         print(f"   Breakeven Rate: {roi_metrics['breakeven_rate']:.1f}%")
+
+        # Same, restricted to props from models that cleared the reliability bar.
+        rel = detailed[detailed.get('model_reliable', True)]
+        if len(rel):
+            roi_rel = calculate_roi(rel)
+            accuracy_metrics['roi_analysis_reliable'] = roi_rel
+            print(f"   [reliable models only, n={len(rel)}] "
+                  f"Hit Rate: {roi_rel['hit_rate']:.1%}, ROI: {roi_rel['roi']:.1f}%")
 
     # Save results
     save_accuracy_results(accuracy_metrics, week)

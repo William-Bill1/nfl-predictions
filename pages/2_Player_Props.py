@@ -395,13 +395,28 @@ def main():
                     ["Confidence", "Player Name", "Avg L3"],
                     key="sort_top"
                 )
-            
+
+            tested_only = st.checkbox(
+                "Show only props from tested (reliable) models",
+                value=True,
+                key="reliable_only_top",
+                help="Hides props whose model did not clear the out-of-time reliability "
+                     "bar - every TD prop, plus the skewed-line yards/receptions tiers "
+                     "with no edge over the base rate. Uncheck to see everything.",
+            )
+
             # Filter predictions
             filtered = predictions[
                 (predictions['confidence'] >= min_conf) &
                 (predictions['prop_type'].isin(prop_types))
             ].copy()
-            
+            if tested_only and 'model_reliable' in filtered.columns:
+                _rel = filtered['model_reliable'].map(lambda v: str(v).strip().lower() in ('true', '1'))
+                filtered = filtered[_rel.values]
+                if filtered.empty:
+                    st.info("No props from reliable models match these filters. "
+                            "Uncheck 'tested models only' or lower the confidence floor.")
+
             # Apply injury filter
             if injury_filter == "Healthy Only":
                 filtered = filtered[filtered['injury_note'].isna() | (filtered['injury_note'] == '')]
