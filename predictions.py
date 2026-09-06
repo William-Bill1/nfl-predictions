@@ -826,7 +826,11 @@ def home_page():
             else:
                 run_flag = str(rp).lower() in ('1', 'true', 'yes')
 
-            if run_flag:
+            # Guard: `?run_pipeline=1` stays in the URL across reruns, so without
+            # this one-shot flag a post-run st.rerun() would kick off the 20-min
+            # pipeline again on every rerun.
+            if run_flag and not st.session_state.get('_url_pipeline_done', False):
+                st.session_state['_url_pipeline_done'] = True
                 with st.spinner('Running prediction pipeline from URL trigger...'):
                     try:
                         import subprocess
@@ -1856,13 +1860,19 @@ def home_page():
                         progress_bar.empty()
                     except Exception:
                         pass
-                    # Re-run the Streamlit script so the fresh data is picked up in UI
-                    try:
-                        st.rerun()
-                    except Exception:
-                        # If rerun isn't allowed in this context, just break and allow
-                        # the user to interact/refresh manually.
-                        break
+                    # Re-run ONCE so the fresh data is picked up in the UI. The
+                    # guard is essential: `streamlit run predictions.py` re-executes
+                    # this whole file on every rerun, which resets the module-level
+                    # `historical_game_level_data = None` / `predictions_df = None`,
+                    # so an unguarded st.rerun() here loops forever. session_state
+                    # survives reruns; module globals do not.
+                    if not st.session_state.get('_bg_data_rerun_done', False):
+                        st.session_state['_bg_data_rerun_done'] = True
+                        try:
+                            st.rerun()
+                        except Exception:
+                            pass
+                    break
                 time.sleep(poll_interval)
                 waited += poll_interval
             # If we exit the polling loop without data, leave the info/progress for now.
