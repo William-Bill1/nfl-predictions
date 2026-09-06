@@ -8,6 +8,20 @@ bottom.
 
 ## September 2026
 
+- **Weekly spread scorecard + up-front honesty banner.** `weekly-model-performance.yml`
+  only backtested player props — it never graded the spread betting log or
+  summarised it. It now runs `betting_log.py` (grade finished bets) then
+  `scripts/weekly_spread_report.py`, which rolls `betting_recommendations_log.csv`
+  into `data_files/spread_performance.json` (overall + per-week + per-tier
+  record / profit / ROI, pushes excluded from the ROI denominator) and commits
+  it. The main dashboard now opens with an `st.warning` stating the
+  out-of-sample reality — spread model is ~break-even (`Spread_OOS_Test`:
+  141 bets, 53.9% correct, +2.9% ROI) — plus season-to-date from
+  `spread_performance.json` once bets settle. Also fixed the tracking-log tab's
+  per-tier breakdown, which iterated `['Elite','Strong','Good','Standard']` and
+  silently dropped every `Lean` bet (`betting_log` writes `Lean`, not
+  `Standard`).
+
 - **Removed dead `st.experimental_rerun()` + deprecation cleanup.**
   `st.experimental_rerun()` was removed from Streamlit in 1.37; the app pins
   1.62, so all 8 call sites (7 in `predictions.py`, 1 in
