@@ -3613,7 +3613,12 @@ def home_page():
 
             # Filter for upcoming games where model thinks underdog has ANY chance to cover (>50%)
             if 'prob_underdogCovered' in predictions_df_spread.columns:
-                spread_bets_all = predictions_df_spread[predictions_df_spread['prob_underdogCovered'] > 0.50].copy()
+                # Exclude games with no posted line yet (nflverse fills later weeks
+                # in as the season goes) - prob_underdogCovered is meaningless there.
+                spread_bets_all = predictions_df_spread[
+                    (predictions_df_spread['prob_underdogCovered'] > 0.50)
+                    & (predictions_df_spread['spread_line'].fillna(0) != 0)
+                ].copy()
 
                 if len(spread_bets_all) > 0:
                     # Add confidence tiers
