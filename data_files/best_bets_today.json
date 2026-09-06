@@ -1,10 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-06T01:48:22.242384+00:00",
+    "generated_at": "2026-09-06T07:32:14.723492+00:00",
     "model_version": "1.1.0",
     "season": "2026",
-    "notes": "No spread signals for 2026-09-05"
+    "notes": "No spread signals for 2026-09-06"
   },
   "bets": []
 }
