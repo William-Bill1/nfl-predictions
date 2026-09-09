@@ -13,7 +13,9 @@ venv/
 
 # IDE and system files
 .DS_Store
-.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
 *.log
 /data_files/nfl.code-workspace
 *.env
