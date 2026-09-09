@@ -1,10 +1,25 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-06T07:32:14.723492+00:00",
+    "generated_at": "2026-09-09T07:46:11.110430+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-09-06"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-09-09",
+      "game_time": "20:20",
+      "game": "NE @ SEA",
+      "home_team": "SEA",
+      "away_team": "NE",
+      "bet_type": "Spread",
+      "pick": "NE +3",
+      "confidence": 0.5974773316421685,
+      "edge": 0.0925268365926635,
+      "tier": "Strong",
+      "odds": -102,
+      "line": 3.0,
+      "notes": null
+    }
+  ]
 }
