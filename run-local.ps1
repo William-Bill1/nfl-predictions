@@ -1,14 +1,25 @@
 # run-local.ps1
-# Helper to run the Streamlit app locally with browser auto-open.
-# Activates venv if present, sets STREAMLIT_SERVER_HEADLESS to false, and runs Streamlit.
+# Launch the Streamlit app from the project's Python 3.13 venv, by full path.
+# Does NOT rely on PATH or an activated environment, so a stray `.venv` (3.11)
+# can't shadow it.
 
-if (Test-Path .\venv\Scripts\Activate.ps1) {
-    Write-Host "Activating virtual environment..."
-    & .\venv\Scripts\Activate.ps1
+$ErrorActionPreference = 'Stop'
+Set-Location -Path $PSScriptRoot
+
+$py = Join-Path $PSScriptRoot 'venv\Scripts\python.exe'
+if (-not (Test-Path $py)) {
+    Write-Error "venv not found at $py`nCreate it:  python -m venv venv ; .\venv\Scripts\python.exe -m pip install -r requirements.txt"
+    exit 1
 }
 
-# Force Streamlit to open the browser locally
+$ver = & $py -c "import sys; print('%d.%d' % sys.version_info[:2])"
+if ($ver -notin @('3.12', '3.13')) {
+    Write-Error "venv Python is $ver; this project needs 3.12 or 3.13. Rebuild venv with a supported Python."
+    exit 1
+}
+Write-Host "Using $py (Python $ver)"
+
+# Open the browser locally rather than run headless.
 $env:STREAMLIT_SERVER_HEADLESS = 'false'
 
-Write-Host "Starting Streamlit (this will open your browser)..."
-streamlit run predictions.py
+& $py -m streamlit run predictions.py @args
