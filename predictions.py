@@ -547,6 +547,22 @@ def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_hei
         return min(calculated_height, max_height)
     return calculated_height
 
+
+def _as_display_date(df, *cols):
+    """Coerce the given columns to plain `date` objects for `st.dataframe`.
+
+    `st.column_config.DateColumn` renders a naive `datetime64[ns]` by shifting it
+    into the *browser's* time zone, so a midnight-stamped `2026-09-09` shows as
+    `09/08/2026` for any viewer west of UTC. `datetime.date` objects have no time
+    component and render exactly as stored.
+    """
+    out = df.copy()
+    for c in cols:
+        if c in out.columns:
+            out[c] = pd.to_datetime(out[c], errors='coerce').dt.date
+    return out
+
+
 SPREAD_TIER_CUTS = (0.65, 0.59, 0.55, 0.50)  # Elite, Strong, Good, Lean floors
 SPREAD_TIER_LABELS = ('🔥 Elite', '⭐ Strong', '📈 Good', '⚖️ Lean')
 
@@ -2258,7 +2274,7 @@ def home_page():
                     display_cols = [col for col in display_cols if col in filtered_data.columns]
 
                     st.dataframe(
-                        filtered_data[display_cols].head(50),
+                        _as_display_date(filtered_data[display_cols].head(50), 'game_date'),
                         hide_index=True,
                         height=600,
                         column_config={
@@ -2323,7 +2339,7 @@ def home_page():
             display_cols = [col for col in display_cols if col in historical_game_level_data_display.columns]
 
             st.dataframe(
-                historical_game_level_data_display[display_cols].head(50),
+                _as_display_date(historical_game_level_data_display[display_cols].head(50), 'gameday'),
                 hide_index=True,
                 height=600,
                 column_config={
@@ -2923,7 +2939,7 @@ def home_page():
             predictions_df_display['away_team'] = predictions_df_display['away_team'].map(team_full_name_map).fillna(predictions_df_display['away_team'])
 
             st.dataframe(
-                predictions_df_display[display_cols].head(50), 
+                _as_display_date(predictions_df_display[display_cols].head(50), 'gameday'),
                 hide_index=True,
                 height=600,
                 column_config={
@@ -3002,8 +3018,8 @@ def home_page():
 
             height = get_dataframe_height(display_df)
             st.dataframe(
-                display_df, 
-                hide_index=True, 
+                _as_display_date(display_df, 'gameday'),
+                hide_index=True,
                 height=height,
                 column_config={
                     'gameday': st.column_config.DateColumn('Date', format='MM/DD/YYYY', width='small'),
@@ -3184,7 +3200,7 @@ def home_page():
                             final_display_cols = [col for col in final_display_cols if col in recent_bets_display.columns]
 
                             st.dataframe(
-                                recent_bets_display[final_display_cols],
+                                _as_display_date(recent_bets_display[final_display_cols], 'Date'),
                                 column_config={
                                     'Date': st.column_config.DateColumn(format='MM/DD/YYYY'),
                                     'Home': st.column_config.TextColumn(width='medium'),
@@ -3380,7 +3396,7 @@ def home_page():
 
                                 height = get_dataframe_height(tier_display)
                                 st.dataframe(
-                                    tier_display,
+                                    _as_display_date(tier_display, 'Date'),
                                     column_config={
                                         'Date': st.column_config.DateColumn(format='MM/DD/YYYY'),
                                         'Home Team': st.column_config.TextColumn(width='medium'),
