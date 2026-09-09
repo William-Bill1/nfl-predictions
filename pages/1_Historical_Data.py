@@ -714,8 +714,13 @@ if 'game_date' in historical_data.columns:
 
         st.write(f"Showing rows {start_idx + 1:,} to {end_idx:,} of {total_rows:,}")
 
+        _pg = filtered_data[display_cols].iloc[start_idx:end_idx].copy()
+        if 'game_date' in _pg.columns:
+            # date objects, not naive datetime64 - DateColumn otherwise shifts
+            # midnight timestamps a day back for viewers west of UTC.
+            _pg['game_date'] = pd.to_datetime(_pg['game_date'], errors='coerce').dt.date
         st.dataframe(
-            filtered_data[display_cols].iloc[start_idx:end_idx],
+            _pg,
             hide_index=True,
             height=600,
             column_config={
