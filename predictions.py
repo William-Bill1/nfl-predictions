@@ -1054,7 +1054,8 @@ def home_page():
                 else:
                     cols[0].write('')
                 # away full name (mark underdog in bold if applicable)
-                away_label_html = f"<div class='team-name'>{away_full}{' <span style=\"font-weight:700\">(Underdog)</span>' if is_away_underdog else ''}</div>"
+                _ud_badge = " <span style='font-weight:700'>(Underdog)</span>"
+                away_label_html = f"<div class='team-name'>{away_full}{_ud_badge if is_away_underdog else ''}</div>"
                 try:
                     cols[1].markdown(away_label_html, unsafe_allow_html=True)
                 except Exception:
@@ -1077,7 +1078,7 @@ def home_page():
                 # center '@'
                 cols[2].markdown("**@**")
                 # home full name (mark underdog in bold if applicable)
-                home_label_html = f"<div class='team-name'>{home_full}{' <span style=\"font-weight:700\">(Underdog)</span>' if is_home_underdog else ''}</div>"
+                home_label_html = f"<div class='team-name'>{home_full}{_ud_badge if is_home_underdog else ''}</div>"
                 try:
                     cols[3].markdown(home_label_html, unsafe_allow_html=True)
                 except Exception:
