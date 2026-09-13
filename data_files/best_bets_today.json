@@ -1,10 +1,115 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-12T07:35:17.717881+00:00",
+    "generated_at": "2026-09-13T07:56:25.226336+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-09-12"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-09-13",
+      "game_time": "13:00",
+      "game": "NO @ DET",
+      "home_team": "DET",
+      "away_team": "NO",
+      "bet_type": "Spread",
+      "pick": "NO +7",
+      "confidence": 0.552053030946688,
+      "edge": 0.0282435071371641,
+      "tier": "Strong",
+      "odds": -110,
+      "line": 7.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "13:00",
+      "game": "ATL @ PIT",
+      "home_team": "PIT",
+      "away_team": "ATL",
+      "bet_type": "Spread",
+      "pick": "ATL +6",
+      "confidence": 0.7822268636470351,
+      "edge": 0.2700317416958155,
+      "tier": "Elite",
+      "odds": -105,
+      "line": 6.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "13:00",
+      "game": "NYJ @ TEN",
+      "home_team": "TEN",
+      "away_team": "NYJ",
+      "bet_type": "Spread",
+      "pick": "NYJ +1.5",
+      "confidence": 0.5497637816079005,
+      "edge": 0.014880060677668,
+      "tier": "Good",
+      "odds": -115,
+      "line": 1.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "16:25",
+      "game": "MIA @ LV",
+      "home_team": "LV",
+      "away_team": "MIA",
+      "bet_type": "Spread",
+      "pick": "MIA +3",
+      "confidence": 0.640579773092437,
+      "edge": 0.1213490038616676,
+      "tier": "Elite",
+      "odds": -108,
+      "line": 3.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "16:25",
+      "game": "GB @ MIN",
+      "home_team": "MIN",
+      "away_team": "GB",
+      "bet_type": "Spread",
+      "pick": "GB +2.5",
+      "confidence": 0.5622435387695122,
+      "edge": 0.0273598178392796,
+      "tier": "Strong",
+      "odds": -115,
+      "line": 2.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "16:25",
+      "game": "WAS @ PHI",
+      "home_team": "PHI",
+      "away_team": "WAS",
+      "bet_type": "Spread",
+      "pick": "WAS +6",
+      "confidence": 0.5584207650402162,
+      "edge": 0.0301188782477633,
+      "tier": "Strong",
+      "odds": -112,
+      "line": 6.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-13",
+      "game_time": "20:20",
+      "game": "DAL @ NYG",
+      "home_team": "NYG",
+      "away_team": "DAL",
+      "bet_type": "Spread",
+      "pick": "NYG +3",
+      "confidence": 0.5472250757697322,
+      "edge": 0.0123413548394997,
+      "tier": "Good",
+      "odds": -115,
+      "line": 3.0,
+      "notes": null
+    }
+  ]
 }
