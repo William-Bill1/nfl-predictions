@@ -1,28 +1,28 @@
 {
-  "generated_at": "2026-09-11T12:05:56",
+  "generated_at": "2026-09-14T08:52:51",
   "source": "betting_recommendations_log.csv",
   "note": "Spread bets only, -110 (win +90.91 / loss -100 / push 0). ROI = profit / (settled non-push bets * 100).",
   "overall": {
-    "pending": 11,
-    "settled": 2,
-    "win": 1,
-    "loss": 0,
+    "pending": 4,
+    "settled": 9,
+    "win": 5,
+    "loss": 3,
     "push": 1,
-    "win_rate": 1.0,
-    "profit": 90.91,
-    "roi_pct": 90.91
+    "win_rate": 0.625,
+    "profit": 154.55,
+    "roi_pct": 19.32
   },
   "by_week": [
     {
       "week": 1,
-      "pending": 7,
-      "settled": 2,
-      "win": 1,
-      "loss": 0,
+      "pending": 0,
+      "settled": 9,
+      "win": 5,
+      "loss": 3,
       "push": 1,
-      "win_rate": 1.0,
-      "profit": 90.91,
-      "roi_pct": 90.91
+      "win_rate": 0.625,
+      "profit": 154.55,
+      "roi_pct": 19.32
     },
     {
       "week": 2,
@@ -38,34 +38,34 @@
   ],
   "by_tier": {
     "Elite": {
-      "pending": 1,
-      "settled": 0,
+      "pending": 0,
+      "settled": 1,
       "win": 0,
-      "loss": 0,
+      "loss": 1,
       "push": 0,
-      "win_rate": null,
-      "profit": 0.0,
-      "roi_pct": null
+      "win_rate": 0.0,
+      "profit": -100.0,
+      "roi_pct": -100.0
     },
     "Strong": {
-      "pending": 2,
-      "settled": 0,
+      "pending": 1,
+      "settled": 1,
       "win": 0,
-      "loss": 0,
+      "loss": 1,
       "push": 0,
-      "win_rate": null,
-      "profit": 0.0,
-      "roi_pct": null
+      "win_rate": 0.0,
+      "profit": -100.0,
+      "roi_pct": -100.0
     },
     "Good": {
-      "pending": 8,
-      "settled": 2,
-      "win": 1,
-      "loss": 0,
+      "pending": 3,
+      "settled": 7,
+      "win": 5,
+      "loss": 1,
       "push": 1,
-      "win_rate": 1.0,
-      "profit": 90.91,
-      "roi_pct": 90.91
+      "win_rate": 0.8333,
+      "profit": 354.55,
+      "roi_pct": 59.09
     }
   }
 }
