@@ -135,6 +135,7 @@ future information. Best-feature subsets per target are cached in
 | **nflverse** (`nfl_data_py`) | schedules, play-by-play, final scores | local, no key — completed-game scores come from the regenerated predictions CSV, not a runtime call |
 | **Open-Meteo** | player-prop weather adjustments | `player_props/weather.py` (nightly runs `--no-weather`) |
 | **ESPN** injury page | player-prop injury adjustments | scraped in `player_props/injuries.py` (nightly runs `--no-injuries`) |
+| **The Odds API** | real DK/FanDuel player-prop lines | opt-in, off by default — `player_props/market_odds.py`, needs `ODDS_API_KEY`; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
 
 All artifacts live in `data_files/` and are committed. The big one,
 `nfl_play_by_play_historical.csv.gz` (~116 MB, **tab-separated**), is tracked
@@ -237,6 +238,7 @@ Optional features (email, RSS) read environment variables. For local dev, copy
 |---|---|
 | `EMAIL_FROM`, `EMAIL_TO`, `EMAIL_PASSWORD`, `SMTP_SERVER`, `SMTP_PORT` | email notifications (Gmail App Password) |
 | `ALERTS_SITE_URL` | base URL for RSS per-alert links |
+| `ODDS_API_KEY` | opt-in real DK/FanDuel player-prop lines (unset = no-op, fixed tiers used as before) |
 
 Never commit real secrets. On Streamlit Cloud use the platform's secrets
 manager (`st.secrets`), not a `.env` file.
