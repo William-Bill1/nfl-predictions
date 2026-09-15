@@ -1,0 +1,101 @@
+season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odds,under_odds
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jared Goff,passing_yards,draftkings,265.5,-112,-112
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Josh Allen,passing_yards,draftkings,250.5,-113,-111
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Amon-Ra St. Brown,receiving_yards,draftkings,79.5,-113,-111
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,DJ Moore,receiving_yards,draftkings,57.5,-112,-112
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jameson Williams,receiving_yards,draftkings,56.5,-114,-110
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dalton Kincaid,receiving_yards,draftkings,50.5,-114,-110
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Sam LaPorta,receiving_yards,draftkings,45.5,-109,-115
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Khalil Shakir,receiving_yards,draftkings,43.5,-113,-111
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,receiving_yards,draftkings,30.5,-109,-115
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Isaac TeSlaa,receiving_yards,draftkings,15.5,-116,-108
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Joshua Palmer,receiving_yards,draftkings,14.5,-111,-113
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dawson Knox,receiving_yards,draftkings,13.5,-112,-112
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Keon Coleman,receiving_yards,draftkings,11.5,-112,-112
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Amon-Ra St. Brown,receptions,draftkings,7.5,-102,-125
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Sam LaPorta,receptions,draftkings,4.5,101,-129
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,DJ Moore,receptions,draftkings,4.5,112,-143
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,receptions,draftkings,4.5,114,-145
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Khalil Shakir,receptions,draftkings,4.5,123,-157
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jameson Williams,receptions,draftkings,3.5,-159,124
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dalton Kincaid,receptions,draftkings,3.5,-155,121
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Isaac TeSlaa,receptions,draftkings,1.5,108,-137
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dawson Knox,receptions,draftkings,1.5,123,-158
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Joshua Palmer,receptions,draftkings,1.5,152,-196
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Keon Coleman,receptions,draftkings,1.5,159,-205
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,rushing_yards,draftkings,89.5,-114,-110
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,James Cook,rushing_yards,draftkings,78.5,-113,-111
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Josh Allen,rushing_yards,draftkings,31.5,-108,-116
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Josh Allen,passing_yards,fanduel,248.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jared Goff,passing_yards,fanduel,270.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jameson Williams,receiving_yards,fanduel,59.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Khalil Shakir,receiving_yards,fanduel,44.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,DJ Moore,receiving_yards,fanduel,55.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Keon Coleman,receiving_yards,fanduel,11.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Amon-Ra St. Brown,receiving_yards,fanduel,79.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,receiving_yards,fanduel,29.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Joshua Palmer,receiving_yards,fanduel,13.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Isaac TeSlaa,receiving_yards,fanduel,15.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Sam LaPorta,receiving_yards,fanduel,46.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dalton Kincaid,receiving_yards,fanduel,51.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dawson Knox,receiving_yards,fanduel,12.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dawson Knox,receptions,fanduel,1.5,124,-166
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,DJ Moore,receptions,fanduel,4.5,102,-136
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Joshua Palmer,receptions,fanduel,1.5,148,-200
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Khalil Shakir,receptions,fanduel,4.5,102,-136
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Amon-Ra St. Brown,receptions,fanduel,7.5,-106,-125
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Keon Coleman,receptions,fanduel,1.5,172,-235
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,receptions,fanduel,4.5,110,-146
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Sam LaPorta,receptions,fanduel,4.5,102,-136
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jameson Williams,receptions,fanduel,3.5,-192,142
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Isaac TeSlaa,receptions,fanduel,1.5,118,-158
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Dalton Kincaid,receptions,fanduel,3.5,-162,122
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Josh Allen,rushing_yards,fanduel,29.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,James Cook,rushing_yards,fanduel,78.5,-114,-114
+2026,2,2026_02_DET_BUF,Buffalo Bills,Detroit Lions,Jahmyr Gibbs,rushing_yards,fanduel,90.5,-114,-114
+2026,2,2026_02_WAS_DAL,Dallas Cowboys,Washington Commanders,Jayden Daniels,passing_yards,fanduel,196.5,-114,-114
+2026,2,2026_02_WAS_DAL,Dallas Cowboys,Washington Commanders,Dak Prescott,passing_yards,fanduel,262.5,-114,-114
+2026,2,2026_02_WAS_DAL,Dallas Cowboys,Washington Commanders,Jacory Croskey-Merritt,rushing_yards,fanduel,56.5,-114,-114
+2026,2,2026_02_WAS_DAL,Dallas Cowboys,Washington Commanders,Javonte Williams,rushing_yards,fanduel,72.5,-114,-114
+2026,2,2026_02_WAS_DAL,Dallas Cowboys,Washington Commanders,Jayden Daniels,rushing_yards,fanduel,38.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Daniel Jones,passing_yards,fanduel,218.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Patrick Mahomes,passing_yards,fanduel,217.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Travis Kelce,receiving_yards,fanduel,42.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Keenan Allen,receiving_yards,fanduel,30.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Tyquan Thornton,receiving_yards,fanduel,13.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Josh Downs,receiving_yards,fanduel,36.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Rashee Rice,receiving_yards,fanduel,54.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Tyler Warren,receiving_yards,fanduel,42.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Alec Pierce,receiving_yards,fanduel,43.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Jonathan Taylor,receiving_yards,fanduel,16.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Kenneth Walker III,receiving_yards,fanduel,18.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Xavier Worthy,receiving_yards,fanduel,37.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Rashee Rice,receptions,fanduel,5.5,120,-160
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Xavier Worthy,receptions,fanduel,3.5,106,-140
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Jonathan Taylor,receptions,fanduel,2.5,-120,-110
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Alec Pierce,receptions,fanduel,2.5,-172,128
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Tyler Warren,receptions,fanduel,4.5,-130,-102
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Travis Kelce,receptions,fanduel,3.5,-154,116
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Josh Downs,receptions,fanduel,3.5,-122,-106
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Kenneth Walker III,receptions,fanduel,2.5,-160,120
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Keenan Allen,receptions,fanduel,3.5,-130,-102
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Tyquan Thornton,receptions,fanduel,1.5,178,-245
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Emmett Johnson,rushing_yards,fanduel,16.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Patrick Mahomes,rushing_yards,fanduel,16.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Jonathan Taylor,rushing_yards,fanduel,88.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Kenneth Walker III,rushing_yards,fanduel,73.5,-114,-114
+2026,2,2026_02_IND_KC,Kansas City Chiefs,Indianapolis Colts,Daniel Jones,rushing_yards,fanduel,9.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Matthew Stafford,passing_yards,fanduel,242.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Jaxson Dart,passing_yards,fanduel,216.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Isaiah Likely,receiving_yards,fanduel,46.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Puka Nacua,receiving_yards,fanduel,85.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Davante Adams,receiving_yards,fanduel,44.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Malik Nabers,receiving_yards,fanduel,65.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Isaiah Likely,receptions,fanduel,4.5,-138,104
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Puka Nacua,receptions,fanduel,6.5,-130,-102
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Davante Adams,receptions,fanduel,3.5,-136,102
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Malik Nabers,receptions,fanduel,5.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Kyren Williams,rushing_yards,fanduel,62.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Blake Corum,rushing_yards,fanduel,43.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Jaxson Dart,rushing_yards,fanduel,30.5,-114,-114
+2026,2,2026_02_NYG_LA,Los Angeles Rams,New York Giants,Cam Skattebo,rushing_yards,fanduel,49.5,-114,-114
