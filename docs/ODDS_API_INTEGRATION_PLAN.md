@@ -1,0 +1,286 @@
+# Sportsbook Player-Prop Odds Integration — Design
+
+**Status:** scoped, not built.
+**Provider:** [The Odds API](https://the-odds-api.com/) (see chat discussion — free tier is
+real, DK + FanDuel covered by name, player-prop market keys line up with what
+`player_props/models.py` already predicts).
+**Goal:** replace the fixed internal prop-line tiers (275 passing yards, 7.5
+receptions, …) with real DraftKings/FanDuel lines for the four **reliable**
+prop types, so `edge = model_prob − market_implied_prob` becomes a real number
+instead of "how often a player clears an arbitrary round line."
+
+## Non-goals (this pass)
+
+- **Spread/moneyline/totals** stay on the nflverse consensus line. The spread
+  model has no proven out-of-sample edge (`Spread_OOS_Test` in
+  `model_metrics.json`); precise live game odds don't fix that, and it's a
+  separate, lower-value integration if ever pursued.
+- **TD props** (`passing_tds`, `rushing_tds`, `receiving_tds`) are already
+  force-flagged `reliable = False` in `player_props/models.py` (every tier
+  collapses to the same 0.5 line, ~coin-flip out-of-time). Don't spend credits
+  pulling market odds for markets the app already tells users to ignore.
+- **Historical backtest** — The Odds API's historical endpoint only covers
+  "featured markets" (moneyline/spread/total), not player props, so this can't
+  retroactively validate past weeks. It's a going-forward integration only,
+  same shape as the existing write-once weekly snapshot.
+- **DK Pick 6 specifically** — Pick 6 is DraftKings' own DFS-style product
+  with its own line-setting, not the same feed as DraftKings' regular
+  sportsbook player props. This integration pulls **regular sportsbook**
+  DK/FanDuel prop lines, which are usually close to Pick 6's lines but not
+  guaranteed identical. The DK Pick 6 Calculator (`pages/2_Player_Props.py`)
+  keeps manual line entry; market odds would only pre-fill it as a *starting
+  point*, with a note that it's the sportsbook line, not the Pick 6 line.
+
+## New module: `player_props/market_odds.py`
+
+Mirrors the existing `player_props/injuries.py` shape (`get_injury_report` /
+`find_player_injury` / `adjust_prediction_for_injury`) so it fits the
+established pattern of an optional, cache-backed enrichment step:
+
+```python
+ODDS_API_KEY = os.getenv("ODDS_API_KEY", "")
+ODDS_API_BASE = "https://api.the-odds-api.com/v4"
+ODDS_API_REGION = "us"
+# Only the reliable prop types - see Non-goals.
+ODDS_API_MARKETS = {
+    "passing_yards": "player_pass_yds",
+    "rushing_yards": "player_rush_yds",
+    "receiving_yards": "player_reception_yds",
+    "receptions": "player_receptions",
+}
+BOOKMAKERS = ("draftkings", "fanduel")
+
+def fetch_market_odds(season: int, week: int, use_cache: bool = True,
+                       max_cache_age_hours: int = 6) -> pd.DataFrame:
+    """One row per (game, player, prop_type, bookmaker): line + over/under price.
+
+    Returns an empty DataFrame - never raises - when ODDS_API_KEY is unset,
+    the request fails, or the response can't be parsed. Callers must treat
+    "no market odds" as a normal, expected state (same contract as
+    get_injury_report's empty-DataFrame-on-failure).
+    """
+
+def find_market_line(display_name: str, team: str, prop_type: str,
+                      odds_df: pd.DataFrame) -> dict | None:
+    """Best-available line across BOOKMAKERS for one player/prop.
+    Returns {'line': float, 'over_odds': int, 'under_odds': int,
+             'book': str, 'implied_prob_over': float} or None if unmatched.
+    """
+
+def attach_market_odds(prediction: dict, market_info: dict | None) -> dict:
+    """Adds market_line / market_book / market_implied_prob / market_edge to
+    a prediction dict in place. No-ops (leaves the fixed-tier fields as-is)
+    when market_info is None.
+    """
+```
+
+Caching (`use_cache`, `max_cache_age_hours=6`) matters more here than for
+injuries: it's what keeps a single fetch within budget (see below) even if
+`predict.py` is invoked more than once in a day (manual reruns, retries).
+Cache to `data_files/.cache/market_odds_{season}_{week}.json` (gitignored),
+same idea as any local cache — not the frozen artifact described next.
+
+### Credit-budget guard (built in, not bolted on)
+
+`fetch_market_odds` reads the response headers The Odds API returns on every
+call — `x-requests-remaining` / `x-requests-used` — and:
+- logs remaining credits after every call (`print(f"[market_odds] {remaining} credits left")`),
+- stops issuing further per-event calls **mid-run** if remaining drops below a
+  floor (`ODDS_API_MIN_REMAINING`, default 20) and returns whatever it already
+  fetched, rather than erroring out or burning the account to zero,
+- this floor is a constant, not a tier-specific hardcode — it behaves
+  identically on the free tier and the $30 tier, it just gets hit less often
+  on the paid one.
+
+## Where it plugs into `predict.py`
+
+`generate_predictions(season, week, freeze, skip_injuries, skip_weather)` at
+`player_props/predict.py:1015` already threads an optional enrichment step
+through per-game prediction (`predict_props_for_game`, line 822, takes
+`skip_injuries`/`skip_weather` and calls `get_injury_report()` /
+`get_weather_for_game()` internally). Add a third, same-shaped flag:
+
+```python
+def generate_predictions(season=None, week=None, freeze=True,
+                          skip_injuries=False, skip_weather=False,
+                          skip_market_odds=False):
+    ...
+    market_odds_df = (pd.DataFrame() if skip_market_odds
+                       else fetch_market_odds(season, resolved_week))
+```
+
+Then in `predict_props_for_game` (or in the prediction-assembly loop it
+feeds), after a prediction dict is built from the fixed-tier line, call
+`attach_market_odds(prediction, find_market_line(...))` — same insertion
+point as the existing `adjust_prediction_for_injury` / `adjust_for_weather`
+calls.
+
+New CLI flag on the existing `argparse` block: `--no-market-odds` (mirrors
+`--no-injuries` / `--no-weather` / `--no-freeze`).
+
+## Schema changes
+
+**`player_props_predictions.csv` / `..._week{W}_{season}.csv`** gain columns
+(additive — nothing existing changes):
+
+| Column | Meaning |
+|---|---|
+| `market_line` | best available DK/FanDuel line for this player+prop |
+| `market_book` | which book it came from (`draftkings` / `fanduel`) |
+| `market_implied_prob` | vig-adjusted implied P(over) from `market_over_odds`/`market_under_odds`, same `implied_prob()` math already in `nfl-gather-data.py` |
+| `market_edge` | `prob_over − market_implied_prob` (the *real* edge, parallel to `edge_underdog_spread` on the game side) |
+| `market_line_available` | bool — False when unmatched/no key/quota hit, so the UI can distinguish "no edge" from "no market data" |
+
+`line_value` (the existing fixed-tier column) is **kept**, not replaced — it's
+still what the trained model's threshold was calibrated against, and losing
+it would break `backtest.py`'s existing hit-rate logic. `market_line` is a
+new, independent field for display/edge purposes.
+
+**New frozen artifact** (mirrors `betting_log.py` → `spread_performance.json`
+and the write-once prop snapshot): `data_files/market_odds_week{W}_{season}.csv`
+— raw fetched rows (one per player/prop/book, before matching/aggregation),
+written once per week alongside the prop snapshot. This is the audit trail:
+if a market line looks wrong later, you can check what was actually returned
+that week without re-querying (impossible anyway, since historical player
+props aren't available from the API).
+
+## Name & team matching
+
+The prop stats' join key is **`display_name`** (full name: "Nick Mullens",
+"Ollie Gordon II" — see `player_props_predictions_week2_2026.csv`), not the
+abbreviated `player_name` ("N.Mullens") used for rolling-stat lookups. The
+Odds API returns full names too, so match on `display_name` directly, with:
+- exact match first,
+- fallback: normalize both sides (strip `Jr.`/`Sr.`/`II`/`III`, lowercase,
+  strip punctuation) and retry,
+- log every unmatched player at the end of a run (`print(f"[market_odds]
+  {n} players had no market line: {names[:10]}...")`) — same "tell me what's
+  missing" discipline as `⚠️ Model {name} not found, skipping` in
+  `predict.py::load_models`. Don't fail silently on a miss; just leave
+  `market_line_available = False` for that row.
+
+Team codes: The Odds API returns full team names ("Kansas City Chiefs"); the
+prop stats use abbreviations ("KC"). `predictions.py:2908` already has a
+`team_full_name_map` (abbr → full) defined inline inside a function — not
+importable as-is. Cheapest option: a small **inverted copy** local to
+`market_odds.py` (matches the codebase's existing style of small inline maps
+rather than a new shared module for one dict). Optional cleanup if this ever
+gets built: hoist the one true map into `season_utils.py` and have both call
+sites import it — flagging as a nice-to-have, not a blocker.
+
+## Config / secrets
+
+- New GitHub Actions secret: `ODDS_API_KEY`.
+- New env var read by `market_odds.py`: `ODDS_API_KEY` (same name locally via
+  `.env`, consistent with `EMAIL_PASSWORD` etc. in `.env.example`).
+- **Unset by default everywhere** — local dev, CI, and a fresh clone all work
+  with zero market-odds calls until someone opts in by setting the key. This
+  is the same posture as `PROP_ROSTER_FILTER=1` (opt-in, not opt-out) from
+  the roster-filter work, but for a different reason: that one was gated
+  because the underlying data was bad; this one is gated because it costs
+  real money once the free tier is exceeded, so silently-always-on is the
+  wrong default for a hobby project.
+
+## Free-tier budget math (design target)
+
+Player props require **one call per game** (`/v4/sports/{sport}/events/{id}/odds`,
+not the bulk `/odds` endpoint), costing `markets × regions` credits per call:
+
+- 4 markets (the reliable subset) × 1 region (`us`) = **4 credits/game**
+- 16-game week ≈ **64 credits**
+- Pulled **once per week** (matching the existing write-once frozen-snapshot
+  cadence — `predict.py` already only generates each week's snapshot once) ⇒
+  a full ~18-week season ≈ 1,150 credits total, spread across ~4.5 months of
+  free-tier resets (500/month × 4.5 ≈ 2,250 available). **Fits the free tier
+  with room to spare**, as long as nothing calls it more than once per week.
+
+The caching layer (6h TTL) is what enforces "once per week" in practice even
+if `predict.py` gets rerun by hand or the nightly retries.
+
+## The $30/mo (20,000 credits/month) upgrade path
+
+Nothing in the design above hardcodes the free tier — the upgrade is a
+**cadence change, not a code change**:
+
+- Add a step to `nightly-update.yml` calling `predict.py` with market odds
+  enabled on nights it currently skips it (right now props only freeze once
+  a week on the nightly that lands the new upcoming week) — i.e. refresh
+  `market_line` **daily** as lines move, instead of once at freeze time.
+  64 credits/day × 7 ≈ 450/week — trivial against 20,000/month.
+- Or: widen `ODDS_API_MARKETS` to include TD props too, or add a second
+  region, without hitting the budget guard.
+- The `ODDS_API_MIN_REMAINING` floor and the per-call credit logging mean
+  you'd *see* the free tier getting tight (via the nightly Action logs)
+  before it ever silently failed — that's the signal to flip the plan.
+
+## Error handling / graceful degradation
+
+Every failure mode falls back to **today's behavior** (fixed-tier lines, no
+`market_*` columns populated / `market_line_available=False`), never a hard
+failure of the prediction pipeline:
+
+| Failure | Behavior |
+|---|---|
+| `ODDS_API_KEY` unset | `fetch_market_odds` returns empty DF immediately, one log line, zero API calls |
+| HTTP error / timeout | caught, logged, empty DF for that call — same `continue-on-error: true` posture as the injuries/weather steps already have in the nightly workflow |
+| Player/team unmatched | that row's `market_line_available = False`; doesn't block other rows |
+| Credit floor hit mid-run | stop fetching, keep what's already fetched, log it |
+| Cache present and fresh | skip the network call entirely |
+
+## UI changes (separate follow-up PR, not required to land with the fetcher)
+
+- **Player Props page** (`pages/2_Player_Props.py`): add a "Market Line"
+  column (from `market_line`/`market_book`) next to the existing prop table,
+  and prefer sorting/filtering by `market_edge` when available, falling back
+  to the current `confidence` sort when it's not (unmatched player, no key).
+- **DK Pick 6 Calculator**: pre-fill the line input from `market_line` when
+  available (labeled "DraftKings sportsbook line — confirm against the Pick 6
+  board" per the Non-goals caveat above), still fully editable.
+
+## Tests (`tests/test_market_odds.py`)
+
+No live API calls in CI — mock `requests.get` / feed canned JSON fixtures,
+matching how `tests/test_betting_log.py` and `tests/test_prop_roster_filter.py`
+build small in-memory DataFrames rather than touching real data:
+
+- `find_market_line`: exact match, suffix-normalized match, unmatched → `None`.
+- `attach_market_odds`: populates fields when given a match; leaves the
+  prediction dict's existing fixed-tier fields untouched when `None`.
+- `fetch_market_odds`: unset key → empty DF, no network attempted (patch
+  `requests.get` with a `Mock` that raises if called, to prove it); credit
+  floor stops mid-run (feed a fake header sequence).
+- Team-map round-trip: every abbreviation in `player_props_predictions` `team`
+  column resolves through the inverted map.
+
+## Docs to update once this is actually built
+
+- `README.md` — Data table gets a new row (`The Odds API — player-prop lines
+  — opt-in, ODDS_API_KEY`); troubleshooting row for "market lines missing."
+- `docs/architecture.md` — API Integrations table + Player Props section
+  (note `market_*` columns, the credit-budget guard, weekly cadence).
+- `.github/copilot-instructions.md` — new env var, new opt-in pattern to list
+  alongside `PROP_ROSTER_FILTER`.
+- `CHANGELOG.md` — standard dated entry when it ships.
+- `.env.example` — add `ODDS_API_KEY=`.
+
+## Rollout phases (if you want to land it incrementally rather than all at once)
+
+1. **Fetch + log only.** `market_odds.py` + the frozen artifact + tests. Wire
+   into `predict.py` behind `--no-market-odds` but don't touch the UI yet.
+   Verify a few weeks of real credit usage against the budget math above.
+2. **Wire into `edge`/display columns** in the predictions CSV + Player Props
+   page table.
+3. **DK Pick 6 pre-fill** + any UI polish.
+
+## Open questions for you before implementation starts
+
+1. Confirm the account: sign up for the free tier, get an `ODDS_API_KEY`,
+   and either add it as a GitHub secret yourself or hand it to me to wire in
+   (never put it in a commit).
+2. Weekly cadence (matches the write-once snapshot, safest for the free
+   tier) vs. daily-refresh-of-market-line-only-while-keeping-model-predictions-weekly
+   — the design above assumes weekly; daily-refresh is a small variant if you
+   want fresher lines without waiting for the $30 tier.
+3. OK with the new frozen-artifact file (`market_odds_week{W}_{season}.csv`)
+   being committed to git like the other snapshots, or would you rather it
+   stay local/gitignored (smaller repo, but loses the audit trail)?
