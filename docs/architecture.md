@@ -106,6 +106,12 @@ flag through as `model_reliable` and the UI marks unreliable rows "display
 only". `opponent_def_rank` was removed (a dataset-wide leaky average that
 clipped to a constant). Prop lines are still fixed tiers (275, 250, …) not
 market lines — the weekly hit rate reflects line placement, not betting edge.
+**Opt-in real market lines** (`player_props/market_odds.py`, off unless
+`ODDS_API_KEY` is set): pulls DK/FanDuel lines for the four reliable prop
+types from The Odds API and adds `market_line`/`market_book`/
+`market_implied_prob`/`market_edge`/`market_line_available` columns
+(additive — `line_value` unchanged). No UI wiring yet — see
+`docs/ODDS_API_INTEGRATION_PLAN.md`.
 
 ## Feature Engineering
 All features are pre-game only (zero data leakage):
@@ -120,6 +126,7 @@ All features are pre-game only (zero data leakage):
 | nfl_data_py | Schedule, play-by-play, final scores | Local, no key; final scores arrive via the regenerated predictions CSV |
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
+| The Odds API | Real DK/FanDuel player-prop lines | opt-in, `player_props/market_odds.py`, needs `ODDS_API_KEY` (nightly: `--no-market-odds` not passed, but no-ops without the secret) |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
 The dashboard makes **no runtime API calls**. `update_completed_games` is now a
@@ -135,6 +142,7 @@ score fetch is gone.
 - `betting_log.py` — headless owner of `betting_recommendations_log.csv` (`append_recommendations`, `grade_pending`); `predictions.py` delegates to it
 - `player_props/train_models.py` — prop model training (temporal hold-out)
 - `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
+- `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); write-once `market_odds_week{W}_{season}.csv` doubles as its own cache
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
 - `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
@@ -146,6 +154,7 @@ All data in `data_files/` (committed to git):
 - `nfl_games_historical_with_predictions.csv` — games (played + upcoming) + spread/market probabilities
 - `model_metrics.json` (incl. `Spread_EV_Analysis` / `Spread_OOS_Test`), `model_feature_importances.csv`, `best_features_spread.txt` — model eval + selected features
 - `player_props_predictions.csv` — latest prop feed; `player_props_predictions_week{W}_{season}.csv` — frozen weekly snapshots
+- `market_odds_week{W}_{season}.csv` — opt-in DK/FanDuel prop lines (empty/absent unless `ODDS_API_KEY` is set); write-once, doubles as its own cache
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed

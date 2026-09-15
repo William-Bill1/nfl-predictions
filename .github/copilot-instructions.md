@@ -138,8 +138,10 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   - training only: `python nfl-gather-data.py` (no network; byte-reproducible)
   - retrain prop models: `python player_props/train_models.py --skip-aggregation`
   - prop predictions + weekly freeze: `python player_props/predict.py`
-    (`--week N` / `--season YYYY` / `--no-injuries --no-weather` / `--no-freeze`;
-    env `PROP_ROSTER_FILTER=1` to drop off-roster players, opt-in)
+    (`--week N` / `--season YYYY` / `--no-injuries --no-weather` / `--no-freeze`
+    / `--no-market-odds`; env `PROP_ROSTER_FILTER=1` to drop off-roster
+    players, `ODDS_API_KEY` for real DK/FanDuel prop lines — both opt-in,
+    both true no-ops when unset)
   - results tracking: `python betting_log.py` then `python scripts/weekly_spread_report.py`
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
@@ -198,6 +200,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **best_bets_today.json**: `scripts/export_best_bets.py` reads the predictions
   CSV directly (`pred_spreadCovered_optimal == 1`, today's games) — independent
   of the app / `betting_recommendations_log.csv`.
+- **Market odds** (opt-in): `player_props/market_odds.py` fetches DK/FanDuel
+  player-prop lines from The Odds API when `ODDS_API_KEY` is set (unset in
+  production today — verified no-op). See `docs/ODDS_API_INTEGRATION_PLAN.md`.
 
 ## Known Issues / gotchas
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.

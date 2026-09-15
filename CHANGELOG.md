@@ -8,6 +8,25 @@ bottom.
 
 ## September 2026
 
+- **Market-odds fetcher, Phase 1 (opt-in, off by default).** New
+  `player_props/market_odds.py` pulls real DraftKings/FanDuel lines for the
+  four reliable prop types (passing/rushing/receiving yards, receptions) from
+  [The Odds API](https://the-odds-api.com/), so `market_edge = model_prob -
+  market_implied_prob` can eventually be a real number instead of accuracy
+  against an arbitrary fixed tier. Wired into `predict.py` the same way as
+  `skip_injuries`/`skip_weather` (`--no-market-odds`, `ODDS_API_KEY` env var);
+  a genuine zero-cost no-op until the key is set - no network call, existing
+  fixed-tier behavior unchanged. New `market_line`/`market_book`/
+  `market_implied_prob`/`market_edge`/`market_line_available` columns on the
+  predictions CSV (additive - `line_value` and everything else untouched). New
+  frozen artifact `market_odds_week{W}_{season}.csv`, doubling as the
+  once-per-week cache that keeps this inside the free tier's 500 credits/month.
+  Nightly workflow passes `secrets.ODDS_API_KEY` through (unset today, so
+  still a no-op in production). Design + credit-budget math in
+  `docs/ODDS_API_INTEGRATION_PLAN.md`; UI wiring (Player Props page columns,
+  DK Pick 6 pre-fill) is Phase 2/3, not built yet. Tests:
+  `tests/test_market_odds.py` (54 total pass; no live API calls).
+
 - **CI `Tests` workflow was red for 10 days — fixed.** `pytest -q` (the bare
   console script, which is what CI runs) errored at collection with
   `ModuleNotFoundError: No module named 'season_utils'` on every run since the

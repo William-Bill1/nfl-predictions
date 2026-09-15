@@ -24,6 +24,7 @@ except ImportError:  # run from inside player_props/
 try:
     from .injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from .weather import get_weather_for_game, adjust_for_weather
+    from .market_odds import fetch_market_odds, find_market_line, attach_market_odds
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -31,6 +32,7 @@ except ImportError:
     sys.path.append(os.path.dirname(__file__))
     from injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from weather import get_weather_for_game, adjust_for_weather
+    from market_odds import fetch_market_odds, find_market_line, attach_market_odds
 
 # ============================================================================
 # CONFIGURATION
@@ -819,9 +821,14 @@ def get_player_performance_tier(player_name, prop_type, all_stats):
     return 'starter'
 
 
-def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, skip_weather=False):
+def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, skip_weather=False,
+                            market_odds_df=None):
     """
     Generate prop predictions for all players in a game.
+
+    `market_odds_df`: optional DataFrame from market_odds.fetch_market_odds()
+    for the whole week (see market_odds.ODDS_COLUMNS). None/empty is fine -
+    every prediction just gets market_line_available=False.
     """
     predictions = []
 
@@ -997,7 +1004,15 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             print(f"⚠️ Weather adjustment failed for {player_name}: {e}")
                             prediction['weather_adjusted'] = False
                             prediction['weather_conditions'] = "Unknown"
-                        
+
+                        # Attach real DK/FanDuel market odds when available
+                        # (opt-in, see market_odds.py). Computed against the
+                        # final prob_over, after injury/weather adjustments.
+                        market_info = find_market_line(
+                            prediction['display_name'], team, prop_type, market_odds_df
+                        )
+                        prediction = attach_market_odds(prediction, market_info)
+
                         predictions.append(prediction)
                     
                 except Exception as e:
@@ -1013,7 +1028,8 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
 # ============================================================================
 
 def generate_predictions(season=None, week=None, freeze=True,
-                         skip_injuries=False, skip_weather=False):
+                         skip_injuries=False, skip_weather=False,
+                         skip_market_odds=False):
     """Main pipeline to generate all prop predictions.
 
     Writes data_files/player_props_predictions.csv (always, the 'latest' feed)
@@ -1021,6 +1037,11 @@ def generate_predictions(season=None, week=None, freeze=True,
     data_files/player_props_predictions_week{W}_{season}.csv that is written
     ONCE and never overwritten - that frozen file is what backtest.py scores,
     so the weekly accuracy check is a genuine prospective test.
+
+    Same shape as skip_injuries/skip_weather: `skip_market_odds=False` is the
+    default, but market_odds.fetch_market_odds() is itself a no-op unless
+    ODDS_API_KEY is set, so this stays a true no-cost no-op everywhere the key
+    isn't configured. See docs/ODDS_API_INTEGRATION_PLAN.md.
     """
     print("=" * 70)
     print("🎯 NFL Player Props Prediction Pipeline")
@@ -1036,24 +1057,35 @@ def generate_predictions(season=None, week=None, freeze=True,
     
     all_stats = load_player_stats()
     models = load_models()
-    
+
     if not models:
         print("❌ No models found. Run 'python player_props/models.py' first")
         return
-    
+
+    # Real DK/FanDuel lines for the reliable prop types, fetched once for the
+    # whole week (not per game). No-op (empty DataFrame) unless ODDS_API_KEY
+    # is set - see market_odds.py.
+    resolved_season = int(schedule['season'].dropna().iloc[0]) if 'season' in schedule.columns and schedule['season'].notna().any() else (season or upcoming_or_current_season())
+    resolved_week = int(schedule['week'].dropna().iloc[0])
+    market_odds_df = (
+        pd.DataFrame() if skip_market_odds
+        else fetch_market_odds(resolved_season, resolved_week, schedule)
+    )
+
     print()
     print("🔮 Generating predictions...")
     print("-" * 70)
-    
+
     # Generate predictions for each game
     all_predictions = []
-    
+
     for idx, game_row in schedule.iterrows():
         print(f"\n📅 {game_row['away_team']} @ {game_row['home_team']} (Week {game_row['week']})")
-        
+
         game_predictions = predict_props_for_game(
             game_row, all_stats, models,
             skip_injuries=skip_injuries, skip_weather=skip_weather,
+            market_odds_df=market_odds_df,
         )
         all_predictions.extend(game_predictions)
         
@@ -1125,8 +1157,11 @@ if __name__ == '__main__':
                     help="skip the ESPN injury scrape (optional nudge; can hang on restricted networks)")
     ap.add_argument('--no-weather', action='store_true',
                     help="skip per-player Open-Meteo weather lookups (slow/flaky)")
+    ap.add_argument('--no-market-odds', action='store_true',
+                    help="skip fetching real DK/FanDuel prop lines (also a no-op if ODDS_API_KEY is unset)")
     args = ap.parse_args()
     generate_predictions(
         season=args.season, week=args.week, freeze=not args.no_freeze,
         skip_injuries=args.no_injuries, skip_weather=args.no_weather,
+        skip_market_odds=args.no_market_odds,
     )

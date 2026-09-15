@@ -1,6 +1,10 @@
 # Sportsbook Player-Prop Odds Integration — Design
 
-**Status:** scoped, not built.
+**Status:** **Phase 1 built** (`player_props/market_odds.py`, wired into
+`predict.py` behind `ODDS_API_KEY`/`--no-market-odds`, `tests/test_market_odds.py`,
+nightly workflow passes the secret through). Phases 2-3 (UI columns, DK Pick 6
+pre-fill) not started. Nobody has set `ODDS_API_KEY` yet, so in production this
+is currently a verified no-op — see "Open questions" at the bottom, still open.
 **Provider:** [The Odds API](https://the-odds-api.com/) (see chat discussion — free tier is
 real, DK + FanDuel covered by name, player-prop market keys line up with what
 `player_props/models.py` already predicts).
@@ -50,35 +54,39 @@ ODDS_API_MARKETS = {
 }
 BOOKMAKERS = ("draftkings", "fanduel")
 
-def fetch_market_odds(season: int, week: int, use_cache: bool = True,
-                       max_cache_age_hours: int = 6) -> pd.DataFrame:
-    """One row per (game, player, prop_type, bookmaker): line + over/under price.
+def fetch_market_odds(season, week, schedule: pd.DataFrame,
+                       use_cache: bool = True) -> pd.DataFrame:
+    """One row per (game, player, prop_type, book): line + over/under price.
 
     Returns an empty DataFrame - never raises - when ODDS_API_KEY is unset,
-    the request fails, or the response can't be parsed. Callers must treat
+    every request fails, or the response can't be parsed. Callers must treat
     "no market odds" as a normal, expected state (same contract as
     get_injury_report's empty-DataFrame-on-failure).
     """
 
 def find_market_line(display_name: str, team: str, prop_type: str,
-                      odds_df: pd.DataFrame) -> dict | None:
-    """Best-available line across BOOKMAKERS for one player/prop.
-    Returns {'line': float, 'over_odds': int, 'under_odds': int,
-             'book': str, 'implied_prob_over': float} or None if unmatched.
+                      odds_df: pd.DataFrame | None) -> dict | None:
+    """Best-available (BOOKMAKERS preference order) line for one player/prop.
+    Returns {'line': float, 'book': str, 'over_odds': int, 'under_odds': int,
+             'market_implied_prob': float} or None if unmatched.
     """
 
 def attach_market_odds(prediction: dict, market_info: dict | None) -> dict:
-    """Adds market_line / market_book / market_implied_prob / market_edge to
-    a prediction dict in place. No-ops (leaves the fixed-tier fields as-is)
-    when market_info is None.
+    """Adds market_line / market_book / market_implied_prob / market_edge /
+    market_line_available to a prediction dict in place. No-ops (leaves the
+    fixed-tier fields as-is) when market_info is None.
     """
 ```
 
-Caching (`use_cache`, `max_cache_age_hours=6`) matters more here than for
-injuries: it's what keeps a single fetch within budget (see below) even if
-`predict.py` is invoked more than once in a day (manual reruns, retries).
-Cache to `data_files/.cache/market_odds_{season}_{week}.json` (gitignored),
-same idea as any local cache — not the frozen artifact described next.
+**Implementation simplification vs. the original sketch above:** rather than
+two separate caching layers (a short-TTL cache plus the frozen weekly
+artifact), the frozen artifact itself *is* the cache —
+`fetch_market_odds` checks `data_files/market_odds_week{W}_{season}.csv` first
+and returns it unfetched if present, matching the write-once philosophy the
+prop snapshot already uses (`predict.py::generate_predictions`) and giving a
+*stronger* budget guarantee than a time-based TTL: once fetched for a week, a
+week is never re-fetched, full stop, regardless of how many times `predict.py`
+is rerun that week.
 
 ### Credit-budget guard (built in, not bolted on)
 

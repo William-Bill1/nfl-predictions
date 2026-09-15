@@ -105,6 +105,11 @@ jobs:
 
       - name: Freeze player-prop predictions for the upcoming week
         if: steps.season_check.outputs.in_season == 'true'
+        env:
+          # Opt-in DK/FanDuel prop-odds fetch (player_props/market_odds.py) -
+          # a genuine no-op (zero API calls) until this secret is set. See
+          # docs/ODDS_API_INTEGRATION_PLAN.md.
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: |
           echo "Generating + freezing player-prop predictions for the next week..."
           # Auto-detects the next upcoming week from the current schedule. The
