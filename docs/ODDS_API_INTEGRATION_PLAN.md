@@ -1,10 +1,17 @@
 # Sportsbook Player-Prop Odds Integration — Design
 
-**Status:** **Phase 1 built** (`player_props/market_odds.py`, wired into
-`predict.py` behind `ODDS_API_KEY`/`--no-market-odds`, `tests/test_market_odds.py`,
-nightly workflow passes the secret through). Phases 2-3 (UI columns, DK Pick 6
-pre-fill) not started. Nobody has set `ODDS_API_KEY` yet, so in production this
-is currently a verified no-op — see "Open questions" at the bottom, still open.
+**Status:** **Phases 1-2 built.** `ODDS_API_KEY` is set as a GitHub Actions
+secret (added 2026-09-16) and confirmed live: the Sep 16 nightly matched 30
+real props to DK/FanDuel lines. Caught and fixed a real bug along the way -
+`attach_market_odds` gated on `isinstance(prob_over, (int, float))`, but
+`model.predict_proba()` returns `numpy.float32` (not a `float` subclass), so
+`market_edge` was `NaN` for nearly every match; fixed with a `float()` cast
+instead of a type-gate. Phase 2 (`pages/2_Player_Props.py`): "Market" /
+"Market Edge" columns on the main props table, sorted by a *directional* edge
+(flipped to align with the recommendation - `market_edge` itself is always in
+P(over) terms, so a strongly negative value on an UNDER pick means a *strong*
+edge, not a weak one; sorting/display use the flipped, always-"bigger is
+better" version). Phase 3 (DK Pick 6 pre-fill) not started.
 **Provider:** [The Odds API](https://the-odds-api.com/) (see chat discussion — free tier is
 real, DK + FanDuel covered by name, player-prop market keys line up with what
 `player_props/models.py` already predicts).
@@ -271,24 +278,25 @@ build small in-memory DataFrames rather than touching real data:
 - `CHANGELOG.md` — standard dated entry when it ships.
 - `.env.example` — add `ODDS_API_KEY=`.
 
-## Rollout phases (if you want to land it incrementally rather than all at once)
+## Rollout phases
 
-1. **Fetch + log only.** `market_odds.py` + the frozen artifact + tests. Wire
-   into `predict.py` behind `--no-market-odds` but don't touch the UI yet.
-   Verify a few weeks of real credit usage against the budget math above.
-2. **Wire into `edge`/display columns** in the predictions CSV + Player Props
-   page table.
-3. **DK Pick 6 pre-fill** + any UI polish.
+1. **✅ Done.** `market_odds.py` + the frozen artifact + tests, wired into
+   `predict.py` behind `--no-market-odds`. Live-verified against a real
+   nightly run (30/880 props matched, 14/500 free credits used).
+2. **✅ Done.** `market_line`/`market_edge`/etc. columns were already on the
+   predictions CSV from Phase 1; added the Player Props page table columns
+   ("Market", "Market Edge") plus edge-aware sorting.
+3. **DK Pick 6 pre-fill** + any UI polish — not started.
 
-## Open questions for you before implementation starts
+## Open questions - resolved / still open
 
-1. Confirm the account: sign up for the free tier, get an `ODDS_API_KEY`,
-   and either add it as a GitHub secret yourself or hand it to me to wire in
-   (never put it in a commit).
+1. ~~Account + `ODDS_API_KEY`~~ — **done.** Key added as a GitHub Actions
+   secret 2026-09-16, confirmed live against the nightly.
 2. Weekly cadence (matches the write-once snapshot, safest for the free
    tier) vs. daily-refresh-of-market-line-only-while-keeping-model-predictions-weekly
-   — the design above assumes weekly; daily-refresh is a small variant if you
-   want fresher lines without waiting for the $30 tier.
-3. OK with the new frozen-artifact file (`market_odds_week{W}_{season}.csv`)
-   being committed to git like the other snapshots, or would you rather it
-   stay local/gitignored (smaller repo, but loses the audit trail)?
+   — still on weekly by default. Revisit only if fresher in-week line movement
+   turns out to matter for the props that get built on top of this.
+3. ~~Commit the frozen artifact?~~ — **yes**, going with committed
+   (`market_odds_week2_2026.csv` is in git) — same audit-trail reasoning as
+   the player-prop weekly snapshots.
+4. **New**: Phase 3 (DK Pick 6 pre-fill) — say the word when you want it.

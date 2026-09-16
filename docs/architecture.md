@@ -106,12 +106,16 @@ flag through as `model_reliable` and the UI marks unreliable rows "display
 only". `opponent_def_rank` was removed (a dataset-wide leaky average that
 clipped to a constant). Prop lines are still fixed tiers (275, 250, …) not
 market lines — the weekly hit rate reflects line placement, not betting edge.
-**Opt-in real market lines** (`player_props/market_odds.py`, off unless
-`ODDS_API_KEY` is set): pulls DK/FanDuel lines for the four reliable prop
+**Real market lines** (`player_props/market_odds.py`, live since `ODDS_API_KEY`
+was added 2026-09-16): pulls DK/FanDuel lines for the four reliable prop
 types from The Odds API and adds `market_line`/`market_book`/
 `market_implied_prob`/`market_edge`/`market_line_available` columns
-(additive — `line_value` unchanged). No UI wiring yet — see
-`docs/ODDS_API_INTEGRATION_PLAN.md`.
+(additive — `line_value` unchanged). The Player Props page shows a "Market" /
+"Market Edge" column and sorts by a *directional* edge (flipped to align with
+the recommendation, since raw `market_edge` is always in P(over) terms — a
+strongly negative value on an UNDER pick means a strong edge, not a weak one).
+Coverage is partial (only games DK/FanDuel have posted props for). Details +
+rollout history in `docs/ODDS_API_INTEGRATION_PLAN.md`.
 
 ## Feature Engineering
 All features are pre-game only (zero data leakage):

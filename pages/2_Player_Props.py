@@ -199,10 +199,20 @@ def load_player_props_predictions():
     if 'model_reliable' not in df.columns:
         df['model_reliable'] = True
 
+    # Real DK/FanDuel market odds (player_props/market_odds.py) - opt-in,
+    # off unless ODDS_API_KEY is set. Older snapshots won't have these columns
+    # at all; default to "no market data" rather than erroring.
+    if 'market_line_available' not in df.columns:
+        df['market_line_available'] = False
+        df['market_line'] = None
+        df['market_book'] = None
+        df['market_implied_prob'] = None
+        df['market_edge'] = None
+
     # Ensure injury_note column exists (for backward compatibility)
     if 'injury_note' not in df.columns:
         df['injury_note'] = None
-    
+
     return df
 
 def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
@@ -423,9 +433,35 @@ def main():
             elif injury_filter == "Injured Only":
                 filtered = filtered[filtered['injury_note'].notna() & (filtered['injury_note'] != '')]
             
+            # market_edge (from market_odds.py) is always in "P(over)" terms:
+            # model_prob_over - market_implied_prob_over. That's the wrong
+            # number to rank picks by when the recommendation is UNDER - a
+            # strongly negative market_edge there means the model agrees
+            # *more* with UNDER than the market does, which is a good sign,
+            # not a bad one. Flip it to "edge in the direction actually
+            # recommended" for sorting/display so a bigger number always
+            # means a stronger real edge, regardless of OVER/UNDER.
+            if 'market_edge' in filtered.columns:
+                filtered['rec_market_edge'] = filtered.apply(
+                    lambda r: (r['market_edge'] if r.get('recommendation') == 'OVER' else -r['market_edge'])
+                    if pd.notna(r.get('market_edge')) else None,
+                    axis=1,
+                )
+            else:
+                filtered['rec_market_edge'] = None
+
             # Sort
             if sort_option == "Confidence":
-                filtered = filtered.sort_values('confidence', ascending=False)
+                # Prefer real market edge when we have it (a handful of props
+                # today - only the games DK/FanDuel have posted lines for);
+                # rows without one (NaN) fall back to sorting by model
+                # confidence, same as before this column existed.
+                if filtered['rec_market_edge'].notna().any():
+                    filtered = filtered.sort_values(
+                        ['rec_market_edge', 'confidence'], ascending=[False, False], na_position='last'
+                    )
+                else:
+                    filtered = filtered.sort_values('confidence', ascending=False)
             elif sort_option == "Player Name":
                 filtered = filtered.sort_values('display_name')
             else:
@@ -448,6 +484,15 @@ def main():
                 display_df['Model'] = display_df['model_reliable'].apply(
                     lambda x: '✅ tested' if x else '⚠️ display only'
                 )
+                _book_label = {'draftkings': 'DK', 'fanduel': 'FD'}
+                display_df['Market'] = display_df.apply(
+                    lambda r: (f"{r['market_line']:.1f} ({_book_label.get(str(r['market_book']).lower(), r['market_book'])})"
+                               if r.get('market_line_available') and pd.notna(r.get('market_line')) else '—'),
+                    axis=1,
+                )
+                display_df['Market Edge'] = display_df['rec_market_edge'].apply(
+                    lambda x: f"{x:+.1%}" if pd.notna(x) else '—'
+                )
 
                 # Add injury information if available
                 if 'injury_note' in display_df.columns:
@@ -458,10 +503,20 @@ def main():
                 # Select columns to show
                 show_cols = [
                     'display_name', 'position', 'team', 'opponent', 'Model', 'trend', 'prop_type',
-                    'Recommendation', 'Confidence', 'Tier', 'Last 3 Avg', 'Last 5 Avg', 'Last 10 Avg', 'weather_conditions', 'Injury Status'
+                    'Recommendation', 'Confidence', 'Tier', 'Market', 'Market Edge',
+                    'Last 3 Avg', 'Last 5 Avg', 'Last 10 Avg', 'weather_conditions', 'Injury Status'
                 ]
-                
+
                 height = get_dataframe_height(display_df[show_cols])
+
+                _matched = int(display_df['market_line_available'].sum())
+                st.caption(
+                    f"💰 **Market** = real DraftKings/FanDuel line. **Market Edge** = how much more "
+                    f"the model favors the recommended side than the market does (always framed in "
+                    f"the direction of the pick, so bigger is always better regardless of OVER/UNDER). "
+                    f"{_matched} of {len(display_df)} rows currently matched — books post more players "
+                    f"as games get closer; '—' means no market line yet, not zero edge."
+                )
 
                 st.dataframe(
                     display_df[show_cols].rename(columns={
