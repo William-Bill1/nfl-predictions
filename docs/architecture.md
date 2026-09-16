@@ -130,7 +130,7 @@ All features are pre-game only (zero data leakage):
 | nfl_data_py | Schedule, play-by-play, final scores | Local, no key; final scores arrive via the regenerated predictions CSV |
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
-| The Odds API | Real DK/FanDuel player-prop lines | opt-in, `player_props/market_odds.py`, needs `ODDS_API_KEY` (nightly: `--no-market-odds` not passed, but no-ops without the secret) |
+| The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
 The dashboard makes **no runtime API calls**. `update_completed_games` is now a

@@ -1,17 +1,20 @@
 # Sportsbook Player-Prop Odds Integration — Design
 
-**Status:** **Phases 1-2 built.** `ODDS_API_KEY` is set as a GitHub Actions
+**Status:** **All 3 phases built.** `ODDS_API_KEY` is set as a GitHub Actions
 secret (added 2026-09-16) and confirmed live: the Sep 16 nightly matched 30
 real props to DK/FanDuel lines. Caught and fixed a real bug along the way -
 `attach_market_odds` gated on `isinstance(prob_over, (int, float))`, but
 `model.predict_proba()` returns `numpy.float32` (not a `float` subclass), so
 `market_edge` was `NaN` for nearly every match; fixed with a `float()` cast
-instead of a type-gate. Phase 2 (`pages/2_Player_Props.py`): "Market" /
-"Market Edge" columns on the main props table, sorted by a *directional* edge
-(flipped to align with the recommendation - `market_edge` itself is always in
-P(over) terms, so a strongly negative value on an UNDER pick means a *strong*
-edge, not a weak one; sorting/display use the flipped, always-"bigger is
-better" version). Phase 3 (DK Pick 6 pre-fill) not started.
+instead of a type-gate. Phase 2 (`pages/2_Player_Props.py` main table):
+"Market" / "Market Edge" columns, sorted by a *directional* edge (flipped to
+align with the recommendation - `market_edge` itself is always in P(over)
+terms, so a strongly negative value on an UNDER pick means a *strong* edge,
+not a weak one; sorting/display use the flipped, always-"bigger is better"
+version). Phase 3 (DK Pick 6 Calculator tab): the line input pre-fills from
+a matched market line when one exists (still fully editable, labeled as a
+sportsbook line to confirm against the Pick 6 board, not the Pick 6 number
+itself).
 **Provider:** [The Odds API](https://the-odds-api.com/) (see chat discussion — free tier is
 real, DK + FanDuel covered by name, player-prop market keys line up with what
 `player_props/models.py` already predicts).
@@ -286,7 +289,13 @@ build small in-memory DataFrames rather than touching real data:
 2. **✅ Done.** `market_line`/`market_edge`/etc. columns were already on the
    predictions CSV from Phase 1; added the Player Props page table columns
    ("Market", "Market Edge") plus edge-aware sorting.
-3. **DK Pick 6 pre-fill** + any UI polish — not started.
+3. **✅ Done.** DK Pick 6 Calculator tab's line input pre-fills from a
+   matched `market_line` when the selected player/stat has one; falls back
+   to the original static default (100.5) otherwise. Widget `key` is scoped
+   to `(player, stat)` rather than a fixed string, since Streamlit ignores a
+   new `value=` once a fixed key already has a stored session_state entry -
+   without that, switching players wouldn't actually change the shown
+   default after the first render.
 
 ## Open questions - resolved / still open
 
@@ -299,4 +308,5 @@ build small in-memory DataFrames rather than touching real data:
 3. ~~Commit the frozen artifact?~~ — **yes**, going with committed
    (`market_odds_week2_2026.csv` is in git) — same audit-trail reasoning as
    the player-prop weekly snapshots.
-4. **New**: Phase 3 (DK Pick 6 pre-fill) — say the word when you want it.
+4. ~~Phase 3 (DK Pick 6 pre-fill)~~ — **done.** No open questions remain;
+   this doc is now a historical design record rather than a plan.

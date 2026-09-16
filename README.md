@@ -66,7 +66,7 @@ market-implied columns, on the Probabilities & Edges tab.
 | Page | Contents |
 |---|---|
 | `1_Historical_Data.py` | filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination |
-| `2_Player_Props.py` | per-player prop predictions (defaults to a "tested (reliable) models only" view — see below) + interactive **DK Pick 6 calculator** (enter a line → OVER/UNDER + confidence tier; ML model or Laplace-smoothed historical fallback) |
+| `2_Player_Props.py` | per-player prop predictions (defaults to a "tested (reliable) models only" view — see below; shows a real DK/FanDuel "Market" line + edge where matched) + interactive **DK Pick 6 calculator** (enter a line, pre-filled from a real sportsbook line when one's matched → OVER/UNDER + confidence tier; ML model or Laplace-smoothed historical fallback) |
 | `3_Parlay_Builder.py` | combine bets, compute parlay odds |
 | `4_Model_Performance.py` | model evaluation and calibration metrics |
 
@@ -135,7 +135,7 @@ future information. Best-feature subsets per target are cached in
 | **nflverse** (`nfl_data_py`) | schedules, play-by-play, final scores | local, no key — completed-game scores come from the regenerated predictions CSV, not a runtime call |
 | **Open-Meteo** | player-prop weather adjustments | `player_props/weather.py` (nightly runs `--no-weather`) |
 | **ESPN** injury page | player-prop injury adjustments | scraped in `player_props/injuries.py` (nightly runs `--no-injuries`) |
-| **The Odds API** | real DK/FanDuel player-prop lines | opt-in, off by default — `player_props/market_odds.py`, needs `ODDS_API_KEY`; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
+| **The Odds API** | real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
 
 All artifacts live in `data_files/` and are committed. The big one,
 `nfl_play_by_play_historical.csv.gz` (~116 MB, **tab-separated**), is tracked
