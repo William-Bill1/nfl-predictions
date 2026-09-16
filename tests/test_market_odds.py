@@ -113,7 +113,26 @@ class TestAttachMarketOdds:
         out = mo.attach_market_odds(dict(pred), None)
         assert out["market_line_available"] is False
         assert out["market_line"] is None and out["market_edge"] is None
-        assert out["line_value"] == 200.0 and out["prob_over"] == 0.60
+
+    def test_with_numpy_float32_prob_over(self):
+        # Regression: model.predict_proba() returns numpy.float32, which is
+        # NOT an instance of Python's float (only numpy.float64 is) - an
+        # isinstance((int, float)) gate here silently dropped market_edge for
+        # nearly every real prediction (caught 2026-09-16 against live data).
+        import numpy as np
+        pred = {"prob_over": np.float32(0.60), "line_value": 200.0}
+        info = {"line": 209.5, "book": "draftkings", "over_odds": -110,
+                "under_odds": -110, "market_implied_prob": 0.5}
+        out = mo.attach_market_odds(dict(pred), info)
+        assert out["market_edge"] == pytest.approx(0.10, abs=1e-6)
+
+    def test_missing_prob_over_falls_back_to_none(self):
+        info = {"line": 209.5, "book": "draftkings", "over_odds": -110,
+                "under_odds": -110, "market_implied_prob": 0.5}
+        out = mo.attach_market_odds({"line_value": 200.0}, info)
+        assert out["market_edge"] is None
+        assert out["market_line_available"] is True  # line itself still attached
+        assert out["line_value"] == 200.0  # fixed-tier field untouched
 
 
 # ---------------------------------------------------------------------------

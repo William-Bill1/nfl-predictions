@@ -310,14 +310,18 @@ def attach_market_odds(prediction: dict, market_info: dict | None) -> dict:
         prediction['market_line_available'] = False
         return prediction
 
-    prob_over = prediction.get('prob_over')
     prediction['market_line'] = market_info['line']
     prediction['market_book'] = market_info['book']
     prediction['market_implied_prob'] = market_info['market_implied_prob']
-    prediction['market_edge'] = (
-        (prob_over - market_info['market_implied_prob'])
-        if isinstance(prob_over, (int, float)) else None
-    )
+    try:
+        # float() rather than isinstance((int, float)): model probabilities
+        # come out of XGBoost/LightGBM as numpy.float32, which is NOT an
+        # instance of Python's float (only numpy.float64 is) - an isinstance
+        # gate here silently dropped market_edge for nearly every real
+        # prediction. float() handles float32/float64/int/numpy scalars alike.
+        prediction['market_edge'] = float(prediction.get('prob_over')) - float(market_info['market_implied_prob'])
+    except (TypeError, ValueError):
+        prediction['market_edge'] = None
     prediction['market_line_available'] = True
     return prediction
 
