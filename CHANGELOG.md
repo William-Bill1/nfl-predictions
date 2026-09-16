@@ -8,6 +8,23 @@ bottom.
 
 ## September 2026
 
+- **Market-odds live + Phase 2 UI + a real bug caught and fixed.**
+  `ODDS_API_KEY` was added as a GitHub Actions secret; the Sep 16 nightly
+  confirmed it live, matching 30 real DraftKings/FanDuel props against the
+  cached Week 2 fetch. That run also exposed a bug: `attach_market_odds()`
+  gated on `isinstance(prob_over, (int, float))`, but `model.predict_proba()`
+  returns `numpy.float32` - not a `float` subclass - so `market_edge` came
+  back `NaN` for 29 of the 30 matches. Fixed with a `float()` cast instead of
+  a type-gate; regression-tested with an actual `numpy.float32` input.
+  Player Props page (Phase 2): new "Market" / "Market Edge" columns on the
+  main props table. Sorting/display use a *directional* edge (flipped to
+  align with the recommendation) rather than raw `market_edge`, which is
+  always in P(over) terms - a strongly negative value on an UNDER pick means
+  a *strong* edge in that direction, not a weak one; showing it unflipped
+  would have ranked a good UNDER pick as if it were bad. Falls back to the
+  existing confidence sort when no market data is matched yet (most rows,
+  today - coverage grows as kickoff approaches).
+
 - **Market-odds fetcher, Phase 1 (opt-in, off by default).** New
   `player_props/market_odds.py` pulls real DraftKings/FanDuel lines for the
   four reliable prop types (passing/rushing/receiving yards, receptions) from
