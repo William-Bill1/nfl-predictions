@@ -679,18 +679,64 @@ def main():
             else:
                 stat_category = None
         
-        # Line input
+        # Line input - pre-filled from a real DraftKings/FanDuel sportsbook
+        # line when market_odds.py has matched one (Phase 3 of
+        # docs/ODDS_API_INTEGRATION_PLAN.md). That's a *regular sportsbook*
+        # prop line, not DraftKings' own Pick 6 board - usually close but not
+        # guaranteed identical, so it's a starting point to confirm, not the
+        # Pick 6 number itself. Always fully editable either way.
+        _STAT_TO_PROP_TYPE = {
+            'Passing Yards': 'passing_yards', 'Rushing Yards': 'rushing_yards',
+            'Receiving Yards': 'receiving_yards', 'Receptions': 'receptions',
+            # TD props aren't fetched (models.py flags them unreliable - see
+            # docs/SPREAD_MODEL_INVESTIGATION.md-style reasoning in the props
+            # honesty pass), so these three never get a market match.
+            'Passing TDs': 'passing_tds', 'Rushing TDs': 'rushing_tds', 'Receiving TDs': 'receiving_tds',
+        }
         if selected_player_id and stat_category:
+            market_prefill = None
+            _prop_type = _STAT_TO_PROP_TYPE.get(stat_category)
+            if predictions is not None and _prop_type and selected_player_full:
+                # Match market_line_available the same robust way as
+                # model_reliable elsewhere on this page - CSV round-trips
+                # don't always preserve a clean bool dtype.
+                _avail = predictions['market_line_available'].map(
+                    lambda v: str(v).strip().lower() in ('true', '1')
+                )
+                _match = predictions[
+                    (predictions['display_name'] == selected_player_full)
+                    & (predictions['prop_type'] == _prop_type)
+                    & _avail
+                ]
+                if not _match.empty:
+                    _row = _match.iloc[0]
+                    market_prefill = {'line': float(_row['market_line']), 'book': _row['market_book']}
+
+            if market_prefill:
+                _book_label = {'draftkings': 'DraftKings', 'fanduel': 'FanDuel'}.get(
+                    str(market_prefill['book']).lower(), market_prefill['book']
+                )
+                st.caption(f"💰 Pre-filled from a real {_book_label} sportsbook line "
+                           f"({market_prefill['line']:g}) - confirm against the actual Pick 6 board.")
+                default_line = market_prefill['line']
+            else:
+                default_line = 100.5
+
             dk_line = st.number_input(
                 f"DraftKings Pick 6 Line for {stat_category}",
                 min_value=0.5,
                 max_value=500.0,
-                value=100.5,
+                value=default_line,
                 step=0.5,
-                key="dk_line_value",
+                # Keying on player+stat (not a fixed string) so the prefilled
+                # default actually refreshes when you switch players/stats -
+                # Streamlit ignores `value=` on reruns once a key already has
+                # a stored session_state entry, so a fixed key would silently
+                # keep showing whatever was first typed/prefilled.
+                key=f"dk_line_value_{selected_player_id}_{stat_category}",
                 help="Enter the exact line from DraftKings Pick 6 (e.g., 100.5, 225.5)"
             )
-            
+
             # Get player stats based on category
             if stat_category in ['Passing Yards', 'Passing TDs']:
                 player_stats_df = passing_stats[passing_stats['player_id'] == selected_player_id].copy()

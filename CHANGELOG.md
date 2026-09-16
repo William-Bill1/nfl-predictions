@@ -8,6 +8,17 @@ bottom.
 
 ## September 2026
 
+- **Market-odds integration complete (Phase 3): DK Pick 6 pre-fill.** The
+  Pick 6 Calculator's line input now pre-fills from a real matched
+  DraftKings/FanDuel line when one exists for the selected player/stat
+  (labeled as a sportsbook line to confirm against the actual Pick 6 board,
+  not the Pick 6 number itself - still fully editable). The widget's `key`
+  is scoped to `(player, stat)` rather than a fixed string: Streamlit ignores
+  a new `value=` once a fixed key already has a session_state entry, so
+  switching players wouldn't otherwise refresh the shown default after the
+  first render. All 3 phases of `docs/ODDS_API_INTEGRATION_PLAN.md` are now
+  built.
+
 - **Market-odds live + Phase 2 UI + a real bug caught and fixed.**
   `ODDS_API_KEY` was added as a GitHub Actions secret; the Sep 16 nightly
   confirmed it live, matching 30 real DraftKings/FanDuel props against the
