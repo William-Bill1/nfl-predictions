@@ -8,6 +8,20 @@ bottom.
 
 ## September 2026
 
+- **Season-long spread-line tracker, Phase 2: comparison rollup.** New
+  `scripts/spread_tracker_report.py` rolls `spread_tracker_log.csv` up into
+  `data_files/spread_tracker_report.json`: a per-book season-to-date ranking
+  by mean-absolute deviation from nflverse's line (the direction-agnostic
+  "which book is closest to nflverse" answer), a best-line-per-game callout
+  (which book gives the most points to each side), and a field-median-relative
+  anomaly list generalizing the PlayNow divergence first spotted by hand in
+  chat (flags any book more than 1.5pt off that game's field median).
+  Live-verified against the real Week 3 2026 log: DraftKings ranked closest to
+  nflverse (mean|dev|=0.00pt across 16 games), FanDuel furthest of the
+  mainstream books (0.34pt), zero anomalies for that single week. Wired into
+  `spread-tracker.yml` right after the fetch step. See
+  `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
+
 - **Season-long spread-line tracker, Phase 1 (opt-in, off by default).** New
   root-level `spread_tracker.py` pulls real US + Canadian sportsbook
   game-spread lines (DraftKings, FanDuel, BetMGM, BetRivers, PROLINE, Sports

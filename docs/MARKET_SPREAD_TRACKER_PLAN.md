@@ -1,17 +1,21 @@
 # Season-Long Sportsbook Spread Tracker — Design
 
-**Status:** **Phase 1 built.** `spread_tracker.py` fetches/normalizes/upserts
-real US + Canadian sportsbook game-spread lines into
-`data_files/spread_tracker_log.csv`, joined against nflverse's `spread_line`.
-Live-verified 2026-09-16 against real Week 3 2026 data: 144 game/book rows (16
-games × up to 10 books across `us`/`ca`), all `deviation_pts` values landing
-in a sane ±1 point range, cache-hit and upsert-idempotency both confirmed
-against the real API. Caught and fixed a real bug along the way: the CLI's
-predictions-CSV read used a plain `pd.read_csv()`, but
-`nfl_games_historical_with_predictions.csv` is **tab-separated** despite the
-`.csv` extension (see `betting_log.py`'s own `PREDICTIONS_PATH` read) — this
-silently produced 100% `NaN` `nflverse_spread_line`/`deviation_pts` values
-with no error; fixed with `sep='\t'`.
+**Status:** **Phases 1 and 2 built.** `spread_tracker.py` fetches/normalizes/
+upserts real US + Canadian sportsbook game-spread lines into
+`data_files/spread_tracker_log.csv`, joined against nflverse's `spread_line`;
+`scripts/spread_tracker_report.py` rolls that log up into
+`data_files/spread_tracker_report.json` (per-book season-to-date ranking,
+best-line-per-game callouts, anomaly flags). Live-verified 2026-09-16 against
+real Week 3 2026 data: 144 game/book rows (16 games × up to 10 books across
+`us`/`ca`), all `deviation_pts` values landing in a sane ±1 point range,
+cache-hit and upsert-idempotency both confirmed against the real API; the
+Phase 2 report ranked DraftKings closest to nflverse's line (mean|dev|=0.00pt)
+with zero anomalies flagged for that single week. Caught and fixed a real bug
+along the way: the CLI's predictions-CSV read used a plain `pd.read_csv()`,
+but `nfl_games_historical_with_predictions.csv` is **tab-separated** despite
+the `.csv` extension (see `betting_log.py`'s own `PREDICTIONS_PATH` read) —
+this silently produced 100% `NaN` `nflverse_spread_line`/`deviation_pts`
+values with no error; fixed with `sep='\t'`.
 
 **Provider:** [The Odds API](https://the-odds-api.com/), same account/key
 already live for `player_props/market_odds.py`. This module uses the
@@ -174,16 +178,27 @@ week — NFL books don't post the full next-week board until Tuesday, so
 Monday would grab stale/partial numbers; the two workflows also have
 unrelated failure semantics). Reuses the existing `ODDS_API_KEY` secret.
 
-## Tests (`tests/test_spread_tracker.py`)
+## Tests
 
-No live network calls — mirrors `tests/test_market_odds.py`'s discipline.
-28 tests covering: `_normalize_spread`'s sign conversion (the highest-risk
-piece — a bug here would silently corrupt every deviation number),
-`_region_for_book` classification, `_parse_bulk_spreads` against a canned
-bulk-JSON fixture, `attach_nflverse_comparison`'s join/NaN behavior,
-`upsert_weekly_spreads`'s insert/overwrite/append semantics, and
-`fetch_weekly_spreads`'s no-key/cache-hit/credit-floor/empty-schedule
-short-circuits.
+`tests/test_spread_tracker.py` — no live network calls, mirrors
+`tests/test_market_odds.py`'s discipline. 28 tests covering:
+`_normalize_spread`'s sign conversion (the highest-risk piece — a bug here
+would silently corrupt every deviation number), `_region_for_book`
+classification, `_parse_bulk_spreads` against a canned bulk-JSON fixture,
+`attach_nflverse_comparison`'s join/NaN behavior, `upsert_weekly_spreads`'s
+insert/overwrite/append semantics, and `fetch_weekly_spreads`'s
+no-key/cache-hit/credit-floor/empty-schedule short-circuits.
+
+`tests/test_spread_tracker_report.py` — mirrors
+`tests/test_weekly_spread_report.py`'s `importlib.util` loading pattern
+(the script lives in `scripts/`, which `pytest.ini` excludes from
+collection). 10 tests covering: `_per_book_bucket`'s mean/mean-abs
+deviation math (including the case where positive and negative deviations
+average toward zero but `mean_abs` doesn't), `_best_lines_per_game`'s
+max-point-per-side selection, `_anomalies`'s threshold flagging and
+worst-first ordering, and `build_report`'s overall/by-week aggregation plus
+JSON-serializability (numpy int64/float64 leaking into the report would
+break `json.dumps`).
 
 ## Rollout phases
 
@@ -191,12 +206,20 @@ short-circuits.
    this doc. Live-verified against real Week 3 2026 data (144 rows, 16
    games, 10 books across `us`/`ca`, sane deviations, confirmed idempotent
    cache-hit and upsert behavior).
-2. **Not yet built.** Comparison rollup: `scripts/spread_tracker_report.py`
-   rolling `spread_tracker_log.csv` up into a season-to-date per-book
-   ranking (mean/mean-abs deviation from nflverse), best-line-per-game
-   callouts, and a field-median-relative anomaly flag generalizing the
-   PlayNow divergence already observed live. Worth proposing once Phase 1
-   has run for a few real weeks.
+2. **✅ Done.** `scripts/spread_tracker_report.py` rolls `spread_tracker_log.csv`
+   up into `data_files/spread_tracker_report.json`: per-book season-to-date
+   `mean_deviation_pts`/`mean_abs_deviation_pts` (the latter is the
+   direction-agnostic "closest to nflverse" ranking), a `best_line_per_game`
+   callout (which book gives the most points to each side, per game), and a
+   field-median-relative `anomalies` list generalizing the PlayNow
+   divergence first spotted by hand (flags any book more than
+   `ANOMALY_THRESHOLD_PTS` = 1.5pt off that game's field median that week).
+   Wired into `spread-tracker.yml` right after the fetch step. Live-verified
+   against the real Week 3 2026 log: DraftKings ranked closest to nflverse
+   (mean|dev|=0.00pt across 16 games), FanDuel furthest of the mainstream
+   books (mean|dev|=0.34pt), zero anomalies for that single week (expected —
+   the anomaly list only gets interesting once a genuinely mispriced book
+   shows up, as PlayNow did in the original ad-hoc chat comparison).
 3. **Not yet built, no committed timeline.** Optional UI page
    (`pages/X_Spread_Tracker.py`) surfacing Phase 2's report — only once
    enough season data exists for a per-book ranking to mean anything.

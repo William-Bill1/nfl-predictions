@@ -45,13 +45,19 @@ jobs:
           python spread_tracker.py
         continue-on-error: true
 
-      - name: Commit spread-tracker log
+      - name: Build season-to-date comparison report
+        run: |
+          echo "Rolling up the spread-tracker log..."
+          python scripts/spread_tracker_report.py
+        continue-on-error: true
+
+      - name: Commit spread-tracker log + report
         if: github.ref == 'refs/heads/main'
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
 
-          git add data_files/spread_tracker_log.csv data_files/market_spreads_week*_*.csv
+          git add data_files/spread_tracker_log.csv data_files/spread_tracker_report.json data_files/market_spreads_week*_*.csv
 
           if git diff --staged --quiet; then
             echo "No new spread-tracker data to commit"
@@ -65,3 +71,5 @@ jobs:
         run: |
           echo "Spread-line tracker run complete."
           tail -n 5 data_files/spread_tracker_log.csv 2>/dev/null || echo "No spread_tracker_log.csv found."
+          echo "--- comparison report ---"
+          cat data_files/spread_tracker_report.json 2>/dev/null || echo "No spread_tracker_report.json"
