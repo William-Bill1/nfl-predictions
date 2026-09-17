@@ -155,6 +155,12 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
     fair win prob (normal approx, sigma=13.5) vs. what a book's own price
     requires, per side, ranked by edge; point-divergence alone (the anomaly
     report above) isn't the same question as "is this side priced well"
+  - model-vs-book line shopping (reads the tracker log + predictions CSV,
+    no API call): `python scripts/model_line_shop.py --game <game_id>` or
+    `--season Y --week N` (defaults to the model's current picks) — extends
+    the spread model's own probability (computed only against nflverse's
+    line) to every tracked book's actual line via the same normal approx,
+    ranked by edge vs. the model instead of vs. the field
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
@@ -224,7 +230,10 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   computes price-adjusted fair-value edges for one book's lines (reads the
   log, no API call) - point-divergence alone doesn't mean a side is priced
   favorably, since a book can shade the price to compensate for generous
-  points. See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
+  points; `scripts/model_line_shop.py` extends the spread model's own
+  probability (nflverse's line only) to every tracked book's specific line
+  via the same normal-approximation math, ranked against the model instead
+  of the field. See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
 
 ## Known Issues / gotchas
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.

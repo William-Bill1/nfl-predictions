@@ -137,7 +137,7 @@ future information. Best-feature subsets per target are cached in
 | **Open-Meteo** | player-prop weather adjustments | `player_props/weather.py` (nightly runs `--no-weather`) |
 | **ESPN** injury page | player-prop injury adjustments | scraped in `player_props/injuries.py` (nightly runs `--no-injuries`) |
 | **The Odds API** | real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
-| **The Odds API (spreads)** | season-long US+CA sportsbook game-spread lines vs. nflverse's line, plus a price-adjusted per-book value finder (`scripts/spread_value_finder.py`) | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`); see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
+| **The Odds API (spreads)** | season-long US+CA sportsbook game-spread lines vs. nflverse's line, a price-adjusted per-book value finder, and a model-vs-book line shopper | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `scripts/model_line_shop.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`); see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 
 All artifacts live in `data_files/` and are committed. The big one,
 `nfl_play_by_play_historical.csv.gz` (~116 MB, **tab-separated**), is tracked
