@@ -43,6 +43,7 @@ Step 2 — UI:
     pages/2_Player_Props.py        [includes the DK Pick 6 calculator]
     pages/3_Parlay_Builder.py
     pages/4_Model_Performance.py
+    pages/5_Spread_Tracker.py      [opt-in; display-only, reads spread_tracker_report.json]
 ```
 
 ## Determinism & mid-season
@@ -131,7 +132,7 @@ All features are pre-game only (zero data leakage):
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
 | The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
-| The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line | `spread_tracker.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
+| The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
 The dashboard makes **no runtime API calls**. `update_completed_games` is now a

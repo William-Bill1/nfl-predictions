@@ -25,6 +25,9 @@ for diagnostics only).
   - The player props system now supports XGBoost + LightGBM soft-voting ensembles and includes usage features like `target_share` to improve receiving predictions.
 - `pages/3_Parlay_Builder.py` → Multi-bet parlay construction
 - `pages/4_Model_Performance.py` → Model evaluation and calibration metrics
+- `pages/5_Spread_Tracker.py` → opt-in, display-only: season-to-date US+CA
+  sportsbook spread-line comparison vs. nflverse, reads
+  `spread_tracker_report.json`/`spread_tracker_log.csv` (never calls the API)
 - All data loaded via `@st.cache_data` decorators (never at module level)
 
 **Critical Constraints**:

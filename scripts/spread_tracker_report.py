@@ -99,6 +99,7 @@ def build_report(log_path: str = LOG_PATH) -> dict:
                  "A positive per-book mean means that book systematically gives "
                  "the home side more points than nflverse; mean_abs_deviation_pts "
                  "is the direction-agnostic 'how far off nflverse' ranking metric."),
+        "anomaly_threshold_pts": ANOMALY_THRESHOLD_PTS,
         "overall": {"n_weeks": 0, "n_games": 0, "n_quotes": 0, "per_book": {}},
         "by_week": [],
         "best_line_per_game": [],

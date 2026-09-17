@@ -8,6 +8,16 @@ bottom.
 
 ## September 2026
 
+- **Season-long spread-line tracker, Phase 3: UI page (all 3 phases done).**
+  New `pages/5_Spread_Tracker.py` surfaces the Phase 2 report in the app: a
+  per-book season-to-date ranking table + bar chart (which sportsbook is
+  closest to nflverse's line), a "closest book" callout, a best-line-per-game
+  table, an anomalies table, a week selector, and a raw-log expander. Purely
+  a display layer - reads the already-generated JSON/CSV, never calls The
+  Odds API itself; shows an explanatory `st.info` when no report exists yet
+  (fresh clone, or `ODDS_API_KEY` unset). All 3 phases of
+  `docs/MARKET_SPREAD_TRACKER_PLAN.md` are now built.
+
 - **Season-long spread-line tracker, Phase 2: comparison rollup.** New
   `scripts/spread_tracker_report.py` rolls `spread_tracker_log.csv` up into
   `data_files/spread_tracker_report.json`: a per-book season-to-date ranking
