@@ -1,15 +1,16 @@
 # Season-Long Sportsbook Spread Tracker — Design
 
-**Status:** **All 3 phases built, plus a post-launch value-finder addition.**
+**Status:** **All 3 phases built, plus two post-launch analysis additions.**
 `spread_tracker.py` fetches/normalizes/upserts real US + Canadian sportsbook
 game-spread lines into `data_files/spread_tracker_log.csv`, joined against
 nflverse's `spread_line`; `scripts/spread_tracker_report.py` rolls that log
 up into `data_files/spread_tracker_report.json` (per-book season-to-date
 ranking, best-line-per-game callouts, anomaly flags); `pages/5_Spread_Tracker.py`
 surfaces that report in the Streamlit app; `scripts/spread_value_finder.py`
-(added 2026-09-17, see Phase 4 below) computes price-adjusted fair-value
-edges for one book's lines, since point-divergence alone isn't the same
-question as "is this side priced favorably." Live-verified 2026-09-16 against
+(Phase 4, added 2026-09-17) computes price-adjusted fair-value edges for one
+book's lines against the field median; `scripts/model_line_shop.py` (Phase
+5, added 2026-09-17) extends the spread model's own probability to every
+tracked book's specific line, against the model instead of the field. Live-verified 2026-09-16 against
 real Week 3 2026 data: 144 game/book rows (16 games × up to 10 books across
 `us`/`ca`), all `deviation_pts` values landing in a sane ±1 point range,
 cache-hit and upsert-idempotency both confirmed against the real API; the
@@ -258,6 +259,34 @@ break `json.dumps`).
    surfaced a real edge (DEN -4.0 @ +130 vs JAX, +5.6pt) that Phase 2's
    point-only anomaly detector had missed entirely because the point number
    itself wasn't unusual — only the price was.
+5. **✅ Done (post-launch addition).** `scripts/model_line_shop.py` — a
+   different baseline than Phase 4's value finder. That script asks "is this
+   book's price good relative to the OTHER TRACKED BOOKS" (field median);
+   this one asks "is this book's price good relative to what OUR OWN MODEL
+   thinks," for games the model actually has a prediction for. The model's
+   `prob_underdogCovered` is computed once, against nflverse's own
+   `spread_line` — it has zero awareness of individual sportsbook lines.
+   Since a book offering the underdog MORE points than nflverse's line is
+   strictly easier to cover (monotonic — more cushion never hurts),
+   `extrapolate_prob()` estimates the model's implied probability at any
+   book's specific line using the same normal margin-of-victory
+   approximation, then compares it to that book's own devigged price
+   requirement. Every result is explicitly labeled "extrapolated," not the
+   model's actual output, since the model was never evaluated at that exact
+   line — this was itself prompted by the user directly confirming in chat
+   that "more points at the same [nflverse] baseline increases the odds when
+   extrapolated" and asking for that to become reusable rather than
+   recomputed by hand per book. Reuses `_normal_cdf` from
+   `spread_value_finder.py` and adds `_normal_ppf` (bisection inverse,
+   still no scipy dependency) as its sibling. CLI: `python
+   scripts/model_line_shop.py --game 2026_02_SEA_ARI` or `--season 2026
+   --week 2` (defaults to only the model's current picks,
+   `pred_spreadCovered_optimal == 1`; `--include-non-picks` widens scope).
+   Live-verified: exactly reproduced the hand-computed ARI numbers at both
+   DraftKings (+11.3pt) and FanDuel (+10.1pt), and surfaced that PlayNow
+   actually has the single biggest edge on that game (+13.1pt) despite
+   offering fewer points than the field — its plus-money price more than
+   compensates.
 
 ## Open questions
 

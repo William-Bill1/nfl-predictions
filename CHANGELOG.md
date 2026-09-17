@@ -8,6 +8,28 @@ bottom.
 
 ## September 2026
 
+- **Spread tracker: model-vs-book line shopping.** New
+  `scripts/model_line_shop.py`. A different baseline than the value finder
+  below: that one asks whether a book's price is good relative to the other
+  tracked books, this one asks whether it's good relative to our OWN
+  model's read. The spread model's `prob_underdogCovered` is computed once
+  against nflverse's own consensus line - it has zero awareness of
+  individual sportsbook lines. Since a book offering more points than that
+  line is strictly easier to cover, `extrapolate_prob()` estimates the
+  model's implied probability at any book's specific line (same normal
+  margin-of-victory approximation, reusing `_normal_cdf` from
+  `spread_value_finder.py` plus a new `_normal_ppf` sibling) and compares it
+  to that book's own price. Every result is explicitly labeled
+  "extrapolated" - not literally the model's output, since it was never
+  evaluated at that exact line. Prompted directly by a chat exchange
+  confirming "more points at the nflverse baseline increases the odds when
+  extrapolated, correct?" and asking for that to be reusable rather than
+  hand-computed per book. Live-verified: exactly reproduced hand-computed
+  numbers for ARI @ DraftKings (+11.3pt) and FanDuel (+10.1pt), and found
+  PlayNow has the single biggest edge on that game (+13.1pt) despite fewer
+  points than the field - its plus-money price compensates. 14 new tests
+  (121 total).
+
 - **Spread tracker: price-adjusted value finder.** New
   `scripts/spread_value_finder.py`. Prompted by a chat request to recommend
   parlay legs from a book (PlayNow) the spread tracker had flagged as

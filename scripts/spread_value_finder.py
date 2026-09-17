@@ -55,6 +55,23 @@ def _normal_cdf(x: float) -> float:
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2)))
 
 
+def _normal_ppf(p: float, lo: float = -10.0, hi: float = 10.0, tol: float = 1e-9) -> float:
+    """Inverse standard normal CDF via bisection on _normal_cdf - avoids a
+    scipy dependency for one function. _normal_cdf is monotonic, so bisection
+    converges reliably; not the fastest inverse-CDF method, but this is only
+    ever called a handful of times per script run, never in a hot loop.
+    """
+    if not 0.0 < p < 1.0:
+        raise ValueError(f"_normal_ppf requires 0 < p < 1, got {p}")
+    while hi - lo > tol:
+        mid = (lo + hi) / 2.0
+        if _normal_cdf(mid) < p:
+            lo = mid
+        else:
+            hi = mid
+    return (lo + hi) / 2.0
+
+
 def _fair_prob_home_covers(mu_field: float, book_home_spread_normalized: float,
                             sigma: float = MOV_SIGMA) -> float:
     """P(home team covers the book's own line), given the true home-margin

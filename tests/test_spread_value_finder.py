@@ -61,6 +61,19 @@ class TestNormalCdf:
         assert svf._normal_cdf(-1.959964) == pytest.approx(0.025, abs=1e-4)
 
 
+class TestNormalPpf:
+    def test_is_inverse_of_cdf(self):
+        for p in (0.025, 0.1, 0.3, 0.5, 0.591285, 0.9, 0.975):
+            x = svf._normal_ppf(p)
+            assert svf._normal_cdf(x) == pytest.approx(p, abs=1e-6)
+
+    def test_rejects_out_of_range(self):
+        with pytest.raises(ValueError):
+            svf._normal_ppf(0.0)
+        with pytest.raises(ValueError):
+            svf._normal_ppf(1.0)
+
+
 class TestFairProbHomeCovers:
     def test_book_line_matches_field_is_exactly_half(self):
         # When the book's own line equals the field's median, that line is by
