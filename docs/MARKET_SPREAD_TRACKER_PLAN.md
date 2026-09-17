@@ -1,6 +1,6 @@
 # Season-Long Sportsbook Spread Tracker — Design
 
-**Status:** **All 3 phases built, plus two post-launch analysis additions.**
+**Status:** **All 3 phases built, plus three post-launch analysis additions.**
 `spread_tracker.py` fetches/normalizes/upserts real US + Canadian sportsbook
 game-spread lines into `data_files/spread_tracker_log.csv`, joined against
 nflverse's `spread_line`; `scripts/spread_tracker_report.py` rolls that log
@@ -10,7 +10,10 @@ surfaces that report in the Streamlit app; `scripts/spread_value_finder.py`
 (Phase 4, added 2026-09-17) computes price-adjusted fair-value edges for one
 book's lines against the field median; `scripts/model_line_shop.py` (Phase
 5, added 2026-09-17) extends the spread model's own probability to every
-tracked book's specific line, against the model instead of the field. Live-verified 2026-09-16 against
+tracked book's specific line, against the model instead of the field;
+`pages/6_Value_Finder.py` (Phase 6, added 2026-09-17) surfaces Phases 4 and
+5 in the app, on its own page kept separate from Phase 3's tracker page.
+Live-verified 2026-09-16 against
 real Week 3 2026 data: 144 game/book rows (16 games × up to 10 books across
 `us`/`ca`), all `deviation_pts` values landing in a sane ±1 point range,
 cache-hit and upsert-idempotency both confirmed against the real API; the
@@ -287,6 +290,25 @@ break `json.dumps`).
    actually has the single biggest edge on that game (+13.1pt) despite
    offering fewer points than the field — its plus-money price more than
    compensates.
+6. **✅ Done (post-launch addition).** `pages/6_Value_Finder.py` surfaces
+   Phases 4 and 5 in the app, on its own page rather than folded into
+   `pages/5_Spread_Tracker.py` — this is the actively-iterated, prescriptive
+   half of the feature ("what to bet" vs. "what happened"), so keeping it
+   separate means refining it can't destabilize the already-verified
+   tracker page. Two tabs: **Book vs Field** (a book picker + week filter
+   over `compute_book_edges`) and **Model vs Books** (season/week pickers +
+   a "model picks only" toggle over `compute_model_edges_for_game`, one
+   table per qualifying game). Both import the scripts' functions directly
+   (`sys.path` includes `scripts/`, which isn't a package) rather than
+   reimplementing the math — no duplication between the CLI tools and the
+   UI. Uses the same pre-formatted-percentage-string display pattern as
+   `pages/4_Model_Performance.py` (not `NumberColumn(format=...)`, to avoid
+   guessing at its raw-fraction-vs-percent scaling behavior). Registered in
+   `predictions.py`'s `st.navigation()` list at the same time it was added —
+   this app does not use Streamlit's automatic `pages/` folder discovery,
+   which is exactly what made `pages/5_Spread_Tracker.py` invisible when
+   that registration was missed the first time (see
+   `.github/copilot-instructions.md`).
 
 ## Open questions
 
