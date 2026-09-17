@@ -4329,6 +4329,7 @@ if _has_runtime:
                 st.Page("pages/2_Player_Props.py",      title="Player Props",      icon="🎯"),
                 st.Page("pages/3_Parlay_Builder.py",    title="Parlay Builder",    icon="🎲"),
                 st.Page("pages/4_Model_Performance.py", title="Model Performance", icon="📈"),
+                st.Page("pages/5_Spread_Tracker.py",     title="Spread Tracker",    icon="📉"),
             ],
         }
     )
