@@ -1,7 +1,8 @@
 {
-  "generated_at": "2026-09-16T21:27:39",
+  "generated_at": "2026-09-16T21:39:34",
   "source": "spread_tracker_log.csv",
   "note": "deviation_pts = a book's home-side spread minus nflverse's spread_line, in nflverse's home-favorite-positive convention. A positive per-book mean means that book systematically gives the home side more points than nflverse; mean_abs_deviation_pts is the direction-agnostic 'how far off nflverse' ranking metric.",
+  "anomaly_threshold_pts": 1.5,
   "overall": {
     "n_weeks": 1,
     "n_games": 16,

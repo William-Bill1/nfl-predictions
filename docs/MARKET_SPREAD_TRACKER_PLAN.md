@@ -1,11 +1,12 @@
 # Season-Long Sportsbook Spread Tracker — Design
 
-**Status:** **Phases 1 and 2 built.** `spread_tracker.py` fetches/normalizes/
+**Status:** **All 3 phases built.** `spread_tracker.py` fetches/normalizes/
 upserts real US + Canadian sportsbook game-spread lines into
 `data_files/spread_tracker_log.csv`, joined against nflverse's `spread_line`;
 `scripts/spread_tracker_report.py` rolls that log up into
 `data_files/spread_tracker_report.json` (per-book season-to-date ranking,
-best-line-per-game callouts, anomaly flags). Live-verified 2026-09-16 against
+best-line-per-game callouts, anomaly flags); `pages/5_Spread_Tracker.py`
+surfaces that report in the Streamlit app. Live-verified 2026-09-16 against
 real Week 3 2026 data: 144 game/book rows (16 games × up to 10 books across
 `us`/`ca`), all `deviation_pts` values landing in a sane ±1 point range,
 cache-hit and upsert-idempotency both confirmed against the real API; the
@@ -220,9 +221,16 @@ break `json.dumps`).
    books (mean|dev|=0.34pt), zero anomalies for that single week (expected —
    the anomaly list only gets interesting once a genuinely mispriced book
    shows up, as PlayNow did in the original ad-hoc chat comparison).
-3. **Not yet built, no committed timeline.** Optional UI page
-   (`pages/X_Spread_Tracker.py`) surfacing Phase 2's report — only once
-   enough season data exists for a per-book ranking to mean anything.
+3. **✅ Done.** `pages/5_Spread_Tracker.py` surfaces Phase 2's report: a
+   per-book season-to-date ranking table + bar chart (sortable by mean
+   absolute deviation from nflverse), a "closest book" callout, a
+   best-line-per-game table, an anomalies table, a week selector (defaults
+   to season-to-date, can narrow to one week), and a raw-log expander. Purely
+   a display layer — reads the already-generated
+   `spread_tracker_report.json`/`spread_tracker_log.csv`, never calls The
+   Odds API itself. Shows an `st.info` explaining the opt-in feature and how
+   to populate it when no report exists yet (e.g. a fresh clone or
+   `ODDS_API_KEY` unset).
 
 ## Open questions
 
