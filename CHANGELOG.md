@@ -8,6 +8,21 @@ bottom.
 
 ## September 2026
 
+- **Spread tracker: Value Finder UI page.** New `pages/6_Value_Finder.py`
+  surfaces the price-adjusted analysis (below) in the app, two tabs: "Book
+  vs Field" (a book picker + week filter over `spread_value_finder.py`) and
+  "Model vs Books" (season/week pickers + a "model picks only" toggle over
+  `model_line_shop.py`, one table per qualifying game). Kept on its own
+  page rather than folded into `pages/5_Spread_Tracker.py` - this is the
+  actively-iterated, prescriptive half of the feature ("what to bet" vs.
+  "what happened"), so isolating it means refining it can't destabilize the
+  already-verified tracker page. Both tabs import the scripts' functions
+  directly rather than reimplementing the math. Registered in
+  `predictions.py`'s `st.navigation()` list at the same time it was added -
+  this app doesn't use Streamlit's automatic `pages/` folder discovery,
+  which is exactly what made `5_Spread_Tracker.py` invisible when that
+  registration was missed the first time.
+
 - **Spread tracker: model-vs-book line shopping.** New
   `scripts/model_line_shop.py`. A different baseline than the value finder
   below: that one asks whether a book's price is good relative to the other

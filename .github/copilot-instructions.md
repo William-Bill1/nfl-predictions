@@ -28,7 +28,17 @@ for diagnostics only).
 - `pages/5_Spread_Tracker.py` → opt-in, display-only: season-to-date US+CA
   sportsbook spread-line comparison vs. nflverse, reads
   `spread_tracker_report.json`/`spread_tracker_log.csv` (never calls the API)
+- `pages/6_Value_Finder.py` → opt-in, display-only: two tabs wrapping
+  `scripts/spread_value_finder.py` (book vs. field) and
+  `scripts/model_line_shop.py` (model vs. every tracked book), imported
+  directly (`sys.path` includes `scripts/`, not a package)
 - All data loaded via `@st.cache_data` decorators (never at module level)
+- **IMPORTANT: this app does NOT use Streamlit's automatic `pages/`
+  directory discovery.** `predictions.py` (~line 4322) builds an explicit
+  `st.navigation({...})` with a hardcoded `st.Page(...)` list — a new file
+  in `pages/` is invisible in the app with zero error until it's added
+  there too (bit twice: `pages/5_Spread_Tracker.py` shipped without this
+  registration and was invisible in the app until a follow-up fix).
 
 **Critical Constraints**:
 - Features must be pre-game only (rolling stats exclude the current game).

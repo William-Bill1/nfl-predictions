@@ -70,6 +70,7 @@ market-implied columns, on the Probabilities & Edges tab.
 | `3_Parlay_Builder.py` | combine bets, compute parlay odds |
 | `4_Model_Performance.py` | model evaluation and calibration metrics |
 | `5_Spread_Tracker.py` | opt-in: season-to-date US+CA sportsbook spread-line comparison vs. nflverse (per-book ranking, best line per game, anomalies) — see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
+| `6_Value_Finder.py` | opt-in: price-adjusted edges — one book's lines vs. the field, and the spread model's own picks vs. every tracked book's actual line |
 
 ### Models
 
