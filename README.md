@@ -136,6 +136,7 @@ future information. Best-feature subsets per target are cached in
 | **Open-Meteo** | player-prop weather adjustments | `player_props/weather.py` (nightly runs `--no-weather`) |
 | **ESPN** injury page | player-prop injury adjustments | scraped in `player_props/injuries.py` (nightly runs `--no-injuries`) |
 | **The Odds API** | real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
+| **The Odds API (spreads)** | season-long US+CA sportsbook game-spread lines vs. nflverse's line | `spread_tracker.py`; opt-in (same `ODDS_API_KEY`); see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 
 All artifacts live in `data_files/` and are committed. The big one,
 `nfl_play_by_play_historical.csv.gz` (~116 MB, **tab-separated**), is tracked
@@ -238,7 +239,7 @@ Optional features (email, RSS) read environment variables. For local dev, copy
 |---|---|
 | `EMAIL_FROM`, `EMAIL_TO`, `EMAIL_PASSWORD`, `SMTP_SERVER`, `SMTP_PORT` | email notifications (Gmail App Password) |
 | `ALERTS_SITE_URL` | base URL for RSS per-alert links |
-| `ODDS_API_KEY` | opt-in real DK/FanDuel player-prop lines (unset = no-op, fixed tiers used as before) |
+| `ODDS_API_KEY` | opt-in real DK/FanDuel player-prop lines, and the US+CA game-spread tracker (unset = no-op for both) |
 
 Never commit real secrets. On Streamlit Cloud use the platform's secrets
 manager (`st.secrets`), not a `.env` file.

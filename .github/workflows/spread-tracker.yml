@@ -1,0 +1,67 @@
+name: Weekly Spread Line Tracker
+
+# Run every Wednesday at 12:00 UTC during football season (Sept-Feb).
+# Wednesday, not Monday like weekly-model-performance.yml (that one backtests
+# *last* week right after it finishes) - NFL sportsbooks typically don't post
+# the full next-week board until Tuesday, so Wednesday gives lines a day to
+# settle past the initial open while still landing well ahead of the Sunday
+# slate (and Thursday Night Football, for the following week's numbers).
+# Opt-in: no-ops (empty DataFrame, no API calls) whenever ODDS_API_KEY isn't set.
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 12 * 9-12,1-2 3'  # Every Wednesday, Sept-Dec and Jan-Feb
+  workflow_dispatch:  # Allow manual trigger any time
+
+jobs:
+  track-spreads:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Fetch this week's US + Canadian sportsbook spread lines
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: |
+          echo "Tracking sportsbook spread lines vs. nflverse..."
+          python spread_tracker.py
+        continue-on-error: true
+
+      - name: Commit spread-tracker log
+        if: github.ref == 'refs/heads/main'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          git add data_files/spread_tracker_log.csv data_files/market_spreads_week*_*.csv
+
+          if git diff --staged --quiet; then
+            echo "No new spread-tracker data to commit"
+          else
+            git commit -m "Weekly spread-line tracker update [skip ci]"
+            git push
+          fi
+        continue-on-error: true
+
+      - name: Summary
+        run: |
+          echo "Spread-line tracker run complete."
+          tail -n 5 data_files/spread_tracker_log.csv 2>/dev/null || echo "No spread_tracker_log.csv found."

@@ -143,6 +143,8 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
     players, `ODDS_API_KEY` for real DK/FanDuel prop lines — both opt-in,
     both true no-ops when unset)
   - results tracking: `python betting_log.py` then `python scripts/weekly_spread_report.py`
+  - spread-line tracker (opt-in, `ODDS_API_KEY`): `python spread_tracker.py --week N`
+    — season-long US+CA sportsbook game-spread log vs. nflverse's line
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
@@ -189,12 +191,12 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **Adding an estimator**: pass `**_XGB_KW` / `**_LGBM_KW` or it reintroduces
   run-to-run drift.
 - **Season year**: `from season_utils import upcoming_or_current_season, latest_pbp_season` — don't compute it inline.
-- **PBP file** (`nfl_play_by_play_historical.csv.gz`) is TAB-separated — every `read_csv` needs `sep='\t'`.
+- **PBP file** (`nfl_play_by_play_historical.csv.gz`) is TAB-separated — every `read_csv` needs `sep='\t'`. So is `nfl_games_historical_with_predictions.csv` despite the `.csv` extension (see `betting_log.py`'s `PREDICTIONS_PATH` read) — a plain `pd.read_csv()` against it silently parses one giant unsplit column with no error (caught in `spread_tracker.py`'s CLI, 2026-09-16).
 
 ## Integration Points
 - **External data**: All historical/play-by-play data is pre-fetched and stored in `data_files/`. The dashboard makes no runtime API calls; completed-game scores come from the regenerated predictions CSV (nflverse), graded by `betting_log.grade_pending`.
 - **Feature importances/metrics**: Stored in `model_feature_importances.csv` and `model_metrics.json` (spread eval: `Spread_EV_Analysis` = validation slice, `Spread_OOS_Test` = held-out test slice).
-- **Automated workflows**: `nightly-update.yml` (Sept-Feb) — smart PBP update, run the pipeline, retrain prop models, freeze the week's prop snapshot, `betting_log.py`, `export_best_bets.py`, commit. `weekly-model-performance.yml` (Mondays) — prop backtest + `betting_log.py` + `weekly_spread_report.py` → `spread_performance.json`. `tests.yml` — `pytest -q` on 3.12/3.13 plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces).
+- **Automated workflows**: `nightly-update.yml` (Sept-Feb) — smart PBP update, run the pipeline, retrain prop models, freeze the week's prop snapshot, `betting_log.py`, `export_best_bets.py`, commit. `weekly-model-performance.yml` (Mondays) — prop backtest + `betting_log.py` + `weekly_spread_report.py` → `spread_performance.json`. `spread-tracker.yml` (Wednesdays, in-season) — `spread_tracker.py` fetch + commit of `spread_tracker_log.csv`. `tests.yml` — `pytest -q` on 3.12/3.13 plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces).
 - **Email notifications**: `scripts/preview_email.py` / `scripts/send_rich_email_now.py`, SMTP via `emailer.py` (Gmail App Passwords). Spread bets only now.
 - **RSS feed**: `scripts/generate_rss.py` → `alerts_feed.xml`, base URL from `app_config.json`.
 - **best_bets_today.json**: `scripts/export_best_bets.py` reads the predictions
@@ -203,10 +205,14 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **Market odds** (opt-in): `player_props/market_odds.py` fetches DK/FanDuel
   player-prop lines from The Odds API when `ODDS_API_KEY` is set (unset in
   production today — verified no-op). See `docs/ODDS_API_INTEGRATION_PLAN.md`.
+- **Spread tracker** (opt-in, same `ODDS_API_KEY`): `spread_tracker.py` pulls
+  US+CA sportsbook game-spread lines via the bulk `/odds` endpoint and
+  upserts `data_files/spread_tracker_log.csv` against nflverse's
+  `spread_line`. See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
 
 ## Known Issues / gotchas
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.
-- PBP file is TAB-separated.
+- PBP file is TAB-separated. So is `nfl_games_historical_with_predictions.csv`.
 - `pytest` writes nothing to `data_files/` now (`pytest.ini` scopes to `tests/`).
   `pytest.ini` also sets `pythonpath = .` so a bare `pytest` collects (without it
   only `python -m pytest` worked — this failed CI for 10 days).

@@ -8,6 +8,25 @@ bottom.
 
 ## September 2026
 
+- **Season-long spread-line tracker, Phase 1 (opt-in, off by default).** New
+  root-level `spread_tracker.py` pulls real US + Canadian sportsbook
+  game-spread lines (DraftKings, FanDuel, BetMGM, BetRivers, PROLINE, Sports
+  Interaction, PlayNow, and others) via The Odds API's bulk `/odds` endpoint
+  (one call, both `us`/`ca` regions, 2 credits total), normalizes them into
+  nflverse's `spread_line` sign convention, and upserts them into a new
+  accumulating `data_files/spread_tracker_log.csv` alongside a
+  `nflverse_spread_line`/`deviation_pts` comparison - so which sportsbook(s)
+  consistently offer a better number than nflverse's line can be answered
+  from real season data instead of one-off manual pulls. Reuses the existing
+  `ODDS_API_KEY` secret; no new secret needed. Live-verified against real
+  Week 3 2026 data (144 game/book rows, sane ±1pt deviations) - and caught a
+  real bug along the way: the predictions CSV read used a plain
+  `pd.read_csv()`, but `nfl_games_historical_with_predictions.csv` is
+  tab-separated despite the `.csv` extension, so every join silently came
+  back 100% `NaN` with no error; fixed with `sep='\t'` (matching
+  `betting_log.py`'s own read of the same file). See
+  `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
+
 - **Market-odds integration complete (Phase 3): DK Pick 6 pre-fill.** The
   Pick 6 Calculator's line input now pre-fills from a real matched
   DraftKings/FanDuel line when one exists for the selected player/stat

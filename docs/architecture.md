@@ -131,6 +131,7 @@ All features are pre-game only (zero data leakage):
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
 | The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
+| The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line | `spread_tracker.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
 The dashboard makes **no runtime API calls**. `update_completed_games` is now a
@@ -147,6 +148,7 @@ score fetch is gone.
 - `player_props/train_models.py` — prop model training (temporal hold-out)
 - `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); write-once `market_odds_week{W}_{season}.csv` doubles as its own cache
+- `spread_tracker.py` — opt-in season-long US+CA sportsbook game-spread tracker (`ODDS_API_KEY`, bulk endpoint); upserts `spread_tracker_log.csv` against nflverse's `spread_line`
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
 - `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
@@ -159,6 +161,7 @@ All data in `data_files/` (committed to git):
 - `model_metrics.json` (incl. `Spread_EV_Analysis` / `Spread_OOS_Test`), `model_feature_importances.csv`, `best_features_spread.txt` — model eval + selected features
 - `player_props_predictions.csv` — latest prop feed; `player_props_predictions_week{W}_{season}.csv` — frozen weekly snapshots
 - `market_odds_week{W}_{season}.csv` — opt-in DK/FanDuel prop lines (empty/absent unless `ODDS_API_KEY` is set); write-once, doubles as its own cache
+- `market_spreads_week{W}_{season}.csv` — opt-in raw US+CA sportsbook game-spread quotes (write-once cache); `spread_tracker_log.csv` — accumulating season-long spread-line-vs-nflverse comparison, upserted weekly by `spread_tracker.py`
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed
