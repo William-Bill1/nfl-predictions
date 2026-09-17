@@ -132,7 +132,7 @@ All features are pre-game only (zero data leakage):
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
 | The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
-| The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
+| The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line, plus a price-adjusted per-book value finder | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
 The dashboard makes **no runtime API calls**. `update_completed_games` is now a
@@ -151,6 +151,7 @@ score fetch is gone.
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); write-once `market_odds_week{W}_{season}.csv` doubles as its own cache
 - `spread_tracker.py` — opt-in season-long US+CA sportsbook game-spread tracker (`ODDS_API_KEY`, bulk endpoint); upserts `spread_tracker_log.csv` against nflverse's `spread_line`
 - `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
+- `scripts/spread_value_finder.py` — reads `spread_tracker_log.csv`; for one book, ranks sides by fair-value edge (normal approx of margin of victory vs. the book's own devigged price) — point-divergence alone isn't the same as a favorable price
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
 - `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
