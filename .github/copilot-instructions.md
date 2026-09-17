@@ -144,7 +144,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
     both true no-ops when unset)
   - results tracking: `python betting_log.py` then `python scripts/weekly_spread_report.py`
   - spread-line tracker (opt-in, `ODDS_API_KEY`): `python spread_tracker.py --week N`
-    — season-long US+CA sportsbook game-spread log vs. nflverse's line
+    then `python scripts/spread_tracker_report.py` — season-long US+CA
+    sportsbook game-spread log vs. nflverse's line, then a per-book
+    season-to-date ranking + anomaly report
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
@@ -196,7 +198,7 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 ## Integration Points
 - **External data**: All historical/play-by-play data is pre-fetched and stored in `data_files/`. The dashboard makes no runtime API calls; completed-game scores come from the regenerated predictions CSV (nflverse), graded by `betting_log.grade_pending`.
 - **Feature importances/metrics**: Stored in `model_feature_importances.csv` and `model_metrics.json` (spread eval: `Spread_EV_Analysis` = validation slice, `Spread_OOS_Test` = held-out test slice).
-- **Automated workflows**: `nightly-update.yml` (Sept-Feb) — smart PBP update, run the pipeline, retrain prop models, freeze the week's prop snapshot, `betting_log.py`, `export_best_bets.py`, commit. `weekly-model-performance.yml` (Mondays) — prop backtest + `betting_log.py` + `weekly_spread_report.py` → `spread_performance.json`. `spread-tracker.yml` (Wednesdays, in-season) — `spread_tracker.py` fetch + commit of `spread_tracker_log.csv`. `tests.yml` — `pytest -q` on 3.12/3.13 plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces).
+- **Automated workflows**: `nightly-update.yml` (Sept-Feb) — smart PBP update, run the pipeline, retrain prop models, freeze the week's prop snapshot, `betting_log.py`, `export_best_bets.py`, commit. `weekly-model-performance.yml` (Mondays) — prop backtest + `betting_log.py` + `weekly_spread_report.py` → `spread_performance.json`. `spread-tracker.yml` (Wednesdays, in-season) — `spread_tracker.py` fetch + `scripts/spread_tracker_report.py` rollup + commit of `spread_tracker_log.csv`/`spread_tracker_report.json`. `tests.yml` — `pytest -q` on 3.12/3.13 plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces).
 - **Email notifications**: `scripts/preview_email.py` / `scripts/send_rich_email_now.py`, SMTP via `emailer.py` (Gmail App Passwords). Spread bets only now.
 - **RSS feed**: `scripts/generate_rss.py` → `alerts_feed.xml`, base URL from `app_config.json`.
 - **best_bets_today.json**: `scripts/export_best_bets.py` reads the predictions
@@ -208,7 +210,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **Spread tracker** (opt-in, same `ODDS_API_KEY`): `spread_tracker.py` pulls
   US+CA sportsbook game-spread lines via the bulk `/odds` endpoint and
   upserts `data_files/spread_tracker_log.csv` against nflverse's
-  `spread_line`. See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
+  `spread_line`; `scripts/spread_tracker_report.py` rolls that log up into
+  `data_files/spread_tracker_report.json` (per-book season-to-date ranking,
+  best-line-per-game, anomaly flags). See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
 
 ## Known Issues / gotchas
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.

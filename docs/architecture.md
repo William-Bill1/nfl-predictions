@@ -149,6 +149,7 @@ score fetch is gone.
 - `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); write-once `market_odds_week{W}_{season}.csv` doubles as its own cache
 - `spread_tracker.py` — opt-in season-long US+CA sportsbook game-spread tracker (`ODDS_API_KEY`, bulk endpoint); upserts `spread_tracker_log.csv` against nflverse's `spread_line`
+- `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
 - `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
@@ -162,6 +163,7 @@ All data in `data_files/` (committed to git):
 - `player_props_predictions.csv` — latest prop feed; `player_props_predictions_week{W}_{season}.csv` — frozen weekly snapshots
 - `market_odds_week{W}_{season}.csv` — opt-in DK/FanDuel prop lines (empty/absent unless `ODDS_API_KEY` is set); write-once, doubles as its own cache
 - `market_spreads_week{W}_{season}.csv` — opt-in raw US+CA sportsbook game-spread quotes (write-once cache); `spread_tracker_log.csv` — accumulating season-long spread-line-vs-nflverse comparison, upserted weekly by `spread_tracker.py`
+- `spread_tracker_report.json` — season-to-date per-book ranking + best-line-per-game + anomaly flags, rolled up from `spread_tracker_log.csv` by `scripts/spread_tracker_report.py`
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed
