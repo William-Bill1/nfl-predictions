@@ -25,10 +25,12 @@ instead of "how often a player clears an arbitrary round line."
 
 ## Non-goals (this pass)
 
-- **Spread/moneyline/totals** stay on the nflverse consensus line. The spread
-  model has no proven out-of-sample edge (`Spread_OOS_Test` in
-  `model_metrics.json`); precise live game odds don't fix that, and it's a
-  separate, lower-value integration if ever pursued.
+- **Spread/moneyline/totals** stay on the nflverse consensus line **for
+  player-prop edge purposes** — the spread model has no proven out-of-sample
+  edge (`Spread_OOS_Test` in `model_metrics.json`), so precise live game odds
+  don't fix that. Superseded for a different purpose (comparing sportsbooks
+  against each other and against nflverse, independent of model edge) by
+  `spread_tracker.py` — see `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
 - **TD props** (`passing_tds`, `rushing_tds`, `receiving_tds`) are already
   force-flagged `reliable = False` in `player_props/models.py` (every tier
   collapses to the same 0.5 line, ~coin-flip out-of-time). Don't spend credits
