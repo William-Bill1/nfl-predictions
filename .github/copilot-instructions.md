@@ -150,6 +150,11 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
     then `python scripts/spread_tracker_report.py` — season-long US+CA
     sportsbook game-spread log vs. nflverse's line, then a per-book
     season-to-date ranking + anomaly report
+  - price-adjusted value finder (reads the tracker log, no API call):
+    `python scripts/spread_value_finder.py --book <book_key> [--week N]` —
+    fair win prob (normal approx, sigma=13.5) vs. what a book's own price
+    requires, per side, ranked by edge; point-divergence alone (the anomaly
+    report above) isn't the same question as "is this side priced well"
 - **Tests**: `pip install -r requirements-dev.txt && pytest -q` (only `tests/`;
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
@@ -215,7 +220,11 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   upserts `data_files/spread_tracker_log.csv` against nflverse's
   `spread_line`; `scripts/spread_tracker_report.py` rolls that log up into
   `data_files/spread_tracker_report.json` (per-book season-to-date ranking,
-  best-line-per-game, anomaly flags). See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
+  best-line-per-game, anomaly flags); `scripts/spread_value_finder.py`
+  computes price-adjusted fair-value edges for one book's lines (reads the
+  log, no API call) - point-divergence alone doesn't mean a side is priced
+  favorably, since a book can shade the price to compensate for generous
+  points. See `docs/MARKET_SPREAD_TRACKER_PLAN.md`.
 
 ## Known Issues / gotchas
 - Module-level data loading → silent Cloud crashes; always `@st.cache_data`.

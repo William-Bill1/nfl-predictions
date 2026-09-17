@@ -1,12 +1,15 @@
 # Season-Long Sportsbook Spread Tracker — Design
 
-**Status:** **All 3 phases built.** `spread_tracker.py` fetches/normalizes/
-upserts real US + Canadian sportsbook game-spread lines into
-`data_files/spread_tracker_log.csv`, joined against nflverse's `spread_line`;
-`scripts/spread_tracker_report.py` rolls that log up into
-`data_files/spread_tracker_report.json` (per-book season-to-date ranking,
-best-line-per-game callouts, anomaly flags); `pages/5_Spread_Tracker.py`
-surfaces that report in the Streamlit app. Live-verified 2026-09-16 against
+**Status:** **All 3 phases built, plus a post-launch value-finder addition.**
+`spread_tracker.py` fetches/normalizes/upserts real US + Canadian sportsbook
+game-spread lines into `data_files/spread_tracker_log.csv`, joined against
+nflverse's `spread_line`; `scripts/spread_tracker_report.py` rolls that log
+up into `data_files/spread_tracker_report.json` (per-book season-to-date
+ranking, best-line-per-game callouts, anomaly flags); `pages/5_Spread_Tracker.py`
+surfaces that report in the Streamlit app; `scripts/spread_value_finder.py`
+(added 2026-09-17, see Phase 4 below) computes price-adjusted fair-value
+edges for one book's lines, since point-divergence alone isn't the same
+question as "is this side priced favorably." Live-verified 2026-09-16 against
 real Week 3 2026 data: 144 game/book rows (16 games × up to 10 books across
 `us`/`ca`), all `deviation_pts` values landing in a sane ±1 point range,
 cache-hit and upsert-idempotency both confirmed against the real API; the
@@ -231,6 +234,30 @@ break `json.dumps`).
    Odds API itself. Shows an `st.info` explaining the opt-in feature and how
    to populate it when no report exists yet (e.g. a fresh clone or
    `ODDS_API_KEY` unset).
+4. **✅ Done (post-launch addition).** `scripts/spread_value_finder.py` —
+   Phase 2's `anomalies` list flags books whose *point number* diverges from
+   the field, but a book can move the points and shade the price to
+   compensate, netting out to a fair (or even worse) bet; point-only
+   divergence isn't the same question as "is this side actually priced
+   favorably." Added after a live example (2026-09-17): a chat request to
+   recommend PlayNow parlay legs from the Phase 2 anomaly list turned out to
+   need price-adjusted fair-value math, not just point-shopping — and a first
+   manual pass at that math mislabeled a side by reading the internal
+   home-favorite-positive convention directly instead of the log's own
+   bettor-facing `home_point`/`away_point` columns. This script is the
+   corrected, tested, reusable version: for one target book, computes a fair
+   win probability per side (normal approximation of NFL margin of victory,
+   `MOV_SIGMA` = 13.5, evaluated at the book's own line against the field
+   median) and compares it to what the book's own price requires to break
+   even, ranked by edge. Output is always read from the raw bettor-facing
+   columns, never re-derived from `home_spread_normalized` — the exact bug
+   class `TestComputeBookEdges::test_labels_match_raw_bettor_facing_columns`
+   guards against. CLI: `python scripts/spread_value_finder.py --book
+   playnow_ca --week 2`. Live-verified against real Week 2 2026 data: exactly
+   reproduced every number from the original manual analysis, and also
+   surfaced a real edge (DEN -4.0 @ +130 vs JAX, +5.6pt) that Phase 2's
+   point-only anomaly detector had missed entirely because the point number
+   itself wasn't unusual — only the price was.
 
 ## Open questions
 

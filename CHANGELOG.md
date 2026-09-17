@@ -8,6 +8,25 @@ bottom.
 
 ## September 2026
 
+- **Spread tracker: price-adjusted value finder.** New
+  `scripts/spread_value_finder.py`. Prompted by a chat request to recommend
+  parlay legs from a book (PlayNow) the spread tracker had flagged as
+  divergent from the field - point-only divergence turned out to be the
+  wrong question, since a book can move the points and shade the price to
+  compensate, netting out to a fair (or worse) bet. Computes a fair win
+  probability per side (normal approximation of NFL margin of victory,
+  sigma=13.5, evaluated against the field median) and compares it to what
+  the book's own price requires to break even, ranked by edge - for any
+  tracked book, not just PlayNow. A first manual pass at this math mislabeled
+  a side by reading the tracker's internal home-favorite-positive convention
+  directly instead of the log's own bettor-facing columns; the shipped
+  version reads labels straight from `home_point`/`away_point` and has a
+  regression test guarding against that exact bug class. Live-verified
+  against real Week 2 2026 data: exactly reproduced the original manual
+  analysis, and also surfaced a real edge (+5.6pt) that the existing
+  point-only anomaly detector had missed because only the price, not the
+  point number, was unusual. 10 new tests (107 total).
+
 - **Season-long spread-line tracker, Phase 3: UI page (all 3 phases done).**
   New `pages/5_Spread_Tracker.py` surfaces the Phase 2 report in the app: a
   per-book season-to-date ranking table + bar chart (which sportsbook is
