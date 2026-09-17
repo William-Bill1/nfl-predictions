@@ -107,16 +107,27 @@ def _cache_path(season, week) -> Path:
     return DATA_DIR / f'market_spreads_week{int(week)}_{int(season)}.csv'
 
 
-def _region_for_book(book_key: str) -> str:
-    """Every Canadian province-licensed book The Odds API returns keys its
+def _region_for_book(book_key: str, book_title: str | None = None) -> str:
+    """Most Canadian province-licensed books The Odds API returns key its
     bookmaker with a '_ca' substring (betmgm_ca_on, playnow_ca, proline_ca_on,
-    sportsinteraction_ca_on, ...). US books never contain '_ca' (draftkings,
-    fanduel, betmgm, ...) - note plain 'betmgm' doesn't collide with
-    'betmgm_ca_on' under a substring check. Anything unrecognized defaults to
-    'us' (the overwhelming majority), so a future new US book is never
-    miscategorized as CA.
+    sportsinteraction_ca_on, betano_ca_on, betrivers_ca_on, ...) - US books
+    never contain '_ca' (draftkings, fanduel, betmgm, ...; plain 'betmgm'
+    doesn't collide with 'betmgm_ca_on' under a substring check.
+
+    `pointsbetca` is a real, live-observed exception: no '_ca' substring in
+    the key, so the key-only check misses it (caught 2026-09-17 - it showed
+    up as region 'us' in a real report despite its own title reading
+    "PointsBet (CA - ON)"). The API's `bookmakers[].title` reliably carries a
+    literal '(CA' marker for every Canadian book observed (including this
+    one), so it's used as a second signal when supplied. Anything neither
+    signal catches defaults to 'us' (the overwhelming majority), so a future
+    new US book is never miscategorized as CA.
     """
-    return 'ca' if '_ca' in (book_key or '') else 'us'
+    if '_ca' in (book_key or ''):
+        return 'ca'
+    if book_title and '(CA' in book_title:
+        return 'ca'
+    return 'us'
 
 
 def _normalize_spread(home_point: float) -> float:
@@ -177,11 +188,12 @@ def _parse_bulk_spreads(events_json, season, week, game_id_by_teams: dict) -> li
                 continue
             home_point = home_o.get('point')
             book_key = bk.get('key', '')
+            book_title = bk.get('title')
             rows.append({
                 'season': season, 'week': week, 'game_id': game_id,
                 'home_team': home_abbr, 'away_team': away_abbr,
-                'book_key': book_key, 'book_title': bk.get('title'),
-                'region': _region_for_book(book_key),
+                'book_key': book_key, 'book_title': book_title,
+                'region': _region_for_book(book_key, book_title),
                 'home_point': home_point, 'home_price': home_o.get('price'),
                 'away_point': away_o.get('point'), 'away_price': away_o.get('price'),
                 'home_spread_normalized': _normalize_spread(home_point),
