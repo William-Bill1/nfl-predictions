@@ -40,11 +40,24 @@ class TestRegionForBook:
         ("playnow_ca", "ca"),
         ("sportsinteraction_ca_on", "ca"),
         ("proline_ca_on", "ca"),
-        ("pointsbetca", "us"),  # no literal "_ca" substring - documents the heuristic's limit
+        ("pointsbetca", "us"),  # no '_ca' substring in the key alone, no title given
         ("", "us"),
     ])
-    def test_classification(self, key, expected):
+    def test_classification_by_key_alone(self, key, expected):
         assert st._region_for_book(key) == expected
+
+    def test_pointsbetca_classified_ca_via_title(self):
+        # Regression: pointsbetca (no '_ca' substring in its key, unlike every
+        # other Canadian book) showed up as region 'us' in a real report
+        # 2026-09-17 despite its own title reading "PointsBet (CA - ON)". The
+        # title is a second signal that catches this.
+        assert st._region_for_book("pointsbetca", "PointsBet (CA - ON)") == "ca"
+
+    def test_title_without_ca_marker_stays_us(self):
+        assert st._region_for_book("draftkings", "DraftKings") == "us"
+
+    def test_key_signal_wins_even_without_title(self):
+        assert st._region_for_book("playnow_ca", None) == "ca"
 
 
 # ---------------------------------------------------------------------------
