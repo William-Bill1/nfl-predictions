@@ -30,7 +30,7 @@ LOG_COLS = [
     "fetched_at", "source_week_snapshot",
 ]
 
-PRED_COLS = ["season", "week", "game_id", "home_team", "away_team",
+PRED_COLS = ["season", "week", "game_id", "gameday", "home_team", "away_team",
              "spread_line", "prob_underdogCovered", "pred_spreadCovered_optimal"]
 
 
@@ -49,8 +49,10 @@ def _log_row(week, game_id, home_team, away_team, book_key, book_title, home_poi
     )
 
 
-def _pred_row(week, game_id, home_team, away_team, spread_line, prob_underdog, optimal=1):
-    return dict(season=2026, week=week, game_id=game_id, home_team=home_team, away_team=away_team,
+def _pred_row(week, game_id, home_team, away_team, spread_line, prob_underdog, optimal=1,
+              gameday="2099-01-01"):
+    return dict(season=2026, week=week, game_id=game_id, gameday=gameday,
+                home_team=home_team, away_team=away_team,
                 spread_line=spread_line, prob_underdogCovered=prob_underdog,
                 pred_spreadCovered_optimal=optimal)
 
@@ -175,3 +177,62 @@ class TestComputeModelEdgesForGame:
         preds.loc[0, "prob_underdogCovered"] = None
         edges = mls.compute_model_edges_for_game("2026_02_SEA_ARI", preds, log)
         assert edges.empty
+
+
+# ---------------------------------------------------------------------------
+# select_candidate_games
+# ---------------------------------------------------------------------------
+
+from datetime import date  # noqa: E402
+
+
+def _mixed_gameday_fixture():
+    # "today" = 2026-09-18 in every test below.
+    return pd.DataFrame([
+        _pred_row(2, "2026_02_PLAYED", "A", "B", spread_line=3.5, prob_underdog=0.6,
+                  optimal=1, gameday="2026-09-17"),   # already played (Thursday)
+        _pred_row(2, "2026_02_UPCOMING_PICK", "C", "D", spread_line=3.5, prob_underdog=0.6,
+                  optimal=1, gameday="2026-09-20"),   # upcoming, qualifies as a pick
+        _pred_row(2, "2026_02_UPCOMING_NO_SIGNAL", "E", "F", spread_line=3.5, prob_underdog=0.5,
+                  optimal=0, gameday="2026-09-20"),   # upcoming, no signal
+        _pred_row(3, "2026_03_OTHER_WEEK", "G", "H", spread_line=3.5, prob_underdog=0.6,
+                  optimal=1, gameday="2026-09-27"),   # different week
+    ], columns=PRED_COLS)
+
+
+class TestSelectCandidateGames:
+    TODAY = date(2026, 9, 18)
+
+    def test_excludes_already_played_games_by_default(self):
+        games = mls.select_candidate_games(_mixed_gameday_fixture(), today=self.TODAY)
+        assert "2026_02_PLAYED" not in games
+        assert "2026_02_UPCOMING_PICK" in games
+
+    def test_include_played_flag_includes_them(self):
+        games = mls.select_candidate_games(
+            _mixed_gameday_fixture(), picks_only=True, include_played=True, today=self.TODAY
+        )
+        assert "2026_02_PLAYED" in games
+
+    def test_picks_only_filters_out_no_signal_games(self):
+        games = mls.select_candidate_games(
+            _mixed_gameday_fixture(), picks_only=True, include_played=True, today=self.TODAY
+        )
+        assert "2026_02_UPCOMING_NO_SIGNAL" not in games
+
+    def test_picks_only_false_includes_no_signal_games(self):
+        games = mls.select_candidate_games(
+            _mixed_gameday_fixture(), picks_only=False, include_played=True, today=self.TODAY
+        )
+        assert "2026_02_UPCOMING_NO_SIGNAL" in games
+
+    def test_season_week_filter(self):
+        games = mls.select_candidate_games(
+            _mixed_gameday_fixture(), season=2026, week=2, picks_only=False,
+            include_played=True, today=self.TODAY,
+        )
+        assert "2026_03_OTHER_WEEK" not in games
+        assert set(games) == {"2026_02_PLAYED", "2026_02_UPCOMING_PICK", "2026_02_UPCOMING_NO_SIGNAL"}
+
+    def test_empty_predictions_returns_empty(self):
+        assert mls.select_candidate_games(pd.DataFrame(columns=PRED_COLS), today=self.TODAY) == []

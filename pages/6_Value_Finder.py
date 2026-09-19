@@ -165,7 +165,7 @@ with tab_model:
             "*extrapolated* onto each book's specific line, not the model's literal output."
         )
 
-        col1, col2, col3 = st.columns(3)
+        col1, col2, col3, col4 = st.columns(4)
         with col1:
             seasons = sorted(predictions_df["season"].dropna().unique().tolist())
             selected_season = st.selectbox("Season", seasons, index=len(seasons) - 1, key="model_season")
@@ -178,18 +178,27 @@ with tab_model:
             picks_only = st.checkbox("Model picks only", value=True, key="picks_only",
                                       help="Only games where pred_spreadCovered_optimal == 1 "
                                            "(the model's actual +EV signal), not every tracked game.")
+        with col4:
+            include_played = st.checkbox("Include played games", value=False, key="include_played",
+                                          help="A completed game can still carry "
+                                               "pred_spreadCovered_optimal == 1 (that flag reflects the "
+                                               "model's read at prediction time, not whether it's still "
+                                               "bettable) - excluded by default.")
 
-        candidates = predictions_df[
-            (predictions_df["season"] == selected_season) & (predictions_df["week"] == selected_model_week)
-        ]
-        if picks_only:
-            candidates = candidates[candidates.get("pred_spreadCovered_optimal", 0) == 1]
-        game_ids = candidates["game_id"].dropna().unique().tolist()
+        game_ids = mls.select_candidate_games(
+            predictions_df, season=selected_season, week=selected_model_week,
+            picks_only=picks_only, include_played=include_played,
+        )
 
         if not game_ids:
-            note = " with a qualifying model signal" if picks_only else ""
+            notes = []
+            if picks_only:
+                notes.append("a qualifying model signal")
+            if not include_played:
+                notes.append("not yet played")
+            note = f" with {' and '.join(notes)}" if notes else ""
             st.info(f"No games found for Week {selected_model_week}, {selected_season}{note}. "
-                    "Try unchecking \"Model picks only\" or a different week.")
+                    "Try unchecking the filters above or a different week.")
         else:
             any_edges = False
             for gid in game_ids:

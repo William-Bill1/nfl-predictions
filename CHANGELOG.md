@@ -8,6 +8,20 @@ bottom.
 
 ## September 2026
 
+- **Spread tracker: fixed a stale-pick bug caught during routine verification.**
+  A daily "run the app and verify" check surfaced that a Thursday game
+  (`2026_02_DET_BUF`, final BUF 41-31) was still showing up as a "current
+  model pick" the next day, in both `model_line_shop.py` and
+  `pages/6_Value_Finder.py`. Root cause: `pred_spreadCovered_optimal == 1`
+  reflects the model's read at prediction time, not whether the game is
+  still upcoming - filtering on it alone can surface an already-played game
+  as a live recommendation. New `select_candidate_games()` (shared by the
+  CLI and the page, so there's one filter definition, not two that could
+  drift) excludes `gameday <= today` by default, mirroring
+  `betting_log.append_recommendations`'s exact convention; `--include-played`
+  / an "Include played games" checkbox is the explicit escape hatch. 6 new
+  tests (127 total).
+
 - **Spread tracker: Value Finder UI page.** New `pages/6_Value_Finder.py`
   surfaces the price-adjusted analysis (below) in the app, two tabs: "Book
   vs Field" (a book picker + week filter over `spread_value_finder.py`) and
