@@ -309,6 +309,21 @@ break `json.dumps`).
    which is exactly what made `pages/5_Spread_Tracker.py` invisible when
    that registration was missed the first time (see
    `.github/copilot-instructions.md`).
+7. **✅ Fixed (live-discovered bug, 2026-09-18).** `model_line_shop.py` and
+   `pages/6_Value_Finder.py`'s game-selection logic filtered on
+   `pred_spreadCovered_optimal == 1` alone — but that flag reflects the
+   model's read at *prediction* time, not whether the game is still
+   upcoming. A Thursday game (`2026_02_DET_BUF`, final BUF 41–31) still
+   carried the flag the next day and was displayed as a live "current pick"
+   by both tools, recommending a bet on a game that had already been
+   played. Added `select_candidate_games()` (shared by the CLI and the
+   page — single source of truth, no duplicated filter logic) which
+   excludes `gameday <= today` by default, mirroring
+   `betting_log.append_recommendations`'s exact `gameday > today`
+   convention so this tooling and the actual recommendation log agree on
+   what counts as "current." `--include-played` (CLI) / "Include played
+   games" checkbox (UI) is the explicit escape hatch for retrospective
+   review. 6 new tests.
 
 ## Open questions
 

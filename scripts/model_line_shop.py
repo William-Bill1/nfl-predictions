@@ -26,6 +26,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -117,6 +118,39 @@ def compute_model_edges_for_game(game_id: str, predictions_df: pd.DataFrame,
     return pd.DataFrame(rows, columns=EDGE_COLUMNS)
 
 
+def select_candidate_games(predictions_df: pd.DataFrame, season: int | None = None,
+                            week: int | None = None, picks_only: bool = True,
+                            include_played: bool = False, today: date | None = None) -> list[str]:
+    """game_ids worth running compute_model_edges_for_game against.
+
+    By default excludes games that have already been played
+    (`gameday <= today`) - a completed game can't actually be bet on, and
+    with no filter it can still carry `pred_spreadCovered_optimal == 1`
+    (that flag reflects the model's read at prediction time, not whether the
+    game is still upcoming). Mirrors betting_log.append_recommendations'
+    exact `gameday > today` convention, so this tool and the actual
+    recommendation log agree on what counts as "current." Caught live
+    2026-09-18: a Thursday game already final (BUF 41 - DET 31) still showed
+    `pred_spreadCovered_optimal == 1` the next day and was being treated as
+    a live pick by this tool and pages/6_Value_Finder.py.
+
+    `today` is injectable for deterministic tests; defaults to the real
+    current date.
+    """
+    df = predictions_df
+    if season is not None:
+        df = df[df["season"] == season]
+    if week is not None:
+        df = df[df["week"] == week]
+    if picks_only:
+        df = df[df.get("pred_spreadCovered_optimal", 0) == 1]
+    if not include_played:
+        cutoff = pd.to_datetime(today or date.today())
+        gameday = pd.to_datetime(df["gameday"], errors="coerce")
+        df = df[gameday > cutoff]
+    return df["game_id"].dropna().unique().tolist()
+
+
 def _load_predictions() -> pd.DataFrame:
     # Despite the .csv extension this file is TAB-separated (see
     # betting_log.py's own PREDICTIONS_PATH read) - a plain pd.read_csv()
@@ -135,6 +169,10 @@ def main() -> None:
     ap.add_argument("--include-non-picks", action="store_true",
                      help="also show games where pred_spreadCovered_optimal != 1 "
                           "(default: only the model's actual current picks)")
+    ap.add_argument("--include-played", action="store_true",
+                     help="also show games that have already been played "
+                          "(default: excluded - gameday <= today, same convention "
+                          "as betting_log.append_recommendations)")
     ap.add_argument("--sigma", type=float, default=MOV_SIGMA)
     ap.add_argument("--top", type=int, default=None)
     args = ap.parse_args()
@@ -152,19 +190,20 @@ def main() -> None:
     if args.game:
         game_ids = [args.game]
     else:
-        candidates = predictions_df
-        if args.season is not None:
-            candidates = candidates[candidates["season"] == args.season]
-        if args.week is not None:
-            candidates = candidates[candidates["week"] == args.week]
-        if not args.include_non_picks:
-            candidates = candidates[candidates.get("pred_spreadCovered_optimal", 0) == 1]
-        game_ids = candidates["game_id"].dropna().unique().tolist()
+        game_ids = select_candidate_games(
+            predictions_df, season=args.season, week=args.week,
+            picks_only=not args.include_non_picks, include_played=args.include_played,
+        )
 
     if not game_ids:
         scope = args.game or f"season={args.season} week={args.week}"
-        pick_note = "" if args.include_non_picks else " with pred_spreadCovered_optimal==1"
-        print(f"[model_line_shop] no games found for {scope}{pick_note}")
+        notes = []
+        if not args.include_non_picks:
+            notes.append("pred_spreadCovered_optimal==1")
+        if not args.include_played:
+            notes.append("not yet played")
+        note = f" with {' and '.join(notes)}" if notes else ""
+        print(f"[model_line_shop] no games found for {scope}{note}")
         raise SystemExit(0)
 
     all_edges = pd.concat(
