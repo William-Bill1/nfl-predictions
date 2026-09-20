@@ -1,10 +1,55 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-19T07:45:22.870232+00:00",
+    "generated_at": "2026-09-20T08:14:33.566245+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-09-19"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-09-20",
+      "game_time": "13:00",
+      "game": "NO @ BAL",
+      "home_team": "BAL",
+      "away_team": "NO",
+      "bet_type": "Spread",
+      "pick": "NO +8.5",
+      "confidence": 0.5518701141187791,
+      "edge": 0.0169863931885465,
+      "tier": "Strong",
+      "odds": -115,
+      "line": 8.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-20",
+      "game_time": "13:00",
+      "game": "CLE @ TB",
+      "home_team": "TB",
+      "away_team": "CLE",
+      "bet_type": "Spread",
+      "pick": "CLE +7.5",
+      "confidence": 0.5779456288325815,
+      "edge": 0.0587148596018122,
+      "tier": "Strong",
+      "odds": -108,
+      "line": 7.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-09-20",
+      "game_time": "16:25",
+      "game": "SEA @ ARI",
+      "home_team": "ARI",
+      "away_team": "SEA",
+      "bet_type": "Spread",
+      "pick": "ARI +3.5",
+      "confidence": 0.6170177007653205,
+      "edge": 0.1170177007653204,
+      "tier": "Elite",
+      "odds": 100,
+      "line": 3.5,
+      "notes": null
+    }
+  ]
 }
