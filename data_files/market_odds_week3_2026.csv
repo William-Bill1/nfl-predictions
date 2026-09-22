@@ -1,0 +1,57 @@
+season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odds,under_odds
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,passing_yards,draftkings,229.5,-113,-111
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,passing_yards,draftkings,205.5,-112,-112
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receiving_yards,draftkings,67.5,-112,-112
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receiving_yards,draftkings,63.5,-114,-110
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receiving_yards,draftkings,51.5,-111,-113
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receiving_yards,draftkings,45.5,-114,-110
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receiving_yards,draftkings,39.5,-114,-110
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receiving_yards,draftkings,35.5,-110,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receiving_yards,draftkings,18.5,-111,-113
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,receiving_yards,draftkings,7.5,-109,-115
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receiving_yards,draftkings,4.5,-122,-103
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receptions,draftkings,5.5,116,-148
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receptions,draftkings,4.5,-135,106
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receptions,draftkings,4.5,-118,-108
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receptions,draftkings,4.5,109,-140
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receptions,draftkings,3.5,-157,123
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receptions,draftkings,3.5,-123,-104
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receptions,draftkings,1.5,-153,120
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receptions,draftkings,0.5,-235,181
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,rushing_yards,draftkings,80.5,-111,-113
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kaleb Johnson,rushing_yards,draftkings,38.5,-109,-115
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,rushing_yards,draftkings,29.5,-113,-111
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Brian Robinson Jr.,rushing_yards,draftkings,22.5,-114,-110
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,rushing_yards,draftkings,15.5,-113,-111
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,rushing_yards,draftkings,8.5,-107,-117
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,rushing_yards,draftkings,3.5,-121,-104
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,passing_yards,fanduel,205.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,passing_yards,fanduel,226.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receiving_yards,fanduel,46.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,receiving_yards,fanduel,7.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receiving_yards,fanduel,62.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receiving_yards,fanduel,5.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receiving_yards,fanduel,40.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receiving_yards,fanduel,34.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receiving_yards,fanduel,19.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receiving_yards,fanduel,66.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receiving_yards,fanduel,52.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receptions,fanduel,5.5,116,-154
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receptions,fanduel,4.5,112,-148
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receptions,fanduel,4.5,-130,-102
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receptions,fanduel,1.5,-162,122
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receptions,fanduel,1.5,162,-220
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receptions,fanduel,3.5,-154,116
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receptions,fanduel,4.5,-122,-108
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receptions,fanduel,3.5,-118,-112
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,rushing_yards,fanduel,4.5,108,-140
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,rushing_yards,fanduel,16.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,rushing_yards,fanduel,28.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,rushing_yards,fanduel,8.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Brian Robinson Jr.,rushing_yards,fanduel,22.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,rushing_yards,fanduel,79.5,-114,-114
+2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kaleb Johnson,rushing_yards,fanduel,36.5,-114,-114
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,passing_yards,draftkings,239.5,-113,-111
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,draftkings,219.5,-112,-112
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,passing_yards,fanduel,240.5,-114,-114
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,fanduel,215.5,-114,-114
