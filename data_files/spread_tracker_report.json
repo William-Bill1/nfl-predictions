@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-09-20T11:24:10",
+  "generated_at": "2026-09-23T16:20:12",
   "source": "spread_tracker_log.csv",
   "note": "deviation_pts = a book's home-side spread minus nflverse's spread_line, in nflverse's home-favorite-positive convention. A positive per-book mean means that book systematically gives the home side more points than nflverse; mean_abs_deviation_pts is the direction-agnostic 'how far off nflverse' ranking metric.",
   "anomaly_threshold_pts": 1.5,
@@ -13,8 +13,8 @@
         "region": "ca",
         "n_quotes": 31,
         "n_with_comparison": 31,
-        "mean_deviation_pts": -0.032,
-        "mean_abs_deviation_pts": 0.258
+        "mean_deviation_pts": 0.613,
+        "mean_abs_deviation_pts": 1.065
       },
       "betmgm": {
         "book_title": "BetMGM",
@@ -37,32 +37,32 @@
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.047,
-        "mean_abs_deviation_pts": 0.297
+        "mean_deviation_pts": 0.578,
+        "mean_abs_deviation_pts": 1.016
       },
       "betrivers": {
         "book_title": "BetRivers",
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.047,
-        "mean_abs_deviation_pts": 0.203
+        "mean_deviation_pts": 0.578,
+        "mean_abs_deviation_pts": 1.016
       },
       "betrivers_ca_on": {
         "book_title": "BetRivers (CA - ON)",
         "region": "ca",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.047,
-        "mean_abs_deviation_pts": 0.203
+        "mean_deviation_pts": 0.578,
+        "mean_abs_deviation_pts": 1.016
       },
       "betus": {
         "book_title": "BetUS",
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": 0.031,
-        "mean_abs_deviation_pts": 0.25
+        "mean_deviation_pts": 0.656,
+        "mean_abs_deviation_pts": 1.0
       },
       "bovada": {
         "book_title": "Bovada",
@@ -77,32 +77,32 @@
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": 0.0,
-        "mean_abs_deviation_pts": 0.125
+        "mean_deviation_pts": 0.625,
+        "mean_abs_deviation_pts": 0.938
       },
       "fanduel": {
         "book_title": "FanDuel",
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.062,
-        "mean_abs_deviation_pts": 0.344
+        "mean_deviation_pts": 0.562,
+        "mean_abs_deviation_pts": 1.062
       },
       "lowvig": {
         "book_title": "LowVig.ag",
         "region": "us",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.047,
-        "mean_abs_deviation_pts": 0.297
+        "mean_deviation_pts": 0.578,
+        "mean_abs_deviation_pts": 1.016
       },
       "mybookieag": {
         "book_title": "MyBookie.ag",
         "region": "us",
         "n_quotes": 17,
         "n_with_comparison": 17,
-        "mean_deviation_pts": 0.0,
-        "mean_abs_deviation_pts": 0.235
+        "mean_deviation_pts": 0.059,
+        "mean_abs_deviation_pts": 0.294
       },
       "playnow_ca": {
         "book_title": "PlayNow (CA)",
@@ -125,8 +125,8 @@
         "region": "ca",
         "n_quotes": 32,
         "n_with_comparison": 32,
-        "mean_deviation_pts": -0.047,
-        "mean_abs_deviation_pts": 0.234
+        "mean_deviation_pts": 0.578,
+        "mean_abs_deviation_pts": 1.047
       },
       "sportsinteraction_ca_on": {
         "book_title": "Sports Interaction (CA - ON)",
@@ -282,80 +282,80 @@
           "region": "ca",
           "n_quotes": 15,
           "n_with_comparison": 15,
-          "mean_deviation_pts": 0.067,
-          "mean_abs_deviation_pts": 0.133
+          "mean_deviation_pts": 1.4,
+          "mean_abs_deviation_pts": 1.8
         },
         "betonlineag": {
           "book_title": "BetOnline.ag",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": -0.125,
-          "mean_abs_deviation_pts": 0.188
+          "mean_deviation_pts": 1.125,
+          "mean_abs_deviation_pts": 1.625
         },
         "betrivers": {
           "book_title": "BetRivers",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": 0.031,
-          "mean_abs_deviation_pts": 0.094
+          "mean_deviation_pts": 1.281,
+          "mean_abs_deviation_pts": 1.719
         },
         "betrivers_ca_on": {
           "book_title": "BetRivers (CA - ON)",
           "region": "ca",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": 0.031,
-          "mean_abs_deviation_pts": 0.094
+          "mean_deviation_pts": 1.281,
+          "mean_abs_deviation_pts": 1.719
         },
         "betus": {
           "book_title": "BetUS",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": -0.125,
-          "mean_abs_deviation_pts": 0.188
+          "mean_deviation_pts": 1.125,
+          "mean_abs_deviation_pts": 1.688
         },
         "draftkings": {
           "book_title": "DraftKings",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": 0.0,
-          "mean_abs_deviation_pts": 0.0
+          "mean_deviation_pts": 1.25,
+          "mean_abs_deviation_pts": 1.625
         },
         "fanduel": {
           "book_title": "FanDuel",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": -0.156,
-          "mean_abs_deviation_pts": 0.344
+          "mean_deviation_pts": 1.094,
+          "mean_abs_deviation_pts": 1.781
         },
         "lowvig": {
           "book_title": "LowVig.ag",
           "region": "us",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": -0.125,
-          "mean_abs_deviation_pts": 0.188
+          "mean_deviation_pts": 1.125,
+          "mean_abs_deviation_pts": 1.625
         },
         "mybookieag": {
           "book_title": "MyBookie.ag",
           "region": "us",
           "n_quotes": 1,
           "n_with_comparison": 1,
-          "mean_deviation_pts": 0.0,
-          "mean_abs_deviation_pts": 0.0
+          "mean_deviation_pts": 1.0,
+          "mean_abs_deviation_pts": 1.0
         },
         "proline_ca_on": {
           "book_title": "PROLINE (CA - ON)",
           "region": "ca",
           "n_quotes": 16,
           "n_with_comparison": 16,
-          "mean_deviation_pts": 0.031,
-          "mean_abs_deviation_pts": 0.094
+          "mean_deviation_pts": 1.281,
+          "mean_abs_deviation_pts": 1.719
         }
       }
     }
