@@ -33,17 +33,7 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run weekly backtest
-        run: |
-          echo "Running weekly model accuracy backtest..."
-          python -c "
-          from player_props.backtest import run_weekly_accuracy_check, save_accuracy_results
-          results = run_weekly_accuracy_check()
-          if results:
-              save_accuracy_results(results)
-              print('Backtest complete:', results)
-          else:
-              print('No backtest results returned (may be off-season or no completed games this week)')
-          "
+        run: python scripts/run_weekly_backtest.py
         continue-on-error: true
 
       - name: Grade finished spread bets
