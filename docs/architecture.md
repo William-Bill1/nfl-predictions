@@ -156,6 +156,7 @@ score fetch is gone.
 - `scripts/model_line_shop.py` — reads `spread_tracker_log.csv` + `nfl_games_historical_with_predictions.csv`; extends the spread model's own probability (evaluated against nflverse's line only) to every tracked book's specific line, ranked by edge vs. the model instead of vs. the field
 - `scripts/export_best_bets.py` — reads the predictions CSV (`pred_spreadCovered_optimal == 1`, today's games) → `best_bets_today.json`; independent of the app
 - `scripts/weekly_spread_report.py` — `betting_recommendations_log.csv` → `spread_performance.json` rollup
+- `scripts/run_weekly_backtest.py` — finds the most recently fully-completed NFL week (`gameday < today` and a real score for every game that week) and runs `player_props.backtest.run_weekly_accuracy_check` against it; replaces a broken inline CI snippet that called that function with no `week` argument
 - `scripts/check_pipeline_outputs.py` — post-run sanity checks for the `pipeline-smoke` CI job
 - `scripts/send_rich_email_now.py` — SMTP email sender
 - `scripts/generate_rss.py` — `alerts_feed.xml` RSS feed

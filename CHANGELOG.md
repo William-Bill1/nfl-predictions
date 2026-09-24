@@ -8,6 +8,26 @@ bottom.
 
 ## September 2026
 
+- **Fixed `weekly-model-performance.yml`'s silent no-op, caught during
+  routine "run app and verify" checks.** The Monday job had shown "Success"
+  on every run for weeks, but its inline backtest step called
+  `run_weekly_accuracy_check()` with no arguments - the function requires a
+  `week` argument, so it raised `TypeError` on every run, immediately
+  swallowed by that step's `continue-on-error: true` (the follow-up
+  `save_accuracy_results(results)` call was missing its own required `week`
+  argument too, so even a working backtest would have failed there
+  instead). Net effect: `data_files/spread_performance.json` on `main` was
+  stuck at 9/14 numbers through two more weeks of real results, with
+  nothing visibly wrong in the Actions UI. New
+  `scripts/run_weekly_backtest.py` replaces the inline snippet: finds the
+  most recently fully-completed week (mirrors `betting_log.grade_pending`'s
+  exact "is this game played" convention - `gameday < today` and a real,
+  non-0-0 score) and calls the backtest/save functions correctly. Verified
+  end-to-end against real data: genuine accuracy results for the first time
+  in weeks (65% overall hit rate, 63.4% on the reliable-only subset, +24.1%
+  ROI on fixed-tier props), plus a fresh `spread_performance.json` (8-4-1,
+  66.7% win rate, +27.3% ROI season-to-date). 7 new tests (134 total).
+
 - **Spread tracker: fixed a stale-pick bug caught during routine verification.**
   A daily "run the app and verify" check surfaced that a Thursday game
   (`2026_02_DET_BUF`, final BUF 41-31) was still showing up as a "current
