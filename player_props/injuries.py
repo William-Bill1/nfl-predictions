@@ -1,11 +1,11 @@
 """
-NFL Injury Data Scraper
-Scrapes injury reports from ESPN.com for player prop adjustments.
+NFL Injury Data Fetcher
+Pulls injury reports from ESPN's public JSON API for player prop adjustments.
 """
+import re
+
 import pandas as pd
 import requests
-from bs4 import BeautifulSoup
-import time
 from pathlib import Path
 import warnings
 warnings.filterwarnings('ignore')
@@ -17,108 +17,74 @@ warnings.filterwarnings('ignore')
 DATA_DIR = Path(__file__).parent.parent / 'data_files'
 INJURIES_FILE = DATA_DIR / 'espn_injuries.csv'
 
-# ESPN injury report URL
-ESPN_INJURIES_URL = "https://www.espn.com/nfl/injuries"
+# ESPN's public JSON injuries feed. The HTML page (espn.com/nfl/injuries) this
+# module used to scrape stopped yielding parseable tables in 2026 - the scrape
+# silently returned zero rows - so this reads the structured feed instead.
+ESPN_INJURIES_URL = "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
 
-# Request headers to avoid blocking
-HEADERS = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.5',
-    'Accept-Encoding': 'gzip, deflate',
-    'Connection': 'keep-alive',
-    'Upgrade-Insecure-Requests': '1',
-}
+# No spoofed browser User-Agent: the old hard-coded Chrome 91 UA gets a 403
+# from this endpoint, while requests' default UA is accepted.
+HEADERS = {'Accept': 'application/json'}
+
+INJURY_COLUMNS = ['player_name', 'position', 'injury_type', 'status',
+                  'practice_participation', 'team', 'source']
 
 # ============================================================================
-# SCRAPING FUNCTIONS
+# FETCH FUNCTIONS
 # ============================================================================
+
+def _parse_espn_injuries(payload):
+    """ESPN injuries JSON -> one row per listed player (INJURY_COLUMNS).
+
+    The feed has no practice-participation field, so that column is left
+    blank; adjust_prediction_for_injury keys off `status` first anyway.
+    """
+    rows = []
+    for team in (payload or {}).get('injuries', []) or []:
+        team_name = team.get('displayName', 'Unknown')
+        for item in team.get('injuries', []) or []:
+            athlete = item.get('athlete') or {}
+            player_name = (athlete.get('displayName') or '').strip()
+            if not player_name:
+                continue
+            rows.append({
+                'player_name': player_name,
+                'position': (athlete.get('position') or {}).get('abbreviation', ''),
+                'injury_type': (item.get('details') or {}).get('type', ''),
+                'status': item.get('status', ''),
+                'practice_participation': '',
+                'team': team_name,
+                'source': 'ESPN',
+            })
+    return pd.DataFrame(rows, columns=INJURY_COLUMNS)
+
 
 def scrape_espn_injuries():
     """
-    Scrape NFL injury reports from ESPN.com
+    Fetch the current NFL injury report from ESPN's JSON feed.
 
     Returns:
-        pd.DataFrame: DataFrame with injury data
+        pd.DataFrame: DataFrame with injury data (empty on any failure)
     """
-    print("🔍 Scraping ESPN injury reports...")
+    print("🔍 Fetching ESPN injury report...")
 
     try:
-        # Make request with headers
         response = requests.get(ESPN_INJURIES_URL, headers=HEADERS, timeout=10)
         response.raise_for_status()
+        df = _parse_espn_injuries(response.json())
 
-        # Parse HTML
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        injuries = []
-
-        # Find all team injury tables
-        # ESPN structures injuries by team in separate sections
-        team_sections = soup.find_all('div', class_='ResponsiveTable')
-
-        for section in team_sections:
-            # Get team name
-            team_header = section.find_previous('h2')
-            if team_header:
-                team_name = team_header.text.strip()
-            else:
-                # Try alternative team identification
-                team_name = "Unknown"
-
-            # Find injury table
-            table = section.find('table')
-            if not table:
-                continue
-
-            # Parse table rows
-            rows = table.find_all('tr')[1:]  # Skip header row
-
-            for row in rows:
-                cols = row.find_all('td')
-                if len(cols) >= 4:
-                    try:
-                        player_name = cols[0].text.strip()
-                        position = cols[1].text.strip() if len(cols) > 1 else ""
-                        injury_type = cols[2].text.strip() if len(cols) > 2 else ""
-                        status = cols[3].text.strip() if len(cols) > 3 else ""
-
-                        # Extract practice participation if available
-                        practice_participation = ""
-                        if len(cols) > 4:
-                            practice_participation = cols[4].text.strip()
-
-                        # Skip empty rows
-                        if not player_name:
-                            continue
-
-                        injuries.append({
-                            'player_name': player_name,
-                            'position': position,
-                            'injury_type': injury_type,
-                            'status': status,
-                            'practice_participation': practice_participation,
-                            'team': team_name,
-                            'source': 'ESPN'
-                        })
-
-                    except Exception as e:
-                        print(f"⚠️  Error parsing row: {e}")
-                        continue
-
-        if injuries:
-            df = pd.DataFrame(injuries)
-            print(f"✅ Scraped {len(df)} injuries from {df['team'].nunique()} teams")
-            return df
-        else:
-            print("⚠️  No injuries found - ESPN may have changed their page structure")
+        if df.empty:
+            print("⚠️  No injuries found - ESPN may have changed the feed format")
             return pd.DataFrame()
+
+        print(f"✅ Fetched {len(df)} injuries from {df['team'].nunique()} teams")
+        return df
 
     except requests.RequestException as e:
         print(f"❌ Request error: {e}")
         return pd.DataFrame()
-    except Exception as e:
-        print(f"❌ Scraping error: {e}")
+    except ValueError as e:
+        print(f"❌ Could not parse ESPN injuries JSON: {e}")
         return pd.DataFrame()
 
 
@@ -261,9 +227,25 @@ def get_injury_report(use_cache=True, max_cache_age_hours=6):
         return pd.DataFrame()
 
 
+def _normalize_name(name):
+    """Lowercase, drop generational suffixes and punctuation, collapse spaces -
+    so "James Cook III" and "James Cook" (or "D'Andre Swift" / "DAndre Swift")
+    compare equal."""
+    name = re.sub(r"\b(Jr|Sr|II|III|IV)\.?(?=\s|$)", "", str(name), flags=re.IGNORECASE)
+    name = re.sub(r"[^a-z0-9 ]", "", name.lower())
+    return re.sub(r"\s+", " ", name).strip()
+
+
 def find_player_injury(player_name, injuries_df):
     """
     Find injury information for a specific player
+
+    Matches on the full name only - exact, then suffix/punctuation-normalized.
+    There is deliberately no last-name fallback: against a league-wide feed a
+    substring match on the last name hit the wrong player for 58 of 317
+    prop players (e.g. "Tahj Brooks" -> "Jonathon Brooks" (IR), which would
+    delete a healthy player's prediction; "Rasheen Ali" -> "Khalil Shakir",
+    since "ali" is inside "khalil").
 
     Args:
         player_name (str): Player name to search for
@@ -275,17 +257,17 @@ def find_player_injury(player_name, injuries_df):
     if injuries_df.empty or not isinstance(player_name, str) or not player_name:
         return None
 
-    # Try exact match first
     exact_match = injuries_df[injuries_df['player_name'] == player_name]
     if not exact_match.empty:
         return exact_match.iloc[0].to_dict()
 
-    # Try partial match (last name)
-    last_name = player_name.split()[-1] if player_name else ""
-    if last_name:
-        partial_matches = injuries_df[injuries_df['player_name'].str.contains(last_name, case=False, na=False)]
-        if not partial_matches.empty:
-            return partial_matches.iloc[0].to_dict()
+    target = _normalize_name(player_name)
+    if not target:
+        return None
+    normalized = injuries_df['player_name'].map(_normalize_name)
+    matches = injuries_df[normalized == target]
+    if not matches.empty:
+        return matches.iloc[0].to_dict()
 
     return None
 
