@@ -8,6 +8,15 @@ bottom.
 
 ## September 2026
 
+- **Nightly now applies injury adjustments to player props.** Dropped
+  `--no-injuries` from `nightly-update.yml`'s `predict.py` step, now that
+  the ESPN injury fetch works (below). Out/IR players' props are removed;
+  Questionable/Doubtful lower confidence. A local dry run on the Week 3
+  slate adjusted 17 players and removed 10 - every removal verified as a
+  genuine Out/IR (including Nico Collins and Jaxson Dart, who had been
+  published as live props). A failed fetch still degrades to no
+  adjustments rather than failing the step. Weather stays off.
+
 - **Player-prop injury data fixed (it had been silently empty).**
   `player_props/injuries.py` scraped ESPN's HTML injury page, which had
   stopped yielding parseable tables - every run returned 0 rows, and the
