@@ -114,8 +114,11 @@ jobs:
           echo "Generating + freezing player-prop predictions for the next week..."
           # Auto-detects the next upcoming week from the current schedule. The
           # per-week snapshot is written once and never overwritten, so this is a
-          # genuine prospective record for the weekly accuracy check.
-          python player_props/predict.py --no-injuries --no-weather
+          # genuine prospective record for the weekly accuracy check. Injury
+          # adjustments are on (ESPN JSON feed; a failed fetch degrades to no
+          # adjustments, not a failed step). Weather stays off - per-player
+          # Open-Meteo lookups are slow.
+          python player_props/predict.py --no-weather
         timeout-minutes: 15
         continue-on-error: true
 
