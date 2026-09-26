@@ -8,6 +8,22 @@ bottom.
 
 ## September 2026
 
+- **Player-prop injury data fixed (it had been silently empty).**
+  `player_props/injuries.py` scraped ESPN's HTML injury page, which had
+  stopped yielding parseable tables - every run returned 0 rows, and the
+  committed `espn_injuries.csv` cache was ~8.5 months stale. It now reads
+  ESPN's public JSON injuries feed (800 entries across all 32 teams on
+  first run). Two follow-on fixes were needed to make that safe:
+  (1) the hard-coded Chrome 91 `User-Agent` got a 403 from the JSON
+  endpoint, so it was dropped; (2) `find_player_injury`'s last-name
+  substring fallback, dormant while the scrape returned nothing, would have
+  matched the wrong player for 58 of 317 prop players against a
+  league-wide feed (e.g. "Tahj Brooks" -> an IR'd "Jonathon Brooks",
+  deleting a healthy player's prediction). Matching is now exact or
+  suffix/punctuation-normalized full name only ("James Cook" still matches
+  "James Cook III"). Zero false matches on the current slate. 15 new tests
+  (`tests/test_injuries.py`). The nightly still runs `--no-injuries`.
+
 - **Fixed `weekly-model-performance.yml`'s silent no-op, caught during
   routine "run app and verify" checks.** The Monday job had shown "Success"
   on every run for weeks, but its inline backtest step called

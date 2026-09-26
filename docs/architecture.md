@@ -131,7 +131,7 @@ All features are pre-game only (zero data leakage):
 |--------|---------|-------|
 | nfl_data_py | Schedule, play-by-play, final scores | Local, no key; final scores arrive via the regenerated predictions CSV |
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
-| ESPN injury page | Player-prop injury adjustments | scraped, `player_props/injuries.py` (nightly: `--no-injuries`) |
+| ESPN injuries JSON feed | Player-prop injury adjustments | `player_props/injuries.py` (nightly: `--no-injuries`); was an HTML scrape that silently returned 0 rows by 2026 |
 | The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
 | The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line, a price-adjusted per-book value finder, and a model-vs-book line shopper | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `scripts/model_line_shop.py` + `pages/5_Spread_Tracker.py` + `pages/6_Value_Finder.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
