@@ -116,6 +116,9 @@ types from The Odds API and adds `market_line`/`market_book`/
 "Market Edge" column and sorts by a *directional* edge (flipped to align with
 the recommendation, since raw `market_edge` is always in P(over) terms — a
 strongly negative value on an UNDER pick means a strong edge, not a weak one).
+`market_edge` is only computed when the book's line equals the model's own
+tier line (`line_value`) - otherwise the two probabilities are for different
+lines and aren't comparable, so the row shows the book line but no edge.
 Coverage is partial (only games DK/FanDuel have posted props for). Details +
 rollout history in `docs/ODDS_API_INTEGRATION_PLAN.md`.
 

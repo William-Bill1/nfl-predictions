@@ -313,15 +313,23 @@ def attach_market_odds(prediction: dict, market_info: dict | None) -> dict:
     prediction['market_line'] = market_info['line']
     prediction['market_book'] = market_info['book']
     prediction['market_implied_prob'] = market_info['market_implied_prob']
+    prediction['market_edge'] = None
     try:
         # float() rather than isinstance((int, float)): model probabilities
         # come out of XGBoost/LightGBM as numpy.float32, which is NOT an
         # instance of Python's float (only numpy.float64 is) - an isinstance
         # gate here silently dropped market_edge for nearly every real
         # prediction. float() handles float32/float64/int/numpy scalars alike.
-        prediction['market_edge'] = float(prediction.get('prob_over')) - float(market_info['market_implied_prob'])
+        model_line = float(prediction.get('line_value'))
+        # prob_over is the model's P(over) at ITS OWN fixed tier line
+        # (line_value); market_implied_prob is P(over) at the BOOK's line. Only
+        # the same line makes them comparable - e.g. P(Henry > 75 rush yds)=93%
+        # vs P(Henry > 90.5)=50% is not a 43-point edge. Different lines keep
+        # the market line/price but get no edge.
+        if abs(model_line - float(market_info['line'])) < 1e-6:
+            prediction['market_edge'] = float(prediction.get('prob_over')) - float(market_info['market_implied_prob'])
     except (TypeError, ValueError):
-        prediction['market_edge'] = None
+        pass
     prediction['market_line_available'] = True
     return prediction
 

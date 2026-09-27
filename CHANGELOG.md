@@ -8,6 +8,21 @@ bottom.
 
 ## September 2026
 
+- **Player Props "Market Edge" fixed: it compared probabilities at different
+  lines.** Refreshing Week 3 prop odds (the write-once snapshot had been taken
+  Monday, when only 2 of 16 games had props posted - 4 matched props; the
+  refresh gives 204) exposed that `market_edge = prob_over -
+  market_implied_prob` subtracts the model's P(over) at its own fixed tier
+  line from the book's P(over) at the book's line. 180 of 204 matches had
+  different lines, producing bogus 40-50 point "edges" at the top of the page
+  (P(Derrick Henry > 75 rush yds)=93% vs the book's P(> 90.5)=50%;
+  "UNDER 0.5 receptions" edges from a 3.5-reception model line). Edge is now
+  only computed when the lines match (24 props this week); other matches
+  keep the book line and price with a blank edge. The reliable (yardage)
+  models use round tiers that almost never equal a book line, so the default
+  reliable-only view currently shows book lines but no edges. Two existing
+  tests encoded the cross-line behavior and were corrected; 2 new tests.
+
 - **Nightly now applies injury adjustments to player props.** Dropped
   `--no-injuries` from `nightly-update.yml`'s `predict.py` step, now that
   the ESPN injury fetch works (below). Out/IR players' props are removed;

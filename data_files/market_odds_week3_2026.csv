@@ -1,57 +1,916 @@
 season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odds,under_odds
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,passing_yards,draftkings,229.5,-113,-111
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,passing_yards,draftkings,205.5,-112,-112
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receiving_yards,draftkings,67.5,-112,-112
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receiving_yards,draftkings,63.5,-114,-110
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receiving_yards,draftkings,51.5,-111,-113
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receiving_yards,draftkings,45.5,-114,-110
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receiving_yards,draftkings,39.5,-114,-110
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receiving_yards,draftkings,35.5,-110,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receiving_yards,draftkings,18.5,-111,-113
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,receiving_yards,draftkings,7.5,-109,-115
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receiving_yards,draftkings,4.5,-122,-103
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receptions,draftkings,5.5,116,-148
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receptions,draftkings,4.5,-135,106
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receptions,draftkings,4.5,-118,-108
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receptions,draftkings,4.5,109,-140
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receptions,draftkings,3.5,-157,123
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receptions,draftkings,3.5,-123,-104
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receptions,draftkings,1.5,-153,120
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receptions,draftkings,0.5,-235,181
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,rushing_yards,draftkings,80.5,-111,-113
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kaleb Johnson,rushing_yards,draftkings,38.5,-109,-115
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,rushing_yards,draftkings,29.5,-113,-111
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Brian Robinson Jr.,rushing_yards,draftkings,22.5,-114,-110
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,rushing_yards,draftkings,15.5,-113,-111
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,rushing_yards,draftkings,8.5,-107,-117
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,rushing_yards,draftkings,3.5,-121,-104
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,passing_yards,fanduel,205.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,passing_yards,fanduel,226.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receiving_yards,fanduel,46.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,receiving_yards,fanduel,7.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receiving_yards,fanduel,62.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receiving_yards,fanduel,5.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receiving_yards,fanduel,40.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receiving_yards,fanduel,34.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receiving_yards,fanduel,19.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receiving_yards,fanduel,66.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receiving_yards,fanduel,52.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Drake London,receptions,fanduel,5.5,116,-154
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Matthew Golden,receptions,fanduel,4.5,112,-148
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,receptions,fanduel,4.5,-130,-102
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jahan Dotson,receptions,fanduel,1.5,-162,122
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,receptions,fanduel,1.5,162,-220
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Tucker Kraft,receptions,fanduel,3.5,-154,116
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Christian Watson,receptions,fanduel,4.5,-122,-108
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kyle Pitts,receptions,fanduel,3.5,-118,-112
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Michael Penix Jr.,rushing_yards,fanduel,4.5,108,-140
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Chris Brooks,rushing_yards,fanduel,16.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,MarShawn Lloyd,rushing_yards,fanduel,28.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Jordan Love,rushing_yards,fanduel,8.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Brian Robinson Jr.,rushing_yards,fanduel,22.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Bijan Robinson,rushing_yards,fanduel,79.5,-114,-114
-2026,3,2026_03_ATL_GB,Green Bay Packers,Atlanta Falcons,Kaleb Johnson,rushing_yards,fanduel,36.5,-114,-114
 2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,passing_yards,draftkings,239.5,-113,-111
-2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,draftkings,219.5,-112,-112
-2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,passing_yards,fanduel,240.5,-114,-114
-2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,fanduel,215.5,-114,-114
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,draftkings,228.5,-112,-112
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Ladd McConkey,receiving_yards,draftkings,58.5,-114,-110
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dalton Kincaid,receiving_yards,draftkings,56.5,-112,-112
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,DJ Moore,receiving_yards,draftkings,49.5,-110,-114
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Khalil Shakir,receiving_yards,draftkings,42.5,-109,-115
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Quentin Johnston,receiving_yards,draftkings,37.5,-114,-110
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Oronde Gadsden II,receiving_yards,draftkings,37.5,-112,-112
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Tre Harris,receiving_yards,draftkings,29.5,-115,-109
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,receiving_yards,draftkings,13.5,-116,-109
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,receiving_yards,draftkings,10.5,-109,-115
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dawson Knox,receiving_yards,draftkings,10.5,-106,-118
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Ladd McConkey,receptions,draftkings,4.5,-148,116
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dalton Kincaid,receptions,draftkings,4.5,104,-133
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Khalil Shakir,receptions,draftkings,4.5,127,-163
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,DJ Moore,receptions,draftkings,3.5,-138,108
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Oronde Gadsden II,receptions,draftkings,3.5,102,-130
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Quentin Johnston,receptions,draftkings,3.5,137,-176
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Tre Harris,receptions,draftkings,2.5,-122,-105
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,receptions,draftkings,1.5,-156,122
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,receptions,draftkings,1.5,-152,119
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dawson Knox,receptions,draftkings,1.5,118,-150
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,rushing_yards,draftkings,80.5,-113,-111
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,rushing_yards,draftkings,58.5,-115,-109
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,rushing_yards,draftkings,34.5,-108,-116
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,rushing_yards,draftkings,19.5,-116,-108
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Keaton Mitchell,rushing_yards,draftkings,13.5,-118,-106
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,passing_yards,fanduel,238.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,passing_yards,fanduel,224.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,receiving_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Quentin Johnston,receiving_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Tre Harris,receiving_yards,fanduel,31.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dawson Knox,receiving_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,receiving_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dalton Kincaid,receiving_yards,fanduel,56.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Oronde Gadsden II,receiving_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,DJ Moore,receiving_yards,fanduel,49.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Ladd McConkey,receiving_yards,fanduel,58.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Khalil Shakir,receiving_yards,fanduel,43.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Quentin Johnston,receptions,fanduel,3.5,132,-178
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Tre Harris,receptions,fanduel,2.5,-144,108
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dalton Kincaid,receptions,fanduel,4.5,106,-140
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,receptions,fanduel,1.5,-154,116
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Dawson Knox,receptions,fanduel,1.5,134,-180
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,DJ Moore,receptions,fanduel,3.5,-140,106
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,receptions,fanduel,1.5,-148,112
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Ladd McConkey,receptions,fanduel,4.5,-140,106
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Khalil Shakir,receptions,fanduel,3.5,-172,128
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Oronde Gadsden II,receptions,fanduel,3.5,112,-148
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Justin Herbert,rushing_yards,fanduel,19.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Omarion Hampton,rushing_yards,fanduel,58.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,James Cook,rushing_yards,fanduel,79.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Keaton Mitchell,rushing_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_LAC_BUF,Buffalo Bills,Los Angeles Chargers,Josh Allen,rushing_yards,fanduel,32.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Bryce Young,passing_yards,draftkings,220.5,-111,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Deshaun Watson,passing_yards,draftkings,188.5,-113,-111
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tetairoa McMillan,receiving_yards,draftkings,61.5,-113,-111
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jalen Coker,receiving_yards,draftkings,57.5,-113,-111
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Denzel Boston,receiving_yards,draftkings,47.5,-113,-111
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Harold Fannin Jr.,receiving_yards,draftkings,37.5,-112,-112
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,receiving_yards,draftkings,33.5,-111,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jerry Jeudy,receiving_yards,draftkings,20.5,-115,-109
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Darren Waller,receiving_yards,draftkings,19.5,-116,-108
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,receiving_yards,draftkings,14.5,-115,-109
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,receiving_yards,draftkings,13.5,-114,-110
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Xavier Legette,receiving_yards,draftkings,12.5,-112,-112
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tommy Tremble,receiving_yards,draftkings,10.5,-105,-120
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Blake Whiteheart,receiving_yards,draftkings,5.5,-110,-114
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,receiving_yards,draftkings,2.5,-118,-106
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jalen Coker,receptions,draftkings,4.5,-130,102
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tetairoa McMillan,receptions,draftkings,4.5,-129,101
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Harold Fannin Jr.,receptions,draftkings,3.5,-151,118
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,receptions,draftkings,3.5,-137,107
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Denzel Boston,receptions,draftkings,3.5,-104,-123
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,receptions,draftkings,2.5,-106,-120
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,receptions,draftkings,2.5,101,-129
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Darren Waller,receptions,draftkings,2.5,118,-151
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jerry Jeudy,receptions,draftkings,1.5,-149,117
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tommy Tremble,receptions,draftkings,1.5,-119,-107
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Xavier Legette,receptions,draftkings,1.5,111,-142
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,receptions,draftkings,0.5,-176,137
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Blake Whiteheart,receptions,draftkings,0.5,-173,135
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,rushing_yards,draftkings,68.5,-110,-114
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,rushing_yards,draftkings,61.5,-111,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Deshaun Watson,rushing_yards,draftkings,25.5,-111,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Bryce Young,rushing_yards,draftkings,14.5,-114,-110
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,AJ Dillon,rushing_yards,draftkings,13.5,-113,-111
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,rushing_yards,draftkings,9.5,-103,-122
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,rushing_yards,draftkings,5.5,-116,-109
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Bryce Young,passing_yards,fanduel,223.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Deshaun Watson,passing_yards,fanduel,187.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jalen Coker,receiving_yards,fanduel,59.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tommy Tremble,receiving_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,receiving_yards,fanduel,2.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,receiving_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Darren Waller,receiving_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Harold Fannin Jr.,receiving_yards,fanduel,37.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tetairoa McMillan,receiving_yards,fanduel,62.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Blake Whiteheart,receiving_yards,fanduel,5.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,receiving_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jerry Jeudy,receiving_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Denzel Boston,receiving_yards,fanduel,47.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,receptions,fanduel,3.5,-132,100
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,receptions,fanduel,2.5,-102,-130
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,receptions,fanduel,2.5,-114,-114
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,receptions,fanduel,0.5,-178,132
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Blake Whiteheart,receptions,fanduel,0.5,-172,128
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Harold Fannin Jr.,receptions,fanduel,3.5,-140,106
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tommy Tremble,receptions,fanduel,1.5,-138,104
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jerry Jeudy,receptions,fanduel,1.5,-132,100
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Tetairoa McMillan,receptions,fanduel,4.5,-138,104
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Denzel Boston,receptions,fanduel,3.5,-122,-108
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Jalen Coker,receptions,fanduel,5.5,130,-174
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Darren Waller,receptions,fanduel,2.5,110,-146
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,AJ Dillon,rushing_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Quinshon Judkins,rushing_yards,fanduel,59.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Raheim Sanders,rushing_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Chuba Hubbard,rushing_yards,fanduel,70.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,KC Concepcion,rushing_yards,fanduel,5.5,-104,-122
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Deshaun Watson,rushing_yards,fanduel,25.5,-113,-113
+2026,3,2026_03_CAR_CLE,Cleveland Browns,Carolina Panthers,Bryce Young,rushing_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Joe Burrow,passing_yards,draftkings,252.5,-113,-111
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Aaron Rodgers,passing_yards,draftkings,221.5,-111,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Ja'Marr Chase,receiving_yards,draftkings,77.5,-110,-114
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Tee Higgins,receiving_yards,draftkings,52.5,-114,-110
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,DK Metcalf,receiving_yards,draftkings,51.5,-111,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Pat Freiermuth,receiving_yards,draftkings,36.5,-110,-114
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,receiving_yards,draftkings,27.5,-113,-111
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Michael Pittman Jr.,receiving_yards,draftkings,26.5,-113,-111
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Mike Gesicki,receiving_yards,draftkings,24.5,-110,-114
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Roman Wilson,receiving_yards,draftkings,23.5,-112,-112
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,receiving_yards,draftkings,23.5,-110,-114
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Darnell Washington,receiving_yards,draftkings,13.5,-116,-108
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,receiving_yards,draftkings,8.5,-108,-117
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Drew Sample,receiving_yards,draftkings,6.5,-111,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Erick All,receiving_yards,draftkings,6.5,-109,-115
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Ja'Marr Chase,receptions,draftkings,6.5,-137,108
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,DK Metcalf,receptions,draftkings,4.5,111,-141
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,receptions,draftkings,4.5,124,-159
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Tee Higgins,receptions,draftkings,4.5,130,-166
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Pat Freiermuth,receptions,draftkings,3.5,-142,111
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,receptions,draftkings,3.5,114,-145
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Michael Pittman Jr.,receptions,draftkings,2.5,-150,117
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Mike Gesicki,receptions,draftkings,2.5,-110,-116
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Roman Wilson,receptions,draftkings,2.5,114,-146
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Darnell Washington,receptions,draftkings,1.5,-127,100
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,receptions,draftkings,1.5,-102,-125
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Drew Sample,receptions,draftkings,1.5,141,-181
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Erick All,receptions,draftkings,0.5,-139,109
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,rushing_yards,draftkings,63.5,-112,-112
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,rushing_yards,draftkings,56.5,-112,-112
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,rushing_yards,draftkings,14.5,-107,-117
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Joe Burrow,rushing_yards,draftkings,5.5,-120,-105
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Aaron Rodgers,rushing_yards,draftkings,0.5,-111,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Aaron Rodgers,passing_yards,fanduel,224.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Joe Burrow,passing_yards,fanduel,253.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,receiving_yards,fanduel,7.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Mike Gesicki,receiving_yards,fanduel,23.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Erick All,receiving_yards,fanduel,5.5,-102,-125
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,DK Metcalf,receiving_yards,fanduel,52.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Darnell Washington,receiving_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Pat Freiermuth,receiving_yards,fanduel,34.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Tee Higgins,receiving_yards,fanduel,52.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Roman Wilson,receiving_yards,fanduel,22.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Drew Sample,receiving_yards,fanduel,6.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Ja'Marr Chase,receiving_yards,fanduel,73.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Michael Pittman Jr.,receiving_yards,fanduel,26.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,receiving_yards,fanduel,25.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Roman Wilson,receptions,fanduel,2.5,106,-140
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Drew Sample,receptions,fanduel,1.5,144,-194
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Michael Pittman Jr.,receptions,fanduel,2.5,-148,112
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,receptions,fanduel,1.5,-106,-125
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Tee Higgins,receptions,fanduel,4.5,118,-158
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Mike Gesicki,receptions,fanduel,2.5,-122,-108
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Erick All,receptions,fanduel,0.5,-154,116
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Pat Freiermuth,receptions,fanduel,3.5,-138,104
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Darnell Washington,receptions,fanduel,1.5,-138,104
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,DK Metcalf,receptions,fanduel,4.5,-102,-130
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,receptions,fanduel,3.5,106,-140
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Ja'Marr Chase,receptions,fanduel,6.5,-122,-108
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,receptions,fanduel,3.5,-158,118
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Jaylen Warren,rushing_yards,fanduel,57.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Samaje Perine,rushing_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Chase Brown,rushing_yards,fanduel,63.5,-113,-113
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Aaron Rodgers,rushing_yards,fanduel,0.5,-115,-111
+2026,3,2026_03_CIN_PIT,Pittsburgh Steelers,Cincinnati Bengals,Joe Burrow,rushing_yards,fanduel,5.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jared Goff,passing_yards,draftkings,261.5,-112,-112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Geno Smith,passing_yards,draftkings,226.5,-111,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Amon-Ra St. Brown,receiving_yards,draftkings,78.5,-111,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Garrett Wilson,receiving_yards,draftkings,76.5,-113,-111
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jameson Williams,receiving_yards,draftkings,54.5,-110,-114
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sam LaPorta,receiving_yards,draftkings,47.5,-110,-114
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Adonai Mitchell,receiving_yards,draftkings,44.5,-111,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,receiving_yards,draftkings,34.5,-109,-115
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Kenyon Sadiq,receiving_yards,draftkings,27.5,-114,-110
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaiah Williams,receiving_yards,draftkings,25.5,-116,-108
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,receiving_yards,draftkings,22.5,-109,-115
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaac TeSlaa,receiving_yards,draftkings,15.5,-116,-108
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jeremy Ruckert,receiving_yards,draftkings,8.5,-108,-116
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Amon-Ra St. Brown,receptions,draftkings,6.5,-150,117
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Garrett Wilson,receptions,draftkings,6.5,105,-134
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sam LaPorta,receptions,draftkings,4.5,-114,-112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,receptions,draftkings,4.5,104,-132
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jameson Williams,receptions,draftkings,3.5,-138,108
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Adonai Mitchell,receptions,draftkings,3.5,-116,-110
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,receptions,draftkings,3.5,114,-146
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Kenyon Sadiq,receptions,draftkings,2.5,-169,132
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaiah Williams,receptions,draftkings,2.5,-129,101
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaac TeSlaa,receptions,draftkings,1.5,120,-153
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jeremy Ruckert,receptions,draftkings,0.5,-233,180
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,rushing_yards,draftkings,88.5,-113,-111
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,rushing_yards,draftkings,60.5,-112,-112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Braelon Allen,rushing_yards,draftkings,17.5,-109,-116
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Geno Smith,rushing_yards,draftkings,11.5,-112,-112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sione Vaki,rushing_yards,draftkings,10.5,-105,-120
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jared Goff,rushing_yards,draftkings,0.5,-105,-119
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jared Goff,passing_yards,fanduel,258.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Geno Smith,passing_yards,fanduel,225.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaac TeSlaa,receiving_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sam LaPorta,receiving_yards,fanduel,45.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaiah Williams,receiving_yards,fanduel,25.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Adonai Mitchell,receiving_yards,fanduel,43.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jeremy Ruckert,receiving_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Kenyon Sadiq,receiving_yards,fanduel,28.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Garrett Wilson,receiving_yards,fanduel,75.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,receiving_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jameson Williams,receiving_yards,fanduel,54.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Amon-Ra St. Brown,receiving_yards,fanduel,75.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaac TeSlaa,receptions,fanduel,1.5,130,-174
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,receptions,fanduel,4.5,-102,-130
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Isaiah Williams,receptions,fanduel,2.5,-118,-112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Garrett Wilson,receptions,fanduel,5.5,-178,132
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sam LaPorta,receptions,fanduel,4.5,-114,-114
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Adonai Mitchell,receptions,fanduel,3.5,-102,-130
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jameson Williams,receptions,fanduel,3.5,-148,112
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Kenyon Sadiq,receptions,fanduel,2.5,-178,132
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jeremy Ruckert,receptions,fanduel,0.5,-225,164
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Amon-Ra St. Brown,receptions,fanduel,7.5,130,-174
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,receptions,fanduel,3.5,120,-160
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Sione Vaki,rushing_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Geno Smith,rushing_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jared Goff,rushing_yards,fanduel,0.5,108,-138
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Braelon Allen,rushing_yards,fanduel,17.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Breece Hall,rushing_yards,fanduel,59.5,-113,-113
+2026,3,2026_03_NYJ_DET,Detroit Lions,New York Jets,Jahmyr Gibbs,rushing_yards,fanduel,89.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,C.J. Stroud,passing_yards,draftkings,236.5,-112,-112
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Daniel Jones,passing_yards,draftkings,212.5,-111,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Josh Downs,receiving_yards,draftkings,50.5,-112,-112
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Dalton Schultz,receiving_yards,draftkings,50.5,-110,-114
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Tyler Warren,receiving_yards,draftkings,46.5,-112,-112
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Xavier Hutchinson,receiving_yards,draftkings,38.5,-115,-109
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Kayshon Boutte,receiving_yards,draftkings,37.5,-114,-110
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Keenan Allen,receiving_yards,draftkings,34.5,-112,-112
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jaylin Noel,receiving_yards,draftkings,28.5,-114,-110
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,receiving_yards,draftkings,22.5,-113,-111
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Laquon Treadwell,receiving_yards,draftkings,18.5,-117,-107
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jared Wayne,receiving_yards,draftkings,15.5,-112,-112
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,receiving_yards,draftkings,11.5,-107,-117
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Darius Slayton,receiving_yards,draftkings,10.5,-107,-117
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,receiving_yards,draftkings,9.5,-109,-115
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Dalton Schultz,receptions,draftkings,5.5,110,-140
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Josh Downs,receptions,draftkings,4.5,-136,107
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Tyler Warren,receptions,draftkings,4.5,-120,-106
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Keenan Allen,receptions,draftkings,3.5,-120,-106
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Xavier Hutchinson,receptions,draftkings,3.5,104,-132
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,receptions,draftkings,3.5,127,-163
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Kayshon Boutte,receptions,draftkings,2.5,-127,100
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jaylin Noel,receptions,draftkings,2.5,109,-139
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,receptions,draftkings,1.5,-153,120
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,receptions,draftkings,1.5,-109,-117
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jared Wayne,receptions,draftkings,1.5,101,-129
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Laquon Treadwell,receptions,draftkings,1.5,124,-158
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Darius Slayton,receptions,draftkings,1.5,162,-210
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,rushing_yards,draftkings,81.5,-113,-111
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,rushing_yards,draftkings,49.5,-113,-111
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,rushing_yards,draftkings,27.5,-115,-110
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Daniel Jones,rushing_yards,draftkings,10.5,-113,-111
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,C.J. Stroud,rushing_yards,draftkings,10.5,-111,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Daniel Jones,passing_yards,fanduel,214.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,C.J. Stroud,passing_yards,fanduel,239.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Keenan Allen,receiving_yards,fanduel,32.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jaylin Noel,receiving_yards,fanduel,27.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Dalton Schultz,receiving_yards,fanduel,49.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Tyler Warren,receiving_yards,fanduel,46.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Xavier Hutchinson,receiving_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Kayshon Boutte,receiving_yards,fanduel,36.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,receiving_yards,fanduel,9.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jared Wayne,receiving_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,receiving_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Laquon Treadwell,receiving_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Josh Downs,receiving_yards,fanduel,50.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Darius Slayton,receiving_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Xavier Hutchinson,receptions,fanduel,3.5,102,-136
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jaylin Noel,receptions,fanduel,2.5,106,-140
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,receptions,fanduel,2.5,-172,128
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Dalton Schultz,receptions,fanduel,5.5,112,-148
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Josh Downs,receptions,fanduel,4.5,-128,-104
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,receptions,fanduel,1.5,-158,118
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Laquon Treadwell,receptions,fanduel,1.5,136,-182
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Keenan Allen,receptions,fanduel,3.5,-108,-122
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Tyler Warren,receptions,fanduel,4.5,-138,104
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Darius Slayton,receptions,fanduel,1.5,162,-220
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jared Wayne,receptions,fanduel,1.5,-106,-125
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,receptions,fanduel,1.5,-108,-122
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Kayshon Boutte,receptions,fanduel,2.5,-128,-104
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,David Montgomery,rushing_yards,fanduel,50.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Jonathan Taylor,rushing_yards,fanduel,81.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Woody Marks,rushing_yards,fanduel,27.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,C.J. Stroud,rushing_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_HOU_IND,Indianapolis Colts,Houston Texans,Daniel Jones,rushing_yards,fanduel,9.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Trevor Lawrence,passing_yards,draftkings,228.5,-111,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Drake Maye,passing_yards,draftkings,221.5,-113,-111
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Parker Washington,receiving_yards,draftkings,67.5,-112,-112
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Hunter Henry,receiving_yards,draftkings,42.5,-114,-110
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Romeo Doubs,receiving_yards,draftkings,42.5,-113,-111
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brian Thomas Jr,receiving_yards,draftkings,36.5,-114,-110
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Jakobi Meyers,receiving_yards,draftkings,35.5,-110,-114
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Mack Hollins,receiving_yards,draftkings,33.5,-114,-110
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brenton Strange,receiving_yards,draftkings,31.5,-113,-111
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,DeMario Douglas,receiving_yards,draftkings,29.5,-115,-109
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,receiving_yards,draftkings,14.5,-109,-115
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,receiving_yards,draftkings,10.5,-113,-111
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,receiving_yards,draftkings,9.5,-107,-117
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Kyle Williams,receiving_yards,draftkings,7.5,-112,-112
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Parker Washington,receptions,draftkings,5.5,114,-146
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Hunter Henry,receptions,draftkings,3.5,-153,120
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Jakobi Meyers,receptions,draftkings,3.5,103,-131
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Romeo Doubs,receptions,draftkings,3.5,122,-155
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brian Thomas Jr,receptions,draftkings,3.5,132,-169
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brenton Strange,receptions,draftkings,3.5,138,-176
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,DeMario Douglas,receptions,draftkings,2.5,-162,127
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Mack Hollins,receptions,draftkings,2.5,-146,114
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,receptions,draftkings,2.5,109,-139
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,receptions,draftkings,1.5,-118,-108
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,receptions,draftkings,1.5,-117,-109
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Kyle Williams,receptions,draftkings,0.5,-170,133
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,rushing_yards,draftkings,51.5,-111,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,rushing_yards,draftkings,42.5,-112,-112
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,rushing_yards,draftkings,34.5,-114,-110
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Drake Maye,rushing_yards,draftkings,26.5,-110,-115
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Chris Rodriguez Jr.,rushing_yards,draftkings,19.5,-117,-108
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Trevor Lawrence,rushing_yards,draftkings,16.5,-108,-116
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Trevor Lawrence,passing_yards,fanduel,228.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Drake Maye,passing_yards,fanduel,222.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Mack Hollins,receiving_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Hunter Henry,receiving_yards,fanduel,41.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brenton Strange,receiving_yards,fanduel,30.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,receiving_yards,fanduel,9.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Jakobi Meyers,receiving_yards,fanduel,34.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Kyle Williams,receiving_yards,fanduel,7.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Parker Washington,receiving_yards,fanduel,67.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,receiving_yards,fanduel,9.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brian Thomas Jr,receiving_yards,fanduel,36.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Travis Hunter,receiving_yards,fanduel,0.5,-106,-120
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,DeMario Douglas,receiving_yards,fanduel,28.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Romeo Doubs,receiving_yards,fanduel,42.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brian Thomas Jr,receptions,fanduel,3.5,140,-188
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Romeo Doubs,receptions,fanduel,3.5,120,-160
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Jakobi Meyers,receptions,fanduel,3.5,-102,-130
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,DeMario Douglas,receptions,fanduel,2.5,-172,128
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Kyle Williams,receptions,fanduel,0.5,-172,128
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Brenton Strange,receptions,fanduel,2.5,-192,142
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Parker Washington,receptions,fanduel,4.5,-182,136
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,receptions,fanduel,1.5,-114,-114
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,receptions,fanduel,1.5,-122,-108
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,receptions,fanduel,2.5,102,-136
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Mack Hollins,receptions,fanduel,2.5,-172,128
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Hunter Henry,receptions,fanduel,3.5,-144,108
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Trevor Lawrence,rushing_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Rhamondre Stevenson,rushing_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,TreVeyon Henderson,rushing_yards,fanduel,41.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Chris Rodriguez Jr.,rushing_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Bhayshul Tuten,rushing_yards,fanduel,50.5,-113,-113
+2026,3,2026_03_NE_JAX,Jacksonville Jaguars,New England Patriots,Drake Maye,rushing_yards,fanduel,26.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Patrick Mahomes,passing_yards,draftkings,235.5,-111,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Willis,passing_yards,draftkings,176.5,-111,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Travis Kelce,receiving_yards,draftkings,51.5,-110,-114
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Rashee Rice,receiving_yards,draftkings,49.5,-109,-115
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Washington,receiving_yards,draftkings,38.5,-114,-110
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Xavier Worthy,receiving_yards,draftkings,37.5,-114,-110
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,receiving_yards,draftkings,28.5,-109,-115
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,receiving_yards,draftkings,23.5,-110,-114
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Greg Dulcich,receiving_yards,draftkings,23.5,-109,-115
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Tyquan Thornton,receiving_yards,draftkings,20.5,-109,-115
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Chris Bell,receiving_yards,draftkings,19.5,-114,-110
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kevin Coleman Jr.,receiving_yards,draftkings,16.5,-107,-117
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,receiving_yards,draftkings,10.5,-108,-117
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Travis Kelce,receptions,draftkings,4.5,-110,-116
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Rashee Rice,receptions,draftkings,4.5,115,-147
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Washington,receptions,draftkings,3.5,-123,-104
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,receptions,draftkings,3.5,-120,-107
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Xavier Worthy,receptions,draftkings,3.5,-107,-119
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,receptions,draftkings,3.5,107,-137
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Greg Dulcich,receptions,draftkings,2.5,113,-144
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Chris Bell,receptions,draftkings,1.5,-112,-114
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kevin Coleman Jr.,receptions,draftkings,1.5,104,-133
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,receptions,draftkings,1.5,108,-138
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Tyquan Thornton,receptions,draftkings,1.5,115,-147
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,rushing_yards,draftkings,83.5,-111,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,rushing_yards,draftkings,60.5,-112,-112
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Willis,rushing_yards,draftkings,33.5,-108,-116
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,rushing_yards,draftkings,29.5,-113,-111
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Patrick Mahomes,rushing_yards,draftkings,15.5,-114,-110
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Ollie Gordon II,rushing_yards,draftkings,8.5,-116,-108
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Willis,passing_yards,fanduel,176.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Patrick Mahomes,passing_yards,fanduel,235.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Tyquan Thornton,receiving_yards,fanduel,18.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Chris Bell,receiving_yards,fanduel,19.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Travis Kelce,receiving_yards,fanduel,52.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Xavier Worthy,receiving_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Rashee Rice,receiving_yards,fanduel,47.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kevin Coleman Jr.,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,receiving_yards,fanduel,26.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,receiving_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,receiving_yards,fanduel,22.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Greg Dulcich,receiving_yards,fanduel,22.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Washington,receiving_yards,fanduel,37.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Washington,receptions,fanduel,3.5,-138,104
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Chris Bell,receptions,fanduel,1.5,-114,-114
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Xavier Worthy,receptions,fanduel,3.5,-106,-125
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,receptions,fanduel,3.5,120,-160
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Rashee Rice,receptions,fanduel,4.5,108,-144
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Travis Kelce,receptions,fanduel,4.5,-114,-114
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kevin Coleman Jr.,receptions,fanduel,1.5,116,-154
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,receptions,fanduel,1.5,-102,-130
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Greg Dulcich,receptions,fanduel,2.5,122,-162
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,receptions,fanduel,3.5,-122,-106
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Tyquan Thornton,receptions,fanduel,1.5,116,-154
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Ollie Gordon II,rushing_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Kenneth Walker III,rushing_yards,fanduel,82.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,De'Von Achane,rushing_yards,fanduel,59.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Emmett Johnson,rushing_yards,fanduel,28.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Malik Willis,rushing_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_KC_MIA,Miami Dolphins,Kansas City Chiefs,Patrick Mahomes,rushing_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Jameis Winston,passing_yards,draftkings,200.5,-112,-112
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Ward,passing_yards,draftkings,176.5,-112,-112
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malik Nabers,receiving_yards,draftkings,55.5,-111,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Isaiah Likely,receiving_yards,draftkings,39.5,-114,-110
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Carnell Tate,receiving_yards,draftkings,38.5,-111,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Wan'Dale Robinson,receiving_yards,draftkings,30.5,-113,-111
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malachi Fields,receiving_yards,draftkings,22.5,-115,-109
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Gunnar Helm,receiving_yards,draftkings,19.5,-110,-114
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Darnell Mooney,receiving_yards,draftkings,17.5,-112,-111
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Calvin Ridley,receiving_yards,draftkings,14.5,-116,-108
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Elic Ayomanor,receiving_yards,draftkings,13.5,-113,-111
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,receiving_yards,draftkings,12.5,-110,-114
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,receiving_yards,draftkings,6.5,-120,-105
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,receiving_yards,draftkings,6.5,-105,-119
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malik Nabers,receptions,draftkings,4.5,-103,-124
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Isaiah Likely,receptions,draftkings,3.5,-148,116
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Wan'Dale Robinson,receptions,draftkings,3.5,-104,-123
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Carnell Tate,receptions,draftkings,3.5,101,-129
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Gunnar Helm,receptions,draftkings,2.5,-127,100
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malachi Fields,receptions,draftkings,1.5,-185,144
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,receptions,draftkings,1.5,-179,139
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Darnell Mooney,receptions,draftkings,1.5,-102,-125
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,receptions,draftkings,1.5,107,-136
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Elic Ayomanor,receptions,draftkings,1.5,119,-152
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Calvin Ridley,receptions,draftkings,1.5,124,-158
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,receptions,draftkings,1.5,130,-167
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,rushing_yards,draftkings,61.5,-110,-114
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,rushing_yards,draftkings,58.5,-111,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Najee Harris,rushing_yards,draftkings,17.5,-114,-110
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Ward,rushing_yards,draftkings,13.5,-109,-115
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,rushing_yards,draftkings,12.5,-109,-115
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Jameis Winston,rushing_yards,draftkings,5.5,-116,-108
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Ward,passing_yards,fanduel,178.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Jameis Winston,passing_yards,fanduel,200.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Carnell Tate,receiving_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malachi Fields,receiving_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Gunnar Helm,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Elic Ayomanor,receiving_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Wan'Dale Robinson,receiving_yards,fanduel,30.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Calvin Ridley,receiving_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Darnell Mooney,receiving_yards,fanduel,17.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,receiving_yards,fanduel,6.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,receiving_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Isaiah Likely,receiving_yards,fanduel,41.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malik Nabers,receiving_yards,fanduel,52.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,receiving_yards,fanduel,6.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Gunnar Helm,receptions,fanduel,2.5,-130,-102
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Elic Ayomanor,receptions,fanduel,1.5,120,-160
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Isaiah Likely,receptions,fanduel,3.5,-154,116
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malik Nabers,receptions,fanduel,4.5,-102,-130
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,receptions,fanduel,1.5,144,-194
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Malachi Fields,receptions,fanduel,2.5,148,-200
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,receptions,fanduel,2.5,154,-210
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Darnell Mooney,receptions,fanduel,1.5,110,-146
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Calvin Ridley,receptions,fanduel,1.5,120,-160
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Wan'Dale Robinson,receptions,fanduel,3.5,-106,-125
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,receptions,fanduel,1.5,102,-136
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Carnell Tate,receptions,fanduel,3.5,106,-140
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Ward,rushing_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Tony Pollard,rushing_yards,fanduel,62.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Najee Harris,rushing_yards,fanduel,17.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Cam Skattebo,rushing_yards,fanduel,57.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Jameis Winston,rushing_yards,fanduel,5.5,-113,-113
+2026,3,2026_03_TEN_NYG,New York Giants,Tennessee Titans,Devin Singletary,rushing_yards,fanduel,12.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Sam Darnold,passing_yards,draftkings,222.5,-111,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Marcus Mariota,passing_yards,draftkings,168.5,-112,-112
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jaxon Smith-Njigba,receiving_yards,draftkings,92.5,-111,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Terry McLaurin,receiving_yards,draftkings,41.5,-112,-112
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Stefon Diggs,receiving_yards,draftkings,34.5,-114,-110
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rashid Shaheed,receiving_yards,draftkings,28.5,-114,-110
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Cooper Kupp,receiving_yards,draftkings,20.5,-112,-112
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,AJ Barner,receiving_yards,draftkings,20.5,-109,-115
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,receiving_yards,draftkings,16.5,-108,-116
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Antonio Williams,receiving_yards,draftkings,13.5,-113,-111
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Dyami Brown,receiving_yards,draftkings,8.5,-107,-118
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,receiving_yards,draftkings,8.5,-107,-117
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Elijah Arroyo,receiving_yards,draftkings,3.5,-115,-109
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jaxon Smith-Njigba,receptions,draftkings,6.5,-120,-106
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Stefon Diggs,receptions,draftkings,3.5,-149,117
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Terry McLaurin,receptions,draftkings,3.5,-104,-122
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,AJ Barner,receptions,draftkings,2.5,-115,-111
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,receptions,draftkings,2.5,-111,-115
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rashid Shaheed,receptions,draftkings,2.5,-102,-125
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Cooper Kupp,receptions,draftkings,2.5,129,-166
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Antonio Williams,receptions,draftkings,1.5,-163,128
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,receptions,draftkings,1.5,-116,-109
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Dyami Brown,receptions,draftkings,1.5,137,-175
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Elijah Arroyo,receptions,draftkings,0.5,-143,112
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,rushing_yards,draftkings,53.5,-111,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jacory Croskey-Merritt,rushing_yards,draftkings,38.5,-110,-114
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Emanuel Wilson,rushing_yards,draftkings,28.5,-116,-108
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Marcus Mariota,rushing_yards,draftkings,23.5,-107,-117
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,rushing_yards,draftkings,19.5,-110,-114
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Sam Darnold,rushing_yards,draftkings,6.5,-117,-107
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Marcus Mariota,passing_yards,fanduel,170.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Sam Darnold,passing_yards,fanduel,221.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Terry McLaurin,receiving_yards,fanduel,42.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Antonio Williams,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,receiving_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Elijah Arroyo,receiving_yards,fanduel,4.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,receiving_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Dyami Brown,receiving_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,AJ Barner,receiving_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jaxon Smith-Njigba,receiving_yards,fanduel,90.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Stefon Diggs,receiving_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rashid Shaheed,receiving_yards,fanduel,28.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Cooper Kupp,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Terry McLaurin,receptions,fanduel,3.5,100,-132
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Elijah Arroyo,receptions,fanduel,0.5,-154,116
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Antonio Williams,receptions,fanduel,1.5,-166,124
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,receptions,fanduel,1.5,-114,-114
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rashid Shaheed,receptions,fanduel,2.5,-108,-122
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,receptions,fanduel,2.5,-108,-122
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Dyami Brown,receptions,fanduel,1.5,134,-180
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Stefon Diggs,receptions,fanduel,3.5,-152,114
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jaxon Smith-Njigba,receptions,fanduel,6.5,-112,-118
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Cooper Kupp,receptions,fanduel,2.5,124,-166
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,AJ Barner,receptions,fanduel,2.5,-114,-114
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Sam Darnold,rushing_yards,fanduel,6.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Rachaad White,rushing_yards,fanduel,18.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jacory Croskey-Merritt,rushing_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Jadarian Price,rushing_yards,fanduel,54.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Marcus Mariota,rushing_yards,fanduel,23.5,-113,-113
+2026,3,2026_03_SEA_WAS,Washington Commanders,Seattle Seahawks,Emanuel Wilson,rushing_yards,fanduel,30.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Brock Purdy,passing_yards,draftkings,236.5,-112,-112
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jacoby Brissett,passing_yards,draftkings,228.5,-113,-111
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Trey McBride,receiving_yards,draftkings,67.5,-114,-110
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Mike Evans,receiving_yards,draftkings,52.5,-114,-110
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,George Kittle,receiving_yards,draftkings,46.5,-113,-111
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Michael Wilson,receiving_yards,draftkings,45.5,-111,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Deebo Samuel,receiving_yards,draftkings,41.5,-110,-114
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,receiving_yards,draftkings,37.5,-111,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Marvin Harrison Jr.,receiving_yards,draftkings,33.5,-110,-114
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kendrick Bourne,receiving_yards,draftkings,24.5,-110,-114
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,receiving_yards,draftkings,15.5,-108,-116
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kyle Juszczyk,receiving_yards,draftkings,8.5,-112,-112
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Tyler Allgeier,receiving_yards,draftkings,7.5,-109,-115
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Trey McBride,receptions,draftkings,7.5,107,-137
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,receptions,draftkings,4.5,-119,-107
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Mike Evans,receptions,draftkings,4.5,119,-152
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,George Kittle,receptions,draftkings,4.5,126,-161
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Deebo Samuel,receptions,draftkings,3.5,-162,127
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Michael Wilson,receptions,draftkings,3.5,-156,122
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kendrick Bourne,receptions,draftkings,2.5,-109,-117
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,receptions,draftkings,2.5,-105,-122
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Marvin Harrison Jr.,receptions,draftkings,2.5,110,-140
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kyle Juszczyk,receptions,draftkings,1.5,160,-206
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,rushing_yards,draftkings,57.5,-111,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,rushing_yards,draftkings,39.5,-109,-116
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Tyler Allgeier,rushing_yards,draftkings,34.5,-109,-115
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kaelon Black,rushing_yards,draftkings,32.5,-109,-115
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Brock Purdy,rushing_yards,draftkings,17.5,-107,-117
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jacoby Brissett,rushing_yards,draftkings,7.5,-113,-111
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Brock Purdy,passing_yards,fanduel,235.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jacoby Brissett,passing_yards,fanduel,225.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Michael Wilson,receiving_yards,fanduel,44.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kendrick Bourne,receiving_yards,fanduel,23.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Trey McBride,receiving_yards,fanduel,67.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Deebo Samuel,receiving_yards,fanduel,40.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,receiving_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Tyler Allgeier,receiving_yards,fanduel,7.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Marvin Harrison Jr.,receiving_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kyle Juszczyk,receiving_yards,fanduel,8.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Mike Evans,receiving_yards,fanduel,55.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,George Kittle,receiving_yards,fanduel,44.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Michael Wilson,receptions,fanduel,3.5,-148,112
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Deebo Samuel,receptions,fanduel,3.5,-166,124
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Marvin Harrison Jr.,receptions,fanduel,2.5,116,-154
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kendrick Bourne,receptions,fanduel,2.5,-112,-118
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,receptions,fanduel,2.5,-114,-114
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,George Kittle,receptions,fanduel,3.5,-188,140
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Trey McBride,receptions,fanduel,7.5,112,-148
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kyle Juszczyk,receptions,fanduel,1.5,154,-210
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Mike Evans,receptions,fanduel,4.5,120,-160
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,receptions,fanduel,4.5,-130,-102
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Christian McCaffrey,rushing_yards,fanduel,55.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jacoby Brissett,rushing_yards,fanduel,7.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Jeremiyah Love,rushing_yards,fanduel,37.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Tyler Allgeier,rushing_yards,fanduel,33.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Brock Purdy,rushing_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_ARI_SF,San Francisco 49ers,Arizona Cardinals,Kaelon Black,rushing_yards,fanduel,32.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Baker Mayfield,passing_yards,draftkings,216.5,-111,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kyler Murray,passing_yards,draftkings,213.5,-111,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Justin Jefferson,receiving_yards,draftkings,73.5,-111,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Emeka Egbuka,receiving_yards,draftkings,49.5,-113,-111
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jordan Addison,receiving_yards,draftkings,36.5,-114,-110
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Chris Godwin,receiving_yards,draftkings,35.5,-113,-111
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,T.J. Hockenson,receiving_yards,draftkings,30.5,-109,-115
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Cade Otton,receiving_yards,draftkings,28.5,-112,-112
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Ted Hurst III,receiving_yards,draftkings,25.5,-113,-111
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,receiving_yards,draftkings,16.5,-109,-115
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jalen McMillan,receiving_yards,draftkings,14.5,-112,-112
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jauan Jennings,receiving_yards,draftkings,14.5,-110,-114
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,receiving_yards,draftkings,13.5,-108,-116
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Josh Oliver,receiving_yards,draftkings,10.5,-110,-114
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,receiving_yards,draftkings,9.5,-119,-105
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Justin Jefferson,receptions,draftkings,5.5,-134,105
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Emeka Egbuka,receptions,draftkings,4.5,121,-155
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,T.J. Hockenson,receptions,draftkings,3.5,-111,-115
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Chris Godwin,receptions,draftkings,3.5,115,-146
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jordan Addison,receptions,draftkings,3.5,132,-169
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Cade Otton,receptions,draftkings,3.5,133,-171
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,receptions,draftkings,2.5,-141,111
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Ted Hurst III,receptions,draftkings,2.5,143,-183
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,receptions,draftkings,1.5,-186,145
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,receptions,draftkings,1.5,-183,143
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jauan Jennings,receptions,draftkings,1.5,101,-128
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Josh Oliver,receptions,draftkings,1.5,122,-156
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jalen McMillan,receptions,draftkings,1.5,129,-166
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,rushing_yards,draftkings,58.5,-112,-112
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,rushing_yards,draftkings,50.5,-115,-109
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kyler Murray,rushing_yards,draftkings,20.5,-118,-107
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,rushing_yards,draftkings,19.5,-108,-116
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Baker Mayfield,rushing_yards,draftkings,16.5,-114,-110
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Baker Mayfield,passing_yards,fanduel,216.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kyler Murray,passing_yards,fanduel,211.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,receiving_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Ted Hurst III,receiving_yards,fanduel,24.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jauan Jennings,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,T.J. Hockenson,receiving_yards,fanduel,30.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Emeka Egbuka,receiving_yards,fanduel,48.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Justin Jefferson,receiving_yards,fanduel,72.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jordan Addison,receiving_yards,fanduel,36.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Chris Godwin,receiving_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jalen McMillan,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Josh Oliver,receiving_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,receiving_yards,fanduel,9.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,receiving_yards,fanduel,12.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Cade Otton,receiving_yards,fanduel,27.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,receptions,fanduel,1.5,-160,120
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Ted Hurst III,receptions,fanduel,2.5,120,-160
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,receptions,fanduel,2.5,-130,-102
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jordan Addison,receptions,fanduel,2.5,-210,154
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,T.J. Hockenson,receptions,fanduel,3.5,-112,-118
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Josh Oliver,receptions,fanduel,1.5,114,-148
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Justin Jefferson,receptions,fanduel,5.5,-138,104
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jauan Jennings,receptions,fanduel,1.5,-102,-130
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,receptions,fanduel,1.5,-166,124
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Chris Godwin,receptions,fanduel,3.5,120,-160
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Emeka Egbuka,receptions,fanduel,4.5,118,-158
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Jalen McMillan,receptions,fanduel,1.5,120,-160
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Cade Otton,receptions,fanduel,3.5,134,-180
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kenny Gainwell,rushing_yards,fanduel,18.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Kyler Murray,rushing_yards,fanduel,20.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Aaron Jones,rushing_yards,fanduel,52.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Bucky Irving,rushing_yards,fanduel,57.5,-113,-113
+2026,3,2026_03_MIN_TB,Tampa Bay Buccaneers,Minnesota Vikings,Baker Mayfield,rushing_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Dak Prescott,passing_yards,draftkings,266.5,-113,-111
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Lamar Jackson,passing_yards,draftkings,240.5,-111,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,CeeDee Lamb,receiving_yards,draftkings,82.5,-114,-110
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,George Pickens,receiving_yards,draftkings,65.5,-113,-111
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Rashod Bateman,receiving_yards,draftkings,46.5,-110,-114
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Mark Andrews,receiving_yards,draftkings,39.5,-115,-110
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Ryan Flournoy,receiving_yards,draftkings,30.5,-109,-116
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Jake Ferguson,receiving_yards,draftkings,29.5,-109,-115
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,receiving_yards,draftkings,15.5,-107,-117
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Justice Hill,receiving_yards,draftkings,13.5,-109,-115
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Derrick Henry,receiving_yards,draftkings,9.5,-107,-117
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,CeeDee Lamb,receptions,draftkings,6.5,-117,-109
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,George Pickens,receptions,draftkings,5.5,105,-134
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Mark Andrews,receptions,draftkings,4.5,125,-160
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Jake Ferguson,receptions,draftkings,3.5,-126,-101
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Rashod Bateman,receptions,draftkings,3.5,105,-134
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Ryan Flournoy,receptions,draftkings,3.5,126,-161
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,receptions,draftkings,2.5,-152,119
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Justice Hill,receptions,draftkings,2.5,150,-193
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Derrick Henry,receptions,draftkings,1.5,131,-168
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Derrick Henry,rushing_yards,draftkings,90.5,-114,-110
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,rushing_yards,draftkings,57.5,-110,-114
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Lamar Jackson,rushing_yards,draftkings,40.5,-111,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Justice Hill,rushing_yards,draftkings,13.5,-119,-106
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Dak Prescott,rushing_yards,draftkings,12.5,-109,-115
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Emari Demercado,rushing_yards,draftkings,8.5,-104,-120
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Dak Prescott,passing_yards,fanduel,261.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Lamar Jackson,passing_yards,fanduel,239.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Jake Ferguson,receiving_yards,fanduel,26.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,George Pickens,receiving_yards,fanduel,64.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,CeeDee Lamb,receiving_yards,fanduel,82.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Derrick Henry,receiving_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Mark Andrews,receiving_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Ryan Flournoy,receiving_yards,fanduel,29.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Justice Hill,receiving_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Rashod Bateman,receiving_yards,fanduel,43.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,receiving_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Ryan Flournoy,receptions,fanduel,3.5,118,-158
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Mark Andrews,receptions,fanduel,4.5,134,-180
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,CeeDee Lamb,receptions,fanduel,6.5,-114,-114
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,receptions,fanduel,2.5,-138,104
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Rashod Bateman,receptions,fanduel,3.5,112,-148
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,George Pickens,receptions,fanduel,5.5,110,-146
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Jake Ferguson,receptions,fanduel,3.5,-122,-108
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Emari Demercado,rushing_yards,fanduel,7.5,-102,-125
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Derrick Henry,rushing_yards,fanduel,89.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Javonte Williams,rushing_yards,fanduel,58.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Justice Hill,rushing_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Lamar Jackson,rushing_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_BAL_DAL,Dallas Cowboys,Baltimore Ravens,Dak Prescott,rushing_yards,fanduel,11.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tyler Shough,passing_yards,draftkings,254.5,-111,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Kirk Cousins,passing_yards,draftkings,212.5,-111,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Chris Olave,receiving_yards,draftkings,77.5,-110,-114
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Devaughn Vele,receiving_yards,draftkings,48.5,-114,-110
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Brock Bowers,receiving_yards,draftkings,47.5,-110,-114
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tre Tucker,receiving_yards,draftkings,41.5,-111,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Juwan Johnson,receiving_yards,draftkings,35.5,-114,-110
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jalen Nailor,receiving_yards,draftkings,24.5,-112,-112
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,receiving_yards,draftkings,22.5,-115,-109
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Michael Mayer,receiving_yards,draftkings,20.5,-114,-110
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Bryce Lance,receiving_yards,draftkings,15.5,-114,-110
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jack Bech,receiving_yards,draftkings,14.5,-116,-108
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,receiving_yards,draftkings,13.5,-116,-108
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Noah Fant,receiving_yards,draftkings,12.5,-115,-109
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,receiving_yards,draftkings,9.5,-108,-116
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Chris Olave,receptions,draftkings,6.5,119,-152
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Brock Bowers,receptions,draftkings,4.5,-117,-109
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Devaughn Vele,receptions,draftkings,4.5,124,-158
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,receptions,draftkings,3.5,-151,118
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tre Tucker,receptions,draftkings,3.5,-117,-109
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Juwan Johnson,receptions,draftkings,3.5,111,-142
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,receptions,draftkings,2.5,-150,118
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Michael Mayer,receptions,draftkings,2.5,119,-153
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jalen Nailor,receptions,draftkings,2.5,122,-156
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,receptions,draftkings,1.5,-149,117
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jack Bech,receptions,draftkings,1.5,-111,-115
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Noah Fant,receptions,draftkings,1.5,-105,-121
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Bryce Lance,receptions,draftkings,1.5,116,-149
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,rushing_yards,draftkings,69.5,-113,-111
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,rushing_yards,draftkings,39.5,-110,-114
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,rushing_yards,draftkings,27.5,-111,-114
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Mike Washington Jr.,rushing_yards,draftkings,15.5,-111,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tyler Shough,rushing_yards,draftkings,15.5,-107,-118
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Kirk Cousins,rushing_yards,draftkings,1.5,-118,-106
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tyler Shough,passing_yards,fanduel,252.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Kirk Cousins,passing_yards,fanduel,211.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,receiving_yards,fanduel,22.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Brock Bowers,receiving_yards,fanduel,46.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jack Bech,receiving_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Noah Fant,receiving_yards,fanduel,12.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Devaughn Vele,receiving_yards,fanduel,48.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Juwan Johnson,receiving_yards,fanduel,35.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tre Tucker,receiving_yards,fanduel,43.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Bryce Lance,receiving_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,receiving_yards,fanduel,13.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,receiving_yards,fanduel,10.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Chris Olave,receiving_yards,fanduel,76.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jalen Nailor,receiving_yards,fanduel,24.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Michael Mayer,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Noah Fant,receptions,fanduel,1.5,-108,-122
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Bryce Lance,receptions,fanduel,1.5,-106,-125
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,receptions,fanduel,3.5,144,-194
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Juwan Johnson,receptions,fanduel,3.5,-102,-130
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Chris Olave,receptions,fanduel,5.5,-172,128
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,receptions,fanduel,1.5,-148,112
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Devaughn Vele,receptions,fanduel,4.5,124,-166
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jalen Nailor,receptions,fanduel,2.5,114,-152
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tre Tucker,receptions,fanduel,3.5,-130,-102
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Michael Mayer,receptions,fanduel,2.5,102,-136
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Jack Bech,receptions,fanduel,1.5,-114,-114
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Brock Bowers,receptions,fanduel,4.5,-108,-122
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,receptions,fanduel,3.5,-144,108
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Ashton Jeanty,rushing_yards,fanduel,68.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Kirk Cousins,rushing_yards,fanduel,1.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Mike Washington Jr.,rushing_yards,fanduel,15.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Alvin Kamara,rushing_yards,fanduel,27.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Travis Etienne Jr.,rushing_yards,fanduel,38.5,-113,-113
+2026,3,2026_03_LV_NO,New Orleans Saints,Las Vegas Raiders,Tyler Shough,rushing_yards,fanduel,14.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Matthew Stafford,passing_yards,draftkings,241.5,-111,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Bo Nix,passing_yards,draftkings,211.5,-113,-111
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Davante Adams,receiving_yards,draftkings,70.5,-110,-114
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Jaylen Waddle,receiving_yards,draftkings,60.5,-111,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Terrance Ferguson,receiving_yards,draftkings,50.5,-111,-112
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Courtland Sutton,receiving_yards,draftkings,35.5,-112,-112
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Pat Bryant,receiving_yards,draftkings,27.5,-110,-114
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Evan Engram,receiving_yards,draftkings,21.5,-110,-114
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,receiving_yards,draftkings,17.5,-118,-107
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,receiving_yards,draftkings,12.5,-116,-108
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Adam Trautman,receiving_yards,draftkings,7.5,-117,-107
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Davante Adams,receptions,draftkings,5.5,-114,-112
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Jaylen Waddle,receptions,draftkings,4.5,-155,121
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Terrance Ferguson,receptions,draftkings,3.5,-165,129
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Courtland Sutton,receptions,draftkings,3.5,102,-129
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Pat Bryant,receptions,draftkings,2.5,-143,112
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,receptions,draftkings,2.5,-130,102
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Evan Engram,receptions,draftkings,2.5,-121,-105
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,receptions,draftkings,2.5,138,-177
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Adam Trautman,receptions,draftkings,0.5,-225,174
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,rushing_yards,draftkings,53.5,-112,-112
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,J.K. Dobbins,rushing_yards,draftkings,50.5,-113,-111
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Blake Corum,rushing_yards,draftkings,47.5,-114,-110
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,rushing_yards,draftkings,19.5,-115,-109
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Bo Nix,rushing_yards,draftkings,16.5,-106,-118
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Matthew Stafford,rushing_yards,draftkings,0.5,119,-149
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Bo Nix,passing_yards,fanduel,211.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Matthew Stafford,passing_yards,fanduel,242.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Jaylen Waddle,receiving_yards,fanduel,59.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Courtland Sutton,receiving_yards,fanduel,36.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Terrance Ferguson,receiving_yards,fanduel,50.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,receiving_yards,fanduel,17.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Evan Engram,receiving_yards,fanduel,21.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Davante Adams,receiving_yards,fanduel,71.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Pat Bryant,receiving_yards,fanduel,24.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,receiving_yards,fanduel,12.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Adam Trautman,receiving_yards,fanduel,6.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Davante Adams,receptions,fanduel,5.5,-130,-102
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Evan Engram,receptions,fanduel,2.5,-128,-104
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Pat Bryant,receptions,fanduel,2.5,-136,102
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Adam Trautman,receptions,fanduel,0.5,-205,152
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Terrance Ferguson,receptions,fanduel,3.5,-172,128
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Jaylen Waddle,receptions,fanduel,4.5,-154,116
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,receptions,fanduel,2.5,-140,106
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Courtland Sutton,receptions,fanduel,3.5,102,-136
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,receptions,fanduel,2.5,124,-166
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Matthew Stafford,rushing_yards,fanduel,0.5,118,-150
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,RJ Harvey,rushing_yards,fanduel,19.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Blake Corum,rushing_yards,fanduel,46.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,J.K. Dobbins,rushing_yards,fanduel,50.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Bo Nix,rushing_yards,fanduel,16.5,-113,-113
+2026,3,2026_03_LA_DEN,Denver Broncos,Los Angeles Rams,Kyren Williams,rushing_yards,fanduel,54.5,-113,-113
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Jalen Hurts,passing_yards,draftkings,218.5,-111,-113
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Tyson Bagent,passing_yards,draftkings,174.5,-110,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,DeVonta Smith,receiving_yards,draftkings,72.5,-112,-111
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Dontayvion Wicks,receiving_yards,draftkings,41.5,-113,-111
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Luther Burden III,receiving_yards,draftkings,37.5,-114,-110
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Colston Loveland,receiving_yards,draftkings,36.5,-114,-110
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Rome Odunze,receiving_yards,draftkings,27.5,-109,-115
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Makai Lemon,receiving_yards,draftkings,26.5,-110,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kalif Raymond,receiving_yards,draftkings,25.5,-109,-115
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,receiving_yards,draftkings,13.5,-111,-113
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Zach Ertz,receiving_yards,draftkings,10.5,-112,-112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,receiving_yards,draftkings,10.5,-108,-116
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Cole Kmet,receiving_yards,draftkings,9.5,-110,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,DeVonta Smith,receptions,draftkings,5.5,-118,-108
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Luther Burden III,receptions,draftkings,3.5,-134,105
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Colston Loveland,receptions,draftkings,3.5,-107,-119
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Dontayvion Wicks,receptions,draftkings,3.5,128,-163
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kalif Raymond,receptions,draftkings,2.5,-162,127
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Makai Lemon,receptions,draftkings,2.5,-120,-106
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Rome Odunze,receptions,draftkings,2.5,-105,-121
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,receptions,draftkings,2.5,120,-153
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,receptions,draftkings,1.5,-136,107
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Cole Kmet,receptions,draftkings,1.5,-118,-108
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Zach Ertz,receptions,draftkings,1.5,-102,-125
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,rushing_yards,draftkings,72.5,-112,-112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,rushing_yards,draftkings,59.5,-112,-112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kyle Monangai,rushing_yards,draftkings,38.5,-112,-112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Jalen Hurts,rushing_yards,draftkings,24.5,-109,-115
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Tyson Bagent,rushing_yards,draftkings,17.5,-117,-107
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Tyson Bagent,passing_yards,fanduel,175.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Jalen Hurts,passing_yards,fanduel,218.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,DeVonta Smith,receiving_yards,fanduel,72.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kalif Raymond,receiving_yards,fanduel,24.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Luther Burden III,receiving_yards,fanduel,35.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,receiving_yards,fanduel,10.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Dontayvion Wicks,receiving_yards,fanduel,42.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,receiving_yards,fanduel,13.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Rome Odunze,receiving_yards,fanduel,25.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Makai Lemon,receiving_yards,fanduel,26.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Colston Loveland,receiving_yards,fanduel,35.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Cole Kmet,receiving_yards,fanduel,9.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Zach Ertz,receiving_yards,fanduel,10.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Luther Burden III,receptions,fanduel,3.5,-148,112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,receptions,fanduel,1.5,-130,-102
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Cole Kmet,receptions,fanduel,1.5,-108,-122
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,receptions,fanduel,2.5,116,-154
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Zach Ertz,receptions,fanduel,1.5,-110,-120
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,DeVonta Smith,receptions,fanduel,5.5,-122,-108
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Rome Odunze,receptions,fanduel,2.5,108,-144
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Colston Loveland,receptions,fanduel,3.5,-102,-130
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kalif Raymond,receptions,fanduel,2.5,-148,112
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Dontayvion Wicks,receptions,fanduel,3.5,128,-172
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Makai Lemon,receptions,fanduel,2.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Saquon Barkley,rushing_yards,fanduel,71.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Kyle Monangai,rushing_yards,fanduel,37.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Tyson Bagent,rushing_yards,fanduel,18.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,D'Andre Swift,rushing_yards,fanduel,59.5,-114,-114
+2026,3,2026_03_PHI_CHI,Chicago Bears,Philadelphia Eagles,Jalen Hurts,rushing_yards,fanduel,24.5,-114,-114

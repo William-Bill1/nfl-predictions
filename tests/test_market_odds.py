@@ -96,8 +96,8 @@ class TestFindMarketLine:
 
 
 class TestAttachMarketOdds:
-    def test_with_match(self):
-        pred = {"prob_over": 0.60, "line_value": 200.0}
+    def test_with_match_same_line(self):
+        pred = {"prob_over": 0.60, "line_value": 209.5}
         info = {"line": 209.5, "book": "draftkings", "over_odds": -110,
                 "under_odds": -110, "market_implied_prob": 0.5}
         out = mo.attach_market_odds(dict(pred), info)
@@ -106,7 +106,27 @@ class TestAttachMarketOdds:
         assert out["market_edge"] == pytest.approx(0.10)
         assert out["market_line_available"] is True
         # fixed-tier fields untouched
-        assert out["line_value"] == 200.0 and out["prob_over"] == 0.60
+        assert out["line_value"] == 209.5 and out["prob_over"] == 0.60
+
+    def test_different_line_attaches_market_but_no_edge(self):
+        # Regression: prob_over is P(over) at the model's own tier line and
+        # market_implied_prob is P(over) at the book's line - subtracting them
+        # across different lines produced bogus 40-50 point "edges" (e.g.
+        # P(Henry > 75 rush yds)=93% vs P(> 90.5)=50%).
+        pred = {"prob_over": 0.93, "line_value": 75.0}
+        info = {"line": 90.5, "book": "draftkings", "over_odds": -110,
+                "under_odds": -110, "market_implied_prob": 0.5}
+        out = mo.attach_market_odds(dict(pred), info)
+        assert out["market_edge"] is None
+        assert out["market_line"] == 90.5
+        assert out["market_line_available"] is True
+
+    def test_missing_line_value_gives_no_edge(self):
+        info = {"line": 90.5, "book": "draftkings", "over_odds": -110,
+                "under_odds": -110, "market_implied_prob": 0.5}
+        out = mo.attach_market_odds({"prob_over": 0.6}, info)
+        assert out["market_edge"] is None
+        assert out["market_line_available"] is True
 
     def test_without_match_marks_unavailable(self):
         pred = {"prob_over": 0.60, "line_value": 200.0}
@@ -120,7 +140,7 @@ class TestAttachMarketOdds:
         # isinstance((int, float)) gate here silently dropped market_edge for
         # nearly every real prediction (caught 2026-09-16 against live data).
         import numpy as np
-        pred = {"prob_over": np.float32(0.60), "line_value": 200.0}
+        pred = {"prob_over": np.float32(0.60), "line_value": np.float32(209.5)}
         info = {"line": 209.5, "book": "draftkings", "over_odds": -110,
                 "under_odds": -110, "market_implied_prob": 0.5}
         out = mo.attach_market_odds(dict(pred), info)
@@ -129,10 +149,10 @@ class TestAttachMarketOdds:
     def test_missing_prob_over_falls_back_to_none(self):
         info = {"line": 209.5, "book": "draftkings", "over_odds": -110,
                 "under_odds": -110, "market_implied_prob": 0.5}
-        out = mo.attach_market_odds({"line_value": 200.0}, info)
+        out = mo.attach_market_odds({"line_value": 209.5}, info)
         assert out["market_edge"] is None
         assert out["market_line_available"] is True  # line itself still attached
-        assert out["line_value"] == 200.0  # fixed-tier field untouched
+        assert out["line_value"] == 209.5  # fixed-tier field untouched
 
 
 # ---------------------------------------------------------------------------
