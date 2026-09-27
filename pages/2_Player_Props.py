@@ -515,7 +515,10 @@ def main():
                     f"the model favors the recommended side than the market does (always framed in "
                     f"the direction of the pick, so bigger is always better regardless of OVER/UNDER). "
                     f"{_matched} of {len(display_df)} rows currently matched — books post more players "
-                    f"as games get closer; '—' means no market line yet, not zero edge."
+                    f"as games get closer. Edge is only computed when the book's line equals the "
+                    f"model's line (the model's probability is for its own line, so a different "
+                    f"book line isn't comparable); '—' means no market line, or a different line - "
+                    f"not zero edge."
                 )
 
                 st.dataframe(

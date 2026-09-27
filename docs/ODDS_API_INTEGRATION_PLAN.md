@@ -148,7 +148,7 @@ New CLI flag on the existing `argparse` block: `--no-market-odds` (mirrors
 | `market_line` | best available DK/FanDuel line for this player+prop |
 | `market_book` | which book it came from (`draftkings` / `fanduel`) |
 | `market_implied_prob` | vig-adjusted implied P(over) from `market_over_odds`/`market_under_odds`, same `implied_prob()` math already in `nfl-gather-data.py` |
-| `market_edge` | `prob_over − market_implied_prob` (the *real* edge, parallel to `edge_underdog_spread` on the game side) |
+| `market_edge` | `prob_over − market_implied_prob`, **only when `market_line == line_value`** (else `None`). `prob_over` is the model's P(over) at its own fixed tier line, so across different lines the difference is meaningless - fixed 2026-09-27 after a full-slate refresh showed 180 of 204 matched props producing bogus 40-50pt "edges" (e.g. P(Henry > 75 rush yds)=93% vs the book's P(> 90.5)=50%). Reliable (yardage) models use round tiers that rarely equal a book line, so most rows show the book line with no edge. |
 | `market_line_available` | bool — False when unmatched/no key/quota hit, so the UI can distinguish "no edge" from "no market data" |
 
 `line_value` (the existing fixed-tier column) is **kept**, not replaced — it's
