@@ -1,85 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-27T08:52:24.001400+00:00",
+    "generated_at": "2026-09-28T09:16:17.431597+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-09-28"
   },
-  "bets": [
-    {
-      "game_date": "2026-09-27",
-      "game_time": "13:00",
-      "game": "LAC @ BUF",
-      "home_team": "BUF",
-      "away_team": "LAC",
-      "bet_type": "Spread",
-      "pick": "LAC +7",
-      "confidence": 0.5493348980292907,
-      "edge": 0.0371397760780711,
-      "tier": "Good",
-      "odds": -105,
-      "line": 7.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-09-27",
-      "game_time": "13:00",
-      "game": "NE @ JAX",
-      "home_team": "JAX",
-      "away_team": "NE",
-      "bet_type": "Spread",
-      "pick": "NE +3",
-      "confidence": 0.5513076703486222,
-      "edge": 0.0100232666788974,
-      "tier": "Strong",
-      "odds": -118,
-      "line": 3.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-09-27",
-      "game_time": "13:00",
-      "game": "KC @ MIA",
-      "home_team": "MIA",
-      "away_team": "KC",
-      "bet_type": "Spread",
-      "pick": "MIA +10",
-      "confidence": 0.9433459289371968,
-      "edge": 0.4084622080069642,
-      "tier": "Elite",
-      "odds": -115,
-      "line": 10.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-09-27",
-      "game_time": "13:00",
-      "game": "SEA @ WAS",
-      "home_team": "WAS",
-      "away_team": "SEA",
-      "bet_type": "Spread",
-      "pick": "WAS +8.5",
-      "confidence": 0.8346376853684585,
-      "edge": 0.299753964438226,
-      "tier": "Elite",
-      "odds": -115,
-      "line": 8.5,
-      "notes": null
-    },
-    {
-      "game_date": "2026-09-27",
-      "game_time": "16:25",
-      "game": "BAL @ DAL",
-      "home_team": "DAL",
-      "away_team": "BAL",
-      "bet_type": "Spread",
-      "pick": "DAL +3.5",
-      "confidence": 0.5620880244669785,
-      "edge": 0.0272043035367459,
-      "tier": "Strong",
-      "odds": -115,
-      "line": 3.5,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
