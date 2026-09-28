@@ -219,6 +219,70 @@ class TestFetchMarketOdds:
         assert calls == ["ev1"]  # stopped after the first call, not both
         assert out.empty  # no outcomes in the canned response, but no crash
 
+    @staticmethod
+    def _event_json(player):
+        return {"bookmakers": [{"key": "draftkings", "markets": [{"key": "player_pass_yds", "outcomes": [
+            {"name": "Over", "description": player, "point": 220.5, "price": -110},
+            {"name": "Under", "description": player, "point": 220.5, "price": -110},
+        ]}]}]}
+
+    def _setup_partial_cache(self, monkeypatch, tmp_path):
+        monkeypatch.setattr(mo, "ODDS_API_KEY", "fake-key")
+        monkeypatch.setattr(mo, "DATA_DIR", tmp_path)
+        pd.DataFrame([{
+            "season": 2026, "week": 1, "game_id": "2026_01_JAX_DEN", "home_team": "Denver Broncos",
+            "away_team": "Jacksonville Jaguars", "player_name": "Nick Mullens", "prop_type": "passing_yards",
+            "book": "draftkings", "line": 209.5, "over_odds": -110, "under_odds": -110,
+        }], columns=mo.ODDS_COLUMNS).to_csv(mo._cache_path(2026, 1), index=False)
+        monkeypatch.setattr(mo, "_list_events", lambda: [
+            {"id": "ev1", "home_team": "Denver Broncos", "away_team": "Jacksonville Jaguars"},
+            {"id": "ev2", "home_team": "Green Bay Packers", "away_team": "New York Jets"},
+        ])
+        return pd.DataFrame([
+            {"home_team": "DEN", "away_team": "JAX"},
+            {"home_team": "GB", "away_team": "NYJ"},
+        ])
+
+    def test_partial_cache_fetches_only_missing_games_and_merges(self, monkeypatch, tmp_path):
+        # Regression: a write-once cache taken early in the week froze Week 3
+        # 2026 at 2 of 16 games. Cached games must not be re-fetched (credits);
+        # missing ones must be re-tried and merged in.
+        schedule = self._setup_partial_cache(monkeypatch, tmp_path)
+        calls = []
+
+        def _fetch(event_id):
+            calls.append(event_id)
+            return self._event_json("Aaron Rodgers"), 300
+        monkeypatch.setattr(mo, "_fetch_event_odds", _fetch)
+
+        out = mo.fetch_market_odds(2026, 1, schedule)
+        assert calls == ["ev2"]  # DEN/JAX already cached - not re-fetched
+        assert set(out["game_id"]) == {"2026_01_JAX_DEN", "2026_01_NYJ_GB"}
+        saved = pd.read_csv(mo._cache_path(2026, 1))
+        assert set(saved["game_id"]) == {"2026_01_JAX_DEN", "2026_01_NYJ_GB"}
+
+    def test_missing_game_with_no_props_yet_stays_missing(self, monkeypatch, tmp_path):
+        # A game with no props posted returns no bookmakers (0 credits); it
+        # stays out of the cache so the next run re-tries it.
+        schedule = self._setup_partial_cache(monkeypatch, tmp_path)
+        monkeypatch.setattr(mo, "_fetch_event_odds", lambda event_id: ({"bookmakers": []}, 300))
+
+        out = mo.fetch_market_odds(2026, 1, schedule)
+        assert set(out["game_id"]) == {"2026_01_JAX_DEN"}
+        calls = []
+        monkeypatch.setattr(mo, "_fetch_event_odds",
+                            lambda event_id: (calls.append(event_id), (self._event_json("Aaron Rodgers"), 300))[1])
+        out2 = mo.fetch_market_odds(2026, 1, schedule)
+        assert calls == ["ev2"]
+        assert set(out2["game_id"]) == {"2026_01_JAX_DEN", "2026_01_NYJ_GB"}
+
+    def test_partial_cache_without_key_returns_cache_no_network(self, monkeypatch, tmp_path):
+        schedule = self._setup_partial_cache(monkeypatch, tmp_path)
+        monkeypatch.setattr(mo, "ODDS_API_KEY", "")
+        monkeypatch.setattr(mo, "_list_events", lambda: (_ for _ in ()).throw(AssertionError("no network")))
+        out = mo.fetch_market_odds(2026, 1, schedule)
+        assert set(out["game_id"]) == {"2026_01_JAX_DEN"}
+
 
 # ---------------------------------------------------------------------------
 # Team map

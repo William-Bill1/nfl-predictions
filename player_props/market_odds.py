@@ -80,9 +80,9 @@ _ABBR_BY_FULL_NAME = {v: k for k, v in TEAM_FULL_NAME.items()}
 
 
 def _cache_path(season, week) -> Path:
-    """Same write-once file the props snapshot uses as its own cache: if it's
-    already there, we already spent the credits for this week - don't refetch.
-    """
+    """Per-week odds file that doubles as the cache: games already in it are
+    never re-fetched; games missing from it are re-tried (see
+    fetch_market_odds)."""
     return DATA_DIR / f'market_odds_week{int(week)}_{int(season)}.csv'
 
 
@@ -183,21 +183,27 @@ def fetch_market_odds(season, week, schedule: pd.DataFrame, use_cache: bool = Tr
     the same DataFrame player_props.predict.load_schedule() already returns),
     used only to filter the sport-wide event list down to this week's games.
 
-    Returns a DataFrame with columns ODDS_COLUMNS. Returns an empty one -
-    never raises - when ODDS_API_KEY is unset, this week was already fetched
-    (cache hit), or every request fails.
+    The per-week file doubles as a cache, but it is filled in incrementally
+    rather than written once: a game already in the file is never re-fetched,
+    while games missing from it are re-tried on every run. The first fetch of
+    a week happens early (the nightly after the previous week ends), when
+    books have posted props for only a couple of games - a write-once cache
+    froze Week 3 2026 at 2 of 16 games (4 matched props; a later refresh gave
+    204). A per-event call for a game with no props posted yet returns no
+    bookmakers and costs 0 credits (checked 2026-09-28), so re-trying costs
+    nothing until props exist, and each game is paid for once.
+
+    Returns a DataFrame with columns ODDS_COLUMNS. Never raises: returns
+    whatever is cached (or empty) when ODDS_API_KEY is unset or requests fail.
+    `use_cache=False` ignores the file and fetches every game without saving.
     """
     cache_file = _cache_path(season, week)
+    cached = pd.DataFrame(columns=ODDS_COLUMNS)
     if use_cache and cache_file.exists():
-        print(f"[market_odds] using cached {cache_file.name} (write-once - delete it to refetch)")
-        return pd.read_csv(cache_file)
-
-    if not ODDS_API_KEY:
-        print("[market_odds] ODDS_API_KEY not set - skipping market odds (fixed tiers only)")
-        return pd.DataFrame(columns=ODDS_COLUMNS)
+        cached = pd.read_csv(cache_file)
 
     if schedule is None or schedule.empty:
-        return pd.DataFrame(columns=ODDS_COLUMNS)
+        return cached
 
     # Build game_id the same way the rest of the pipeline does:
     # SEASON_WEEK_AWAY_HOME, e.g. 2026_01_NE_SEA.
@@ -205,49 +211,71 @@ def fetch_market_odds(season, week, schedule: pd.DataFrame, use_cache: bool = Tr
         (row['home_team'], row['away_team']): f"{int(season)}_{int(week):02d}_{row['away_team']}_{row['home_team']}"
         for _, row in schedule.iterrows()
     }
+    covered = set(cached['game_id'].dropna().astype(str)) if not cached.empty else set()
+    missing = {k: gid for k, gid in game_id_by_teams.items() if gid not in covered}
+    if not missing:
+        print(f"[market_odds] using cached {cache_file.name} (all {len(game_id_by_teams)} games covered)")
+        return cached
+
+    if not ODDS_API_KEY:
+        if cached.empty:
+            print("[market_odds] ODDS_API_KEY not set - skipping market odds (fixed tiers only)")
+        return cached
+
     target_full_names = {
         (TEAM_FULL_NAME.get(h), TEAM_FULL_NAME.get(a)): gid
-        for (h, a), gid in game_id_by_teams.items()
+        for (h, a), gid in missing.items()
     }
 
     try:
         events = _list_events()
     except requests.RequestException as e:
         print(f"[market_odds] failed to list events: {e}")
-        return pd.DataFrame(columns=ODDS_COLUMNS)
+        return cached
 
+    # Only games still listed as upcoming events can be fetched; games that
+    # already kicked off drop off the event list and stay missing.
     matched = [
         (ev, target_full_names[(ev.get('home_team'), ev.get('away_team'))])
         for ev in events
         if (ev.get('home_team'), ev.get('away_team')) in target_full_names
     ]
-    print(f"[market_odds] {len(matched)}/{len(schedule)} week-{week} games matched to book events")
+    print(f"[market_odds] week {week}: {len(covered)}/{len(game_id_by_teams)} games already cached, "
+          f"re-trying {len(matched)} upcoming uncovered game(s)")
 
-    all_rows: list[dict] = []
+    new_rows: list[dict] = []
     remaining = None
-    for ev, game_id in matched:
+    for i, (ev, game_id) in enumerate(matched):
         if remaining is not None and remaining < ODDS_API_MIN_REMAINING:
             print(f"[market_odds] stopping early - {remaining} credits left "
-                  f"(floor {ODDS_API_MIN_REMAINING}); {len(matched) - len(all_rows)} games not fetched")
+                  f"(floor {ODDS_API_MIN_REMAINING}); {len(matched) - i} games not fetched")
             break
         try:
             event_json, remaining = _fetch_event_odds(ev['id'])
         except requests.RequestException as e:
             print(f"[market_odds] event {ev.get('id')} ({ev.get('away_team')} @ {ev.get('home_team')}) failed: {e}")
             continue
-        all_rows.extend(_parse_event_odds(event_json, season, week, game_id))
+        new_rows.extend(_parse_event_odds(event_json, season, week, game_id))
         if remaining is not None:
             print(f"[market_odds]   ...{remaining} credits remaining")
 
-    df = pd.DataFrame(all_rows, columns=ODDS_COLUMNS)
-    print(f"[market_odds] fetched {len(df)} player/prop/book rows")
+    new_df = pd.DataFrame(new_rows, columns=ODDS_COLUMNS)
+    newly_covered = new_df['game_id'].nunique() if not new_df.empty else 0
+    print(f"[market_odds] fetched {len(new_df)} player/prop/book rows for {newly_covered} newly covered game(s)")
+
+    if cached.empty:
+        df = new_df
+    elif new_df.empty:
+        df = cached
+    else:
+        df = pd.concat([cached, new_df], ignore_index=True)
 
     if use_cache:
-        # Write even when empty, so a week with zero matched games doesn't
-        # get re-queried (for credits) on every subsequent run this week.
+        # Written even when nothing new came back, so the file exists as the
+        # week's audit trail; missing games are simply re-tried next run.
         DATA_DIR.mkdir(parents=True, exist_ok=True)
         df.to_csv(cache_file, index=False)
-        print(f"[market_odds] wrote {cache_file.name}")
+        print(f"[market_odds] wrote {cache_file.name} ({df['game_id'].nunique() if not df.empty else 0} games)")
 
     return df
 

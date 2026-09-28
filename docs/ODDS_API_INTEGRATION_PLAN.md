@@ -158,8 +158,13 @@ new, independent field for display/edge purposes.
 
 **New frozen artifact** (mirrors `betting_log.py` → `spread_performance.json`
 and the write-once prop snapshot): `data_files/market_odds_week{W}_{season}.csv`
-— raw fetched rows (one per player/prop/book, before matching/aggregation),
-written once per week alongside the prop snapshot. This is the audit trail:
+— raw fetched rows (one per player/prop/book, before matching/aggregation).
+*Update 2026-09-28:* no longer written once per week. The first fetch of a
+week happens early, when books have props for only a couple of games (Week 3
+2026 froze at 2 of 16 games, 4 matched props), so the file is now filled in
+per game: a game already in it is never re-fetched, games missing from it are
+re-tried each run. A call for a game with no props posted yet costs 0 credits,
+so each game is effectively paid for once. This is the audit trail:
 if a market line looks wrong later, you can check what was actually returned
 that week without re-querying (impossible anyway, since historical player
 props aren't available from the API).
