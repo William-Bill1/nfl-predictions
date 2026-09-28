@@ -8,6 +8,16 @@ bottom.
 
 ## September 2026
 
+- **Prop odds no longer freeze early in the week.** `market_odds.py`'s
+  per-week odds file was write-once, and the first fetch of a week happens
+  the night after the previous week ends - when books have posted props for
+  only a couple of games. Week 3 2026 froze at 2 of 16 games (4 matched
+  props) until a manual refresh (204). The file is now filled in per game:
+  cached games are never re-fetched, and uncovered upcoming games are re-tried
+  on every run. Checked live that a call for a game with no props posted
+  costs 0 credits, so re-trying is free and each game is paid for once
+  (~4 credits). Week 4 is the first week this applies to. 3 new tests.
+
 - **Player Props "Market Edge" fixed: it compared probabilities at different
   lines.** Refreshing Week 3 prop odds (the write-once snapshot had been taken
   Monday, when only 2 of 16 games had props posted - 4 matched props; the
