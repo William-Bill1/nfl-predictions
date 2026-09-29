@@ -1,0 +1,123 @@
+season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odds,under_odds
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Aaron Rodgers,passing_yards,draftkings,213.5,-113,-111
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Deshaun Watson,passing_yards,draftkings,186.5,-112,-112
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,DK Metcalf,receiving_yards,draftkings,42.5,-111,-113
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Harold Fannin Jr.,receiving_yards,draftkings,41.5,-111,-113
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,KC Concepcion,receiving_yards,draftkings,35.5,-110,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Denzel Boston,receiving_yards,draftkings,33.5,-115,-109
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Michael Pittman Jr.,receiving_yards,draftkings,32.5,-111,-113
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Pat Freiermuth,receiving_yards,draftkings,29.5,-109,-115
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,receiving_yards,draftkings,22.5,-114,-110
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Roman Wilson,receiving_yards,draftkings,22.5,-113,-111
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Darnell Washington,receiving_yards,draftkings,15.5,-107,-117
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Raheim Sanders,receiving_yards,draftkings,13.5,-107,-117
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jerry Jeudy,receiving_yards,draftkings,12.5,-116,-108
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,receiving_yards,draftkings,12.5,-116,-108
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Harold Fannin Jr.,receptions,draftkings,4.5,-111,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,KC Concepcion,receptions,draftkings,3.5,-133,104
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Pat Freiermuth,receptions,draftkings,3.5,-124,-103
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,DK Metcalf,receptions,draftkings,3.5,-120,-106
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Michael Pittman Jr.,receptions,draftkings,3.5,103,-132
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,receptions,draftkings,3.5,118,-150
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Denzel Boston,receptions,draftkings,2.5,-147,115
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Roman Wilson,receptions,draftkings,2.5,109,-139
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,receptions,draftkings,2.5,136,-174
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Raheim Sanders,receptions,draftkings,2.5,140,-180
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Darnell Washington,receptions,draftkings,1.5,-179,140
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jerry Jeudy,receptions,draftkings,1.5,147,-188
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,rushing_yards,draftkings,65.5,-113,-111
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,rushing_yards,draftkings,55.5,-109,-115
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Deshaun Watson,rushing_yards,draftkings,29.5,-111,-113
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Aaron Rodgers,rushing_yards,draftkings,1.5,-109,-115
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Aaron Rodgers,passing_yards,fanduel,212.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Deshaun Watson,passing_yards,fanduel,187.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Harold Fannin Jr.,receiving_yards,fanduel,40.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,KC Concepcion,receiving_yards,fanduel,33.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Denzel Boston,receiving_yards,fanduel,35.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Pat Freiermuth,receiving_yards,fanduel,29.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jerry Jeudy,receiving_yards,fanduel,13.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Darnell Washington,receiving_yards,fanduel,15.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,DK Metcalf,receiving_yards,fanduel,41.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Roman Wilson,receiving_yards,fanduel,22.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,receiving_yards,fanduel,12.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Raheim Sanders,receiving_yards,fanduel,12.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,receiving_yards,fanduel,22.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Michael Pittman Jr.,receiving_yards,fanduel,34.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,DK Metcalf,receptions,fanduel,3.5,-122,-108
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Darnell Washington,receptions,fanduel,1.5,-188,140
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,KC Concepcion,receptions,fanduel,3.5,-125,-106
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Pat Freiermuth,receptions,fanduel,3.5,-122,-108
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Harold Fannin Jr.,receptions,fanduel,4.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,receptions,fanduel,2.5,140,-188
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jerry Jeudy,receptions,fanduel,1.5,134,-180
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Denzel Boston,receptions,fanduel,2.5,-146,110
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Raheim Sanders,receptions,fanduel,1.5,-198,146
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Michael Pittman Jr.,receptions,fanduel,3.5,106,-140
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Roman Wilson,receptions,fanduel,2.5,-102,-130
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,receptions,fanduel,3.5,116,-154
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Aaron Rodgers,rushing_yards,fanduel,0.5,-140,108
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Deshaun Watson,rushing_yards,fanduel,29.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Quinshon Judkins,rushing_yards,fanduel,55.5,-114,-114
+2026,4,2026_04_PIT_CLE,Cleveland Browns,Pittsburgh Steelers,Jaylen Warren,rushing_yards,fanduel,65.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Daniel Jones,passing_yards,draftkings,225.5,-112,-112
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Marcus Mariota,passing_yards,draftkings,211.5,-111,-113
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Josh Downs,receiving_yards,draftkings,64.5,-113,-111
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Terry McLaurin,receiving_yards,draftkings,55.5,-110,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Tyler Warren,receiving_yards,draftkings,46.5,-112,-112
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Keenan Allen,receiving_yards,draftkings,33.5,-113,-111
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,receiving_yards,draftkings,19.5,-112,-112
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Tyler Warren,receptions,draftkings,5.5,-104,-123
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Josh Downs,receptions,draftkings,5.5,111,-141
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Terry McLaurin,receptions,draftkings,4.5,-109,-117
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Keenan Allen,receptions,draftkings,3.5,-106,-120
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,receptions,draftkings,2.5,-128,101
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,rushing_yards,draftkings,92.5,-114,-110
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jacory Croskey-Merritt,rushing_yards,draftkings,54.5,-112,-112
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Marcus Mariota,rushing_yards,draftkings,29.5,-110,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Daniel Jones,rushing_yards,draftkings,11.5,-114,-110
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Marcus Mariota,passing_yards,fanduel,212.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Daniel Jones,passing_yards,fanduel,224.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,receiving_yards,fanduel,19.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Terry McLaurin,receiving_yards,fanduel,55.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Keenan Allen,receiving_yards,fanduel,33.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Tyler Warren,receiving_yards,fanduel,46.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Josh Downs,receiving_yards,fanduel,64.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Tyler Warren,receptions,fanduel,5.5,-102,-130
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Terry McLaurin,receptions,fanduel,4.5,-118,-112
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Josh Downs,receptions,fanduel,5.5,118,-158
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,receptions,fanduel,2.5,-130,-102
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Keenan Allen,receptions,fanduel,3.5,-108,-122
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Daniel Jones,rushing_yards,fanduel,11.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Marcus Mariota,rushing_yards,fanduel,30.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jonathan Taylor,rushing_yards,fanduel,92.5,-114,-114
+2026,4,2026_04_IND_WAS,Washington Commanders,Indianapolis Colts,Jacory Croskey-Merritt,rushing_yards,fanduel,54.5,-114,-114
+2026,4,2026_04_NE_BUF,Buffalo Bills,New England Patriots,Drake Maye,passing_yards,fanduel,230.5,-114,-114
+2026,4,2026_04_NE_BUF,Buffalo Bills,New England Patriots,Josh Allen,passing_yards,fanduel,241.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Joe Burrow,passing_yards,draftkings,265.5,-112,-112
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Trevor Lawrence,passing_yards,draftkings,264.5,-112,-112
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Ja'Marr Chase,receiving_yards,draftkings,78.5,-110,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Parker Washington,receiving_yards,draftkings,73.5,-112,-112
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Tee Higgins,receiving_yards,draftkings,59.5,-114,-110
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Jakobi Meyers,receiving_yards,draftkings,39.5,-114,-110
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Ja'Marr Chase,receptions,draftkings,6.5,-129,101
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Parker Washington,receptions,draftkings,5.5,-104,-123
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Tee Higgins,receptions,draftkings,4.5,114,-145
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Jakobi Meyers,receptions,draftkings,3.5,-145,114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Chase Brown,rushing_yards,draftkings,65.5,-114,-110
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Bhayshul Tuten,rushing_yards,draftkings,53.5,-111,-113
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Trevor Lawrence,passing_yards,fanduel,265.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Joe Burrow,passing_yards,fanduel,267.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Tee Higgins,receiving_yards,fanduel,60.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Ja'Marr Chase,receiving_yards,fanduel,76.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Jakobi Meyers,receiving_yards,fanduel,40.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Parker Washington,receiving_yards,fanduel,72.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Parker Washington,receptions,fanduel,5.5,106,-140
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Ja'Marr Chase,receptions,fanduel,6.5,-122,-108
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Tee Higgins,receptions,fanduel,4.5,106,-140
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Jakobi Meyers,receptions,fanduel,3.5,-148,112
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Bhayshul Tuten,rushing_yards,fanduel,53.5,-114,-114
+2026,4,2026_04_JAX_CIN,Cincinnati Bengals,Jacksonville Jaguars,Chase Brown,rushing_yards,fanduel,66.5,-114,-114
+2026,4,2026_04_KC_LV,Las Vegas Raiders,Kansas City Chiefs,Kirk Cousins,passing_yards,fanduel,225.5,-114,-114
+2026,4,2026_04_KC_LV,Las Vegas Raiders,Kansas City Chiefs,Patrick Mahomes,passing_yards,fanduel,236.5,-114,-114
+2026,4,2026_04_KC_LV,Las Vegas Raiders,Kansas City Chiefs,Ashton Jeanty,rushing_yards,fanduel,60.5,-114,-114
+2026,4,2026_04_KC_LV,Las Vegas Raiders,Kansas City Chiefs,Kenneth Walker III,rushing_yards,fanduel,91.5,-114,-114
