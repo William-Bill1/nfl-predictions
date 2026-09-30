@@ -65,6 +65,7 @@ week,date,home_team,away_team,venue,status
 4,2026-10-05,NO,ATL,Caesars Superdome,REG
 5,2026-10-08,DAL,TB,AT&T Stadium,REG
 5,2026-10-11,JAX,PHI,Tottenham Hotspur Stadium,REG
+5,2026-10-11,GB,CHI,Lambeau Field,REG
 5,2026-10-11,MIA,CIN,Hard Rock Stadium,REG
 5,2026-10-11,NE,LV,Gillette Stadium,REG
 5,2026-10-11,NO,MIN,Caesars Superdome,REG
@@ -74,7 +75,6 @@ week,date,home_team,away_team,venue,status
 5,2026-10-11,WAS,NYG,Northwest Stadium,REG
 5,2026-10-11,LAC,DEN,SoFi Stadium,REG
 5,2026-10-11,ARI,DET,State Farm Stadium,REG
-5,2026-10-11,GB,CHI,Lambeau Field,REG
 5,2026-10-11,SEA,SF,Lumen Field,REG
 5,2026-10-11,ATL,BAL,Mercedes-Benz Stadium,REG
 5,2026-10-12,LA,BUF,SoFi Stadium,REG
