@@ -1,10 +1,25 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-09-30T09:16:42.580836+00:00",
+    "generated_at": "2026-10-01T09:43:26.716012+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-09-30"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-10-01",
+      "game_time": "20:15",
+      "game": "PIT @ CLE",
+      "home_team": "CLE",
+      "away_team": "PIT",
+      "bet_type": "Spread",
+      "pick": "CLE +2.5",
+      "confidence": 0.5666600530743701,
+      "edge": 0.06666005307437,
+      "tier": "Strong",
+      "odds": 100,
+      "line": 2.5,
+      "notes": null
+    }
+  ]
 }
