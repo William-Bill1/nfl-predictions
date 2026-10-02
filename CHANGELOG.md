@@ -8,6 +8,14 @@ bottom.
 
 ## October 2026
 
+- Added `scripts/rolling_spread_backtest.py`, a read-only weekly backtest
+  of the spread model. Each week it retrains using only earlier games, with
+  team stats built from earlier games only, and keeps the fit and calibration
+  periods separate. It compares the model with a 50% guess, devigged closing
+  odds and a logistic model on |spread|. Results are reported per season with
+  week-resampled confidence intervals, and frozen pregame predictions are
+  scored separately. See `docs/ROLLING_SPREAD_BACKTEST.md`. Production
+  training and predictions are unchanged.
 - Spread Value Finder and model line shopping now use the offered American
   price for break-even probability. A -110 quote requires 52.38%, not the
   margin-free 50%. The page labels this column "Break-even %".
