@@ -1,0 +1,5 @@
+game_id,recommended_team,spread_line,previous_result,previous_profit,corrected_result,corrected_profit,corrected_at,reason
+2026_01_NE_SEA,NE,3.5,push,0.0,win,90.91,2026-10-02,"graded against line recorded at log time (not closing line), assumed -110"
+2026_03_TEN_NYG,TEN,5.5,loss,-100.0,win,90.91,2026-10-02,"graded against line recorded at log time (not closing line), assumed -110"
+2026_02_SEA_ARI,Pick,0.0,loss,-100.0,unresolved,,2026-10-02T11:49:00,no team recorded (recommended_team='Pick'); excluded from totals
+2026_04_PIT_CLE,Pick,0.0,win,90.91,unresolved,,2026-10-02T11:49:00,no team recorded (recommended_team='Pick'); excluded from totals

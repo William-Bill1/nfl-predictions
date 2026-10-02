@@ -62,3 +62,14 @@ def test_by_week_and_by_tier(tmp_path):
     assert weeks[2]["win"] == 1
     assert r["by_tier"]["Elite"]["win"] == 1
     assert "Lean" not in r["by_tier"]  # no Lean rows -> not emitted
+
+
+def test_unresolved_rows_excluded_and_listed(tmp_path):
+    rows = [_row(1, "Good", "win"), _row(1, "Good", "loss"),
+            dict(bet_type="spread", week=2, confidence_tier="Good",
+                 bet_result="unresolved", bet_profit="")]
+    r = wsr.build_report(_write(tmp_path, rows))
+    o = r["overall"]
+    assert (o["settled"], o["unresolved"], o["win_rate"]) == (2, 1, 0.5)
+    assert o["profit"] == pytest.approx(-9.09, abs=0.01)
+    assert [g["week"] for g in r["unresolved_games"]] == [2]

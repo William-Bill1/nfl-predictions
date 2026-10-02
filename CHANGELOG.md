@@ -6,6 +6,27 @@ bottom.
 
 ---
 
+## October 2026
+
+- Spread Value Finder and model line shopping now use the offered American
+  price for break-even probability. A -110 quote requires 52.38%, not the
+  margin-free 50%. The page labels this column "Break-even %".
+- Spread recommendations freeze the team handicap, assumed -110 odds and
+  odds source. Settlement uses final scores and the original bet, never
+  the latest line or cover labels. Legacy rows use their recorded nflverse
+  line and a -110 assumption, labelled in `odds_source`. Legacy "Pick" rows
+  (logged before a line existed, no team recorded) are marked `unresolved`,
+  excluded from every total and listed in `spread_performance.json` under
+  `unresolved_games`; no team is inferred. `python betting_log.py --regrade`
+  corrects settled results and appends each change to
+  `data_files/settlement_corrections_YYYYMMDD.csv`. Profits are per $100 risk
+  at recorded odds. Repeat logging deduplicates settled rows too, and games
+  without a posted line are no longer logged.
+- 2 Oct regrade: NE +3.5 (wk 1) push -> win and TEN +5.5 (wk 3) loss -> win
+  (graded against the recorded line, not the later closing line); SEA@ARI
+  (wk 2) and PIT@CLE (wk 4) "Pick" rows -> unresolved. Season record moves
+  from 10-8-3 to 12-6-2 with 2 unresolved.
+
 ## September 2026
 
 - **Prop odds no longer freeze early in the week.** `market_odds.py`'s

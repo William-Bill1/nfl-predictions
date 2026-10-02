@@ -113,13 +113,13 @@ class TestComputeBookEdges:
 
         assert home["team"] == "NYJ"
         assert home["fair_prob"] == pytest.approx(0.602, abs=0.001)
-        assert home["required_prob"] == pytest.approx(0.6344, abs=1e-4)
-        assert home["edge_pts"] == pytest.approx(-3.2, abs=0.1)
+        assert home["required_prob"] == pytest.approx(227/327)
+        assert home["edge_pts"] == pytest.approx(-9.2, abs=0.1)
 
         assert away["team"] == "GB"
         assert away["fair_prob"] == pytest.approx(0.398, abs=0.001)
-        assert away["required_prob"] == pytest.approx(0.3656, abs=1e-4)
-        assert away["edge_pts"] == pytest.approx(3.2, abs=0.1)
+        assert away["required_prob"] == pytest.approx(100/327)
+        assert away["edge_pts"] == pytest.approx(9.2, abs=0.1)
 
     def test_labels_match_raw_bettor_facing_columns(self):
         # Regression: output must be read straight from home_point/away_point
@@ -147,9 +147,9 @@ class TestComputeBookEdges:
         edges = svf.compute_book_edges(df, "playnow_ca")
         assert edges.empty
 
-    def test_missing_devigged_prob_skips_row(self):
+    def test_missing_price_skips_row(self):
         df = _gb_nyj_fixture()
-        df.loc[df["book_key"] == "playnow_ca", "home_implied_prob_devigged"] = None
+        df.loc[df["book_key"] == "playnow_ca", "home_price"] = None
         edges = svf.compute_book_edges(df, "playnow_ca")
         assert edges.empty
 
@@ -170,3 +170,15 @@ class TestComputeBookEdges:
         df = pd.concat([_gb_nyj_fixture(), week3_rows], ignore_index=True)
         edges_wk3 = svf.compute_book_edges(df, "playnow_ca", week=3)
         assert set(edges_wk3["week"]) == {3}
+
+@pytest.mark.parametrize("odds,expected", [(-110, 110/210), (-175, 175/275), (150, .4)])
+def test_actual_price_break_even(odds, expected):
+    assert svf.break_even_probability(odds) == pytest.approx(expected)
+
+
+def test_even_field_at_minus110_has_negative_edge():
+    df = _gb_nyj_fixture()
+    df.loc[df.book_key == "playnow_ca", ["home_point", "away_point", "home_spread_normalized",
+                                        "home_price", "away_price"]] = [3.5, -3.5, -3.5, -110, -110]
+    edges = svf.compute_book_edges(df, "playnow_ca")
+    assert (edges.edge_pts < 0).all()
