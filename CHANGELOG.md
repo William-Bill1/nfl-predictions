@@ -26,6 +26,14 @@ bottom.
   (graded against the recorded line, not the later closing line); SEA@ARI
   (wk 2) and PIT@CLE (wk 4) "Pick" rows -> unresolved. Season record moves
   from 10-8-3 to 12-6-2 with 2 unresolved.
+- Regrades always leave an audit record. `grade_pending(regrade=True)` now
+  defaults to a dated `settlement_corrections_YYYYMMDD.csv` beside the log
+  when no audit path is given; before, corrections were silently dropped.
+  The audit is written before the log, and each file is replaced atomically.
+  If the audit write fails the log is unchanged; if the log write fails the
+  audit is restored. This covers errors Python can catch, not a crash
+  between the two writes. Existing audit entries are kept, and repeating a
+  regrade adds no duplicate rows.
 
 ## September 2026
 

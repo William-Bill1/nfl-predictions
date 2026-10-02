@@ -22,6 +22,8 @@ from __future__ import annotations
 
 import os
 import math
+import shutil
+import tempfile
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -139,8 +141,17 @@ def grade_pending(preds_df: pd.DataFrame, log_path: str = LOG_PATH, *, regrade: 
                   audit_path: str | None = None) -> int:
     """Grade pending rows whose game has a final score. Returns rows graded.
 
-    With regrade=True, already-settled and unresolved rows are re-settled too;
-    any change to a previously settled result is appended to `audit_path`.
+    With regrade=True, already-settled and unresolved rows are re-settled too.
+    Every change to a previously settled result is appended to `audit_path`
+    (default: `default_audit_path(log_path)`, a dated file next to the log)
+    BEFORE the log is rewritten. Each file is replaced atomically on its own
+    (temp file + os.replace). If the audit write raises, the log is left
+    untouched; if the log write raises, the audit is restored to its prior
+    bytes. This is rollback for handled exceptions, not a crash-safe two-file
+    transaction: a process kill between the two replaces leaves audit rows for
+    corrections the log doesn't yet have (a later regrade would record them
+    again). A regrade that changes nothing writes no audit rows, so repeated
+    regrades are idempotent.
     """
     if preds_df is None or not os.path.exists(log_path) or os.path.getsize(log_path) == 0:
         return 0
@@ -197,13 +208,70 @@ def grade_pending(preds_df: pd.DataFrame, log_path: str = LOG_PATH, *, regrade: 
                 "corrected_at": datetime.now().isoformat(timespec="seconds"), "reason": reason,
             })
 
-    if graded:
-        log_df.to_csv(log_path, index=False)
-    if corrections and audit_path:
-        audit = pd.DataFrame(corrections, columns=AUDIT_COLUMNS)
-        header = not os.path.exists(audit_path) or os.path.getsize(audit_path) == 0
-        audit.to_csv(audit_path, mode="a", header=header, index=False)
+    if not graded:
+        return 0
+    restore_audit = None
+    if corrections:
+        # Audit first: a changed historical settlement is never written
+        # without its correction record.
+        restore_audit = _append_audit(audit_path or default_audit_path(log_path), corrections)
+    try:
+        _atomic_replace(log_path, lambda tmp: log_df.to_csv(tmp, index=False))
+    except BaseException:
+        if restore_audit:
+            restore_audit()
+        raise
     return graded
+
+
+def default_audit_path(log_path: str = LOG_PATH, when: datetime | None = None) -> str:
+    """Dated corrections file next to the log: settlement_corrections_YYYYMMDD.csv."""
+    when = when or datetime.now()
+    return os.path.join(os.path.dirname(log_path) or ".", f"settlement_corrections_{when:%Y%m%d}.csv")
+
+
+def _atomic_replace(path: str, write) -> None:
+    """Call write(tmp_path) on a temp file beside `path`, then swap it in."""
+    fd, tmp = tempfile.mkstemp(prefix=".tmp_", suffix=".csv", dir=os.path.dirname(path) or ".")
+    os.close(fd)
+    try:
+        write(tmp)
+        os.replace(tmp, path)
+    except BaseException:
+        if os.path.exists(tmp):
+            os.remove(tmp)
+        raise
+
+
+def _append_audit(audit_path: str, corrections: list[dict]):
+    """Append correction rows atomically, keeping existing entries.
+
+    Returns a callable that restores the audit file to its prior state.
+    """
+    original = None                     # prior bytes, or None if the file didn't exist
+    if os.path.exists(audit_path):
+        with open(audit_path, "rb") as f:
+            original = f.read()
+    existed = bool(original)            # non-empty file -> append without a header
+    audit = pd.DataFrame(corrections, columns=AUDIT_COLUMNS)
+
+    def write(tmp):
+        if existed:
+            shutil.copyfile(audit_path, tmp)
+        audit.to_csv(tmp, mode="a" if existed else "w", header=not existed, index=False)
+
+    _atomic_replace(audit_path, write)
+
+    def restore():
+        if original is None:
+            if os.path.exists(audit_path):
+                os.remove(audit_path)
+        else:
+            def put_back(tmp):
+                with open(tmp, "wb") as f:
+                    f.write(original)
+            _atomic_replace(audit_path, put_back)
+    return restore
 
 
 def _settle(row, g) -> tuple[str | None, float | None, str]:
@@ -257,8 +325,7 @@ def main() -> None:
         return
     preds = pd.read_csv(PREDICTIONS_PATH, sep="\t")
     added = append_recommendations(preds)
-    audit_path = os.path.join(DATA_DIR, f"settlement_corrections_{datetime.now():%Y%m%d}.csv")
-    graded = grade_pending(preds, regrade=args.regrade, audit_path=audit_path)
+    graded = grade_pending(preds, regrade=args.regrade, audit_path=default_audit_path(LOG_PATH))
     print(f"[betting_log] appended {added} new spread rec(s), graded {graded} finished bet(s)")
     if os.path.exists(LOG_PATH) and os.path.getsize(LOG_PATH) > 0:
         log = pd.read_csv(LOG_PATH)

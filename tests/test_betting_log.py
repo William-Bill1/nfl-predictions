@@ -196,3 +196,84 @@ def test_append_skips_games_without_a_line(tmp_path):
                          pred_spreadCovered_optimal=1, prob_underdogCovered=0.6)])
     log = tmp_path / "log.csv"
     assert bl.append_recommendations(preds, str(log)) == 0
+
+
+class TestRegradeAuditTrail:
+    """A changed historical settlement is never written without its audit record."""
+
+    @staticmethod
+    def _settled_wrong(tmp_path):
+        # Real case 2026_01_NE_SEA: graded "push" from closing-line labels; the
+        # recorded NE +3.5 bet actually won (NE lost by 3).
+        return _legacy_log(tmp_path, bet_result="push", bet_profit=0.0)
+
+    def test_regrade_without_audit_path_uses_dated_default(self, tmp_path):
+        path = self._settled_wrong(tmp_path)
+        assert bl.grade_pending(_final(13, 10, 3.0), path, regrade=True) == 1
+        assert pd.read_csv(path).iloc[0].bet_result == "win"
+        default = tmp_path / f"settlement_corrections_{datetime.now():%Y%m%d}.csv"
+        assert bl.default_audit_path(str(path)) == str(default)
+        audit = pd.read_csv(default)
+        assert list(audit.columns) == bl.AUDIT_COLUMNS
+        assert (audit.iloc[0].previous_result, audit.iloc[0].corrected_result) == ("push", "win")
+
+    def test_audit_write_failure_leaves_log_unchanged(self, tmp_path):
+        path = self._settled_wrong(tmp_path)
+        before = path.read_bytes()
+        unwritable = tmp_path / "missing_dir" / "audit.csv"
+        with pytest.raises(OSError):
+            bl.grade_pending(_final(13, 10, 3.0), path, regrade=True, audit_path=str(unwritable))
+        assert path.read_bytes() == before
+        assert not unwritable.exists()
+        assert sorted(p.name for p in tmp_path.iterdir()) == ["bets.csv"]   # no temp files left
+
+    @pytest.mark.parametrize("prior", [None, "", "game_id,previous_result\nold,loss\n"],
+                             ids=["no-audit-file", "empty-audit-file", "existing-entries"])
+    def test_log_write_failure_restores_audit(self, tmp_path, monkeypatch, prior):
+        path = self._settled_wrong(tmp_path)
+        audit = tmp_path / "audit.csv"
+        if prior is not None:
+            audit.write_text(prior)
+        audit_before = audit.read_bytes() if prior is not None else None
+        log_before = path.read_bytes()
+        real_replace = bl._atomic_replace
+
+        def fail_on_log(target, write):
+            if str(target) == str(path):
+                raise OSError("disk full")
+            return real_replace(target, write)
+
+        monkeypatch.setattr(bl, "_atomic_replace", fail_on_log)
+        with pytest.raises(OSError):
+            bl.grade_pending(_final(13, 10, 3.0), path, regrade=True, audit_path=str(audit))
+        assert (audit.read_bytes() if audit.exists() else None) == audit_before
+        assert path.read_bytes() == log_before
+        expected = ["audit.csv", "bets.csv"] if prior is not None else ["bets.csv"]
+        assert sorted(p.name for p in tmp_path.iterdir()) == expected   # no temp files left
+
+    def test_existing_audit_entries_are_preserved(self, tmp_path):
+        path = self._settled_wrong(tmp_path)
+        audit = tmp_path / "audit.csv"
+        earlier = pd.DataFrame([dict(game_id="2026_03_TEN_NYG", recommended_team="TEN", spread_line=5.5,
+                                     previous_result="loss", previous_profit=-100.0,
+                                     corrected_result="win", corrected_profit=90.91,
+                                     corrected_at="2026-10-02", reason="earlier correction")],
+                               columns=bl.AUDIT_COLUMNS)
+        earlier.to_csv(audit, index=False)
+        bl.grade_pending(_final(13, 10, 3.0), path, regrade=True, audit_path=str(audit))
+        out = pd.read_csv(audit)
+        assert list(out.game_id) == ["2026_03_TEN_NYG", "g"]
+        assert out.iloc[0].reason == "earlier correction"
+
+    def test_repeated_regrades_add_no_duplicate_corrections(self, tmp_path):
+        path = self._settled_wrong(tmp_path)
+        audit = tmp_path / "audit.csv"
+        for _ in range(3):
+            bl.grade_pending(_final(13, 10, 3.0), path, regrade=True, audit_path=str(audit))
+        assert len(pd.read_csv(audit)) == 1
+        assert pd.read_csv(path).iloc[0].bet_result == "win"
+
+    def test_unchanged_regrade_writes_no_audit_file(self, tmp_path):
+        path = _legacy_log(tmp_path, bet_result="win", bet_profit=90.91)
+        bl.grade_pending(_final(13, 10, 3.0), path, regrade=True)
+        assert not (tmp_path / f"settlement_corrections_{datetime.now():%Y%m%d}.csv").exists()

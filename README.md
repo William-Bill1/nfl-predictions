@@ -200,6 +200,33 @@ python update_pbp_smart.py             # refresh the play-by-play LFS file (only
 4. If the dashboard reads the new column, add it there too — `predictions.py`
    and `pages/` load the same predictions CSV.
 
+### Spread pricing and settlement
+
+Value Finder's **Break-even %** uses the actual offered American odds,
+including bookmaker margin. Margin-free market probabilities are not cash
+break-even rates. Extrapolated cover probabilities remain estimates; pushes
+are not modeled by the normal approximation.
+
+The betting log stores `bet_spread` (the recommended team's signed handicap),
+`bet_odds`, and `odds_source`. Model signals assume -110 and $100 risk;
+these are simulated recommendations, not records of placed sportsbook bets.
+Legacy records retain their original `spread_line`; settlement converts that
+line for the recorded team and assumes -110 (`odds_source` says so). To
+correct existing settled records after refreshing final scores, run
+`python betting_log.py --regrade`, then `python scripts/weekly_spread_report.py`.
+Every changed result is appended to `data_files/settlement_corrections_YYYYMMDD.csv`
+(previous and corrected result/profit, timestamp, reason). `grade_pending(regrade=True)`
+defaults to that dated file when no audit path is given. The audit is written
+before the log, and each file is replaced atomically. If the audit write fails,
+the log is unchanged; if the log write fails, the audit is restored. This covers
+errors Python can catch, not a crash between the two writes, so it isn't a
+two-file transaction. Repeating a regrade adds no duplicate rows.
+
+Rows with no recorded team (legacy "Pick" rows logged before a line was
+posted) are marked `unresolved`. They stay in the log but are excluded from
+win rate, profit and ROI, and are listed under `unresolved_games` in
+`spread_performance.json`.
+
 ### Conventions
 
 - Season-year logic is centralized in [`season_utils.py`](season_utils.py)
