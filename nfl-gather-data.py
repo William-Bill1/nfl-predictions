@@ -56,12 +56,34 @@ def require_chronological(games: pd.DataFrame) -> None:
     """Raise ValueError unless `games` rows are in (season, week) order.
 
     The temporal splits below cut by row position, so out-of-order training
-    rows would put later games into the training slice. An explicit raise
-    (not `assert`) so the guard still runs under `python -O`.
+    rows would put later games into the training slice. Every row must have a
+    numeric season and week first: a missing value compares False with
+    everything and would otherwise slip through the order check. Ties (same
+    season and week) are allowed. Explicit raises (not `assert`) so the guard
+    still runs under `python -O`.
     """
-    key = (pd.to_numeric(games['season'], errors='coerce') * 100
-           + pd.to_numeric(games['week'], errors='coerce')).to_numpy()
-    back = np.flatnonzero(key[1:] < key[:-1])
+    values = {}
+    for field in ('season', 'week'):
+        if field not in games.columns:
+            raise ValueError(f"nfl_games_historical.csv has no '{field}' column; "
+                             "the temporal split needs season and week for every played game.")
+        raw = games[field]
+        num = pd.to_numeric(raw, errors='coerce')
+        bad = np.flatnonzero(num.isna().to_numpy())
+        if len(bad):
+            i = bad[0]
+            row = games.iloc[i]
+            raise ValueError(
+                f"nfl_games_historical.csv played game {row.get('game_id', '?')} (row {i}) has a "
+                f"missing or non-numeric '{field}' ({raw.iloc[i]!r}); every played game needs a "
+                f"season and week for the temporal train/validation/test split "
+                f"({len(bad)} row(s) affected)."
+            )
+        values[field] = num.to_numpy(dtype=float)
+
+    season, week = values['season'], values['week']
+    later_first = (season[:-1] > season[1:]) | ((season[:-1] == season[1:]) & (week[:-1] > week[1:]))
+    back = np.flatnonzero(later_first)
     if len(back):
         i = back[0] + 1
         row, prev = games.iloc[i], games.iloc[i - 1]

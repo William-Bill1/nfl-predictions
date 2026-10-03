@@ -50,20 +50,88 @@ class TestChronologicalGuard:
                 gd.main()
         assert not (tmp_path / "nfl_games_historical_with_predictions.csv").exists()  # stopped before writing
 
-    def test_guard_still_runs_under_python_O(self, tmp_path):
-        raw = _schedule(seasons=(2020,), weeks=4).iloc[::-1]
-        raw.to_csv(tmp_path / "unsorted.csv", sep="\t", index=False)
+    @pytest.mark.parametrize("case,expected", [
+        ("unsorted", "ordered by (season, week)"),
+        ("missing_week", "missing or non-numeric 'week'"),
+    ])
+    def test_guard_still_runs_under_python_O(self, tmp_path, case, expected):
+        raw = _schedule(seasons=(2020,), weeks=4)
+        if case == "unsorted":
+            raw = raw.iloc[::-1]
+        else:
+            raw.loc[raw.index[3], "week"] = np.nan
+        raw.to_csv(tmp_path / "games.csv", sep="\t", index=False)
         code = (
             "import importlib.util, sys, pandas as pd\n"
             f"spec = importlib.util.spec_from_file_location('g', r'{ROOT / 'nfl-gather-data.py'}')\n"
             "g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)\n"
             "assert False, 'asserts are on'  # skipped under -O\n"
-            f"g.require_chronological(pd.read_csv(r'{tmp_path / 'unsorted.csv'}', sep='\\t'))\n"
+            f"g.require_chronological(pd.read_csv(r'{tmp_path / 'games.csv'}', sep='\\t'))\n"
         )
         res = subprocess.run([sys.executable, "-O", "-c", code], cwd=ROOT, capture_output=True, text=True)
         assert res.returncode != 0
-        assert "ValueError" in res.stderr and "ordered by (season, week)" in res.stderr
+        assert "ValueError" in res.stderr and expected in res.stderr
         assert "asserts are on" not in res.stderr          # proves -O really disabled asserts
+
+
+class TestSeasonWeekValidation:
+    """Missing / non-numeric season or week is rejected before the order check."""
+
+    @staticmethod
+    def _gd():
+        return _load("nfl_gather_data_guard_values", "nfl-gather-data.py")
+
+    @staticmethod
+    def _games(rows):
+        return pd.DataFrame(rows, columns=["game_id", "season", "week"])
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    def test_single_row_with_missing_value_is_rejected(self, field):
+        one = self._games([("2020_01_A_B", 2020, 1)])
+        one[field] = np.nan
+        with pytest.raises(ValueError, match=rf"2020_01_A_B \(row 0\) has a missing or non-numeric '{field}'"):
+            self._gd().require_chronological(one)
+
+    @pytest.mark.parametrize("field,position", [("season", 0), ("season", 2), ("week", 1), ("week", 3)])
+    def test_missing_value_anywhere_is_rejected(self, field, position):
+        # Otherwise-sorted input: NaN compares False, so the old order check let it through.
+        games = self._games([("g0", 2020, 1), ("g1", 2020, 2), ("g2", 2020, 3), ("g3", 2021, 1)])
+        games[field] = games[field].astype(float)
+        games.loc[position, field] = np.nan
+        with pytest.raises(ValueError, match=rf"g{position} \(row {position}\) has a missing or non-numeric '{field}'"):
+            self._gd().require_chronological(games)
+
+    def test_non_numeric_value_is_rejected(self):
+        games = self._games([("g0", 2020, 1), ("g1", 2020, "wild card")])
+        with pytest.raises(ValueError, match=r"g1 \(row 1\).*'week' \('wild card'\)"):
+            self._gd().require_chronological(games)
+
+    def test_missing_column_is_rejected(self):
+        with pytest.raises(ValueError, match="no 'week' column"):
+            self._gd().require_chronological(pd.DataFrame({"game_id": ["g0"], "season": [2020]}))
+
+    def test_missing_value_reported_before_ordering(self):
+        games = self._games([("g0", 2021, 1), ("g1", 2020, 5), ("g2", 2020, None)])
+        with pytest.raises(ValueError, match=r"g2 \(row 2\).*'week'"):
+            self._gd().require_chronological(games)
+
+    def test_valid_ties_and_season_boundaries_pass(self):
+        games = self._games([
+            ("a", 2020, 1), ("b", 2020, 1),        # same-week ties
+            ("c", 2020, 17), ("d", 2020, 22),      # regular season into playoffs
+            ("e", 2021, 1), ("f", 2021, 1),        # season boundary: week resets
+            ("g", 2021, 18),
+        ])
+        self._gd().require_chronological(games)                  # no exception
+        self._gd().require_chronological(games.iloc[[0]])        # single valid row
+
+    @pytest.mark.parametrize("rows,bad_row", [
+        ([("a", 2021, 1), ("b", 2020, 18)], 1),   # season goes backwards while week goes up
+        ([("a", 2020, 22), ("b", 2020, 1)], 1),   # playoff week before week 1 of the same season
+    ])
+    def test_backwards_across_or_within_season_is_rejected(self, rows, bad_row):
+        with pytest.raises(ValueError, match=rf"ordered by \(season, week\).*row {bad_row}"):
+            self._gd().require_chronological(self._games(rows))
 
 
 # ------------------------------------------------------ genuine pick'em --
