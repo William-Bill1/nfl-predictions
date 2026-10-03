@@ -8,6 +8,26 @@ bottom.
 
 ## October 2026
 
+- `nfl-gather-data.py`'s check that played games are in (season, week)
+  order is now an explicit `ValueError` (`require_chronological`) naming the
+  first out-of-order game. It was an `assert`, which `python -O` silently
+  skips; the temporal train/validation/test split depends on row order.
+  It first rejects any played game whose season or week is missing,
+  non-numeric, infinite (`inf`, `-inf`, `"inf"`) or fractional (e.g. week
+  1.5), or a missing column, naming the game, field and original value.
+  Missing values compare False and slipped through the order check; `inf`
+  sorted after every real week; an out-of-order `inf` crashed the message
+  with `OverflowError`. Values must also fall inside documented bounds
+  (`SEASON_BOUNDS = (1920, 2100)`, `WEEK_BOUNDS = (1, 22)`, weeks 1-18
+  regular season plus playoffs through Super Bowl week 22), checked before
+  the int64 conversion. Values of 2**63 or more (e.g. season 1e20) used to
+  wrap silently, accepting out-of-order input. Numeric strings ("2020",
+  "1.0"), same-week ties, playoff weeks and season boundaries (week resetting
+  to 1) still pass.
+  New tests cover genuine pick'em lines (`spread_line == 0`): no spread
+  probability, EV, edge or recommendation, never in training, and
+  `check_pipeline_outputs.py` fails if one carries a probability or signal.
+  No model settings or predictions changed.
 - **Production team features no longer leak results.** Team aggregates
   move to a shared `team_features.py`, used by both `nfl-gather-data.py`
   and the rolling backtest. Each game now uses only completed games from
