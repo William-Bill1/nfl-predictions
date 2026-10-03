@@ -9,10 +9,6 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.12', '3.13']
 
     steps:
       - name: Checkout repository
@@ -20,10 +16,10 @@ jobs:
         with:
           lfs: false  # the test suite doesn't need the play-by-play LFS file
 
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.14'
           cache: 'pip'
 
       - name: Install dependencies
@@ -46,10 +42,10 @@ jobs:
         with:
           lfs: false
 
-      - name: Set up Python 3.12
+      - name: Set up Python 3.14
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: '3.14'
           cache: 'pip'
 
       - name: Install dependencies
