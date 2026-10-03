@@ -974,6 +974,8 @@ def home_page():
             # Quick probabilities (if available) - compute up-front so we can place them with the left-side data
             prob_ml = game_row.get('prob_underdogWon', None)
             prob_spread = game_row.get('prob_underdogCovered', None)
+            if prob_spread is not None and pd.isna(prob_spread):
+                prob_spread = None  # no valid spread line -> no spread probability
             prob_over = game_row.get('prob_overHit', None)
 
             col_a, col_b = st.columns([3, 1])
@@ -2769,10 +2771,10 @@ def home_page():
                             'Spread': f"{favorite} -{spread}" if spread not in (None, '') else "TBD",
                             'Total': f"{pred.get('total_line', 'N/A')}" if 'total_line' in pred.index else 'N/A',
                             'Underdog Win %': f"{pred.get('prob_underdogWon', 0):.1%}" if 'prob_underdogWon' in pred.index else 'N/A',
-                            'Spread Cover %': f"{pred.get('prob_underdogCovered', 0):.1%}" if 'prob_underdogCovered' in pred.index else 'N/A',
+                            'Spread Cover %': f"{pred.get('prob_underdogCovered'):.1%}" if pd.notna(pred.get('prob_underdogCovered')) else 'N/A',
                             'Over Hit %': f"{pred.get('prob_overHit', 0):.1%}" if 'prob_overHit' in pred.index else 'N/A',
                             'ML Edge': f"{pred.get('edge_underdog_ml', 0):.1f}" if 'edge_underdog_ml' in pred.index else 'N/A',
-                            'Spread Edge': f"{pred.get('edge_underdog_spread', 0):.1f}" if 'edge_underdog_spread' in pred.index else 'N/A',
+                            'Spread Edge': f"{pred.get('edge_underdog_spread'):.1f}" if pd.notna(pred.get('edge_underdog_spread')) else 'N/A',
                             'Total Edge': f"{pred.get('edge_over', 0):.1f}" if 'edge_over' in pred.index else 'N/A',
                             'game_id': pred.get('game_id', '') if 'game_id' in pred.index else ''
                         })

@@ -44,9 +44,19 @@ if PRED.exists():
     check(not missing, f"{PRED.name} missing columns: {sorted(missing)}")
 
     if SRC.exists():
-        n_src = len(pd.read_csv(SRC, sep="\t"))
+        src = pd.read_csv(SRC, sep="\t")
+        n_src = len(src)
         check(len(df) == n_src,
               f"{PRED.name} has {len(df)} rows, expected {n_src} (same as source)")
+        # Games without a valid line (missing or 0 in the raw schedule) must
+        # carry no spread probability and no spread signal - the CSV's own
+        # spread_line is fillna(0)'d, so check against the source.
+        if len(df) == n_src and {"prob_underdogCovered", "pred_spreadCovered_optimal"} <= set(df.columns):
+            no_line = (src["spread_line"].isna() | (src["spread_line"] == 0)).to_numpy()
+            check(df.loc[no_line, "prob_underdogCovered"].isna().all(),
+                  "games without a spread line have a prob_underdogCovered")
+            check((df.loc[no_line, "pred_spreadCovered_optimal"] == 0).all(),
+                  "games without a spread line carry a spread bet signal")
 
     if "prob_underdogCovered" in df.columns:
         p = df["prob_underdogCovered"].dropna()

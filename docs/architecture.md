@@ -130,11 +130,32 @@ Coverage is partial (only games DK/FanDuel have posted props for). Details +
 rollout history in `docs/ODDS_API_INTEGRATION_PLAN.md`.
 
 ## Feature Engineering
-All features are pre-game only (zero data leakage):
+- **Team aggregates** (38: win/close/blowout %, scoring, point diff, line and
+  total averages, favored/cover/over/under/push-total %, last-3 form, point-diff
+  trend): `team_features.compute_team_features`, shared by `nfl-gather-data.py`
+  and `scripts/rolling_spread_backtest.py`.
+  - **Availability rule:** only COMPLETED games (both scores present) from
+    strictly EARLIER week keys (`season*100 + week`). The whole current week is
+    excluded, because the schedule has no "result posted" timestamp and a
+    kickoff time doesn't prove a game had finished at prediction time.
+  - **Role split:** home stats use the team's earlier home games, and away
+    stats its earlier away games. `PointDiffTrend` uses both.
+  - **Order:** results don't depend on row order. Last-N is ordered by
+    (week, kickoff, game_id).
+  - **Cold start:** 0.0.
+  - **History:** until Oct 2026, FavoredPct, SpreadCoveredPct and the
+    over/under hit rates were full-history means that included each game's
+    own result. The loop-based stats also counted unplayed earlier games as
+    0-results for games 2+ weeks out.
 - **Momentum** (8): Last 3 games win%, scoring, point differential
 - **Rest** (5): Rest day differences, well-rested ≥10d / short-rest ≤6d flags
 - **Weather** (3): Cold ≤32°F, windy ≥15mph, extreme conditions
-- Rolling stats: `prior_games = df[(team) & ((season < s) | (season == s & week < w))]`
+- **Missing lines:** `_valid_line` (non-missing, non-zero `spread_line`) is
+  captured before `fillna(0)`. Games without a valid line get NaN
+  `prob_underdogCovered` / `ev_spread` / `edge_underdog_spread` and
+  `pred_spreadCovered_optimal = 0`, and are never trained on. The CSV's
+  `spread_line` is still written as 0 for those games (schema unchanged);
+  read a missing probability as "no line".
 
 ## API Integrations
 | Source | Purpose | Notes |
