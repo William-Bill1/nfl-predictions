@@ -124,7 +124,7 @@ with tab_book:
         sign = "+" if best["line"] >= 0 else ""
         st.success(
             f"🏆 Best edge: **{best['team']} {sign}{best['line']:.1f} ({best['price']:+.0f})** "
-            f"vs {best['opponent']} - fair {best['fair_prob']:.1%} / required "
+            f"vs {best['opponent']} - fair {best['fair_prob']:.1%} / break-even "
             f"{best['required_prob']:.1%} → **{best['edge_pts']:+.1f}pt**"
         )
 
@@ -133,10 +133,10 @@ with tab_book:
         display["Line"] = display["line"].map(lambda v: f"{'+' if v >= 0 else ''}{v:.1f}")
         display["Price"] = display["price"].map(lambda v: f"{v:+.0f}")
         display["Fair %"] = display["fair_prob"].map("{:.1%}".format)
-        display["Required %"] = display["required_prob"].map("{:.1%}".format)
+        display["Break-even %"] = display["required_prob"].map("{:.1%}".format)
         display["Edge (pt)"] = display["edge_pts"].map(lambda v: f"{v:+.1f}")
         display = display.rename(columns={"week": "Week"})[
-            ["Week", "Matchup", "Line", "Price", "Fair %", "Required %", "Edge (pt)"]
+            ["Week", "Matchup", "Line", "Price", "Fair %", "Break-even %", "Edge (pt)"]
         ]
 
         st.dataframe(
@@ -218,10 +218,10 @@ with tab_model:
                 display["Line"] = display["book_line"].map(lambda v: f"{'+' if v >= 0 else ''}{v:.1f}")
                 display["Price"] = display["book_price"].map(lambda v: f"{v:+.0f}")
                 display["Extrapolated %"] = display["extrapolated_prob"].map("{:.1%}".format)
-                display["Required %"] = display["required_prob"].map("{:.1%}".format)
+                display["Break-even %"] = display["required_prob"].map("{:.1%}".format)
                 display["Edge (pt)"] = display["edge_pts"].map(lambda v: f"{v:+.1f}")
                 display = display.rename(columns={"book_title": "Book", "region": "Region"})[
-                    ["Book", "Region", "Line", "Price", "Extrapolated %", "Required %", "Edge (pt)"]
+                    ["Book", "Region", "Line", "Price", "Extrapolated %", "Break-even %", "Edge (pt)"]
                 ]
 
                 st.dataframe(

@@ -5,8 +5,11 @@ record / profit / ROI) and prints a short summary. Run by
 `weekly-model-performance.yml` after `betting_log.py` has graded finished bets;
 also fine to run by hand.
 
-Only `bet_type == 'spread'` rows count (moneyline / totals are disabled). A
-`-110` bet: win -> +90.91, loss -> -100, push -> 0. ROI = profit / (settled * 100).
+Only `bet_type == 'spread'` rows count (moneyline / totals are disabled).
+Profit is per $100 risk at each row's recorded odds (legacy rows assume -110:
+win -> +90.91, loss -> -100, push -> 0). ROI = profit / (settled non-push * 100).
+`unresolved` rows (no team recorded) are excluded from every total and listed
+separately under `unresolved_games`.
 """
 from __future__ import annotations
 
@@ -21,6 +24,7 @@ LOG_PATH = os.path.join(DATA_DIR, "betting_recommendations_log.csv")
 OUT_PATH = os.path.join(DATA_DIR, "spread_performance.json")
 
 SETTLED = ("win", "loss", "push")
+UNRESOLVED = "unresolved"
 
 
 def _bucket(rows: pd.DataFrame) -> dict:
@@ -34,6 +38,7 @@ def _bucket(rows: pd.DataFrame) -> dict:
     n_graded = len(graded)
     return {
         "pending": int((rows["bet_result"] == "pending").sum()),
+        "unresolved": int((rows["bet_result"] == UNRESOLVED).sum()),
         "settled": wins + losses + pushes,
         "win": wins,
         "loss": losses,
@@ -48,11 +53,14 @@ def build_report(log_path: str = LOG_PATH) -> dict:
     report = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "source": os.path.basename(log_path),
-        "note": ("Spread bets only, -110 (win +90.91 / loss -100 / push 0). "
-                 "ROI = profit / (settled non-push bets * 100)."),
+        "note": ("Spread bets only. Profit per $100 risk at recorded odds; legacy rows "
+                 "assume -110 (win +90.91 / loss -100 / push 0). "
+                 "ROI = profit / (settled non-push bets * 100). "
+                 "Unresolved rows (no team recorded) are excluded from all totals."),
         "overall": _bucket(pd.DataFrame(columns=["bet_result", "bet_profit"])),
         "by_week": [],
         "by_tier": {},
+        "unresolved_games": [],
     }
     if not (os.path.exists(log_path) and os.path.getsize(log_path) > 0):
         return report
@@ -64,6 +72,12 @@ def build_report(log_path: str = LOG_PATH) -> dict:
         return report
 
     report["overall"] = _bucket(df)
+    unresolved = df[df["bet_result"] == UNRESOLVED]
+    report["unresolved_games"] = [
+        {"game_id": str(r.get("game_id", "")), "week": int(r["week"]) if pd.notna(r.get("week")) else None,
+         "recommended_team": str(r.get("recommended_team", ""))}
+        for _, r in unresolved.iterrows()
+    ]
 
     if "week" in df.columns:
         for wk, grp in df.groupby("week", dropna=True):
@@ -103,6 +117,9 @@ def main() -> None:
                 print(f"   week {wk['week']:>2}: {wk['win']}-{wk['loss']}  {wk_roi}")
     else:
         print(f"[spread_report] no settled spread bets yet ({o['pending']} pending)")
+    if report["unresolved_games"]:
+        ids = ", ".join(g["game_id"] for g in report["unresolved_games"])
+        print(f"[spread_report] {len(report['unresolved_games'])} unresolved, excluded from totals: {ids}")
 
 
 if __name__ == "__main__":

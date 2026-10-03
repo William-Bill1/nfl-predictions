@@ -3491,7 +3491,8 @@ def home_page():
 
                 total_bets = len(filtered_log)
                 pending_bets = len(filtered_log[filtered_log['bet_result'] == 'pending'])
-                completed_bets = len(filtered_log[filtered_log['bet_result'] != 'pending'])
+                # 'unresolved' rows (no team recorded) are not settled bets - exclude them.
+                completed_bets = len(filtered_log[filtered_log['bet_result'].isin(['win', 'loss', 'push'])])
 
                 col1, col2, col3, col4 = st.columns(4)
                 with col1:
@@ -3516,7 +3517,7 @@ def home_page():
                     for tier in ['Elite', 'Strong', 'Good', 'Lean']:  # match betting_log._spread_tier
                         tier_bets = filtered_log[
                             (filtered_log['confidence_tier'] == tier) & 
-                            (filtered_log['bet_result'] != 'pending')
+                            (filtered_log['bet_result'].isin(['win', 'loss', 'push']))
                         ]
                         if len(tier_bets) > 0:
                             wins = len(tier_bets[tier_bets['bet_result'] == 'win'])

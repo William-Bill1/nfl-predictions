@@ -109,12 +109,12 @@ class TestComputeModelEdgesForGame:
         dk = edges[edges["book_key"] == "draftkings"].iloc[0]
         assert dk["book_line"] == pytest.approx(3.5)
         assert dk["extrapolated_prob"] == pytest.approx(0.591285, abs=1e-4)
-        assert dk["edge_pts"] == pytest.approx((0.591285 - 0.478) * 100, abs=0.1)
+        assert dk["edge_pts"] == pytest.approx((0.591285 - 0.5) * 100, abs=0.1)
 
         fd = edges[edges["book_key"] == "fanduel"].iloc[0]
         assert fd["book_line"] == pytest.approx(4.5)
         assert fd["extrapolated_prob"] == pytest.approx(0.620, abs=0.001)
-        assert fd["edge_pts"] == pytest.approx((0.620 - 0.519) * 100, abs=0.15)
+        assert fd["edge_pts"] == pytest.approx((0.620 - 120/220) * 100, abs=0.15)
 
     def test_away_underdog_case(self):
         # spread_line positive -> home favored -> AWAY team is the underdog.
@@ -168,7 +168,7 @@ class TestComputeModelEdgesForGame:
 
     def test_missing_required_prob_skipped(self):
         preds, log = _ari_sea_fixture()
-        log.loc[log["book_key"] == "fanduel", "home_implied_prob_devigged"] = None
+        log.loc[log["book_key"] == "fanduel", "home_price"] = None
         edges = mls.compute_model_edges_for_game("2026_02_SEA_ARI", preds, log)
         assert set(edges["book_key"]) == {"draftkings"}
 

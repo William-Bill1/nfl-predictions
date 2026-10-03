@@ -50,6 +50,14 @@ EDGE_COLUMNS = [
 ]
 
 
+def break_even_probability(price: float) -> float:
+    """Required win rate at the offered American price, excluding pushes."""
+    odds = float(price)
+    if not math.isfinite(odds) or abs(odds) < 100:
+        raise ValueError("Invalid American odds")
+    return -odds / (100 - odds) if odds < 0 else 100 / (100 + odds)
+
+
 def _normal_cdf(x: float) -> float:
     """Standard normal CDF via math.erf - no scipy dependency for one line of math."""
     return 0.5 * (1.0 + math.erf(x / math.sqrt(2)))
@@ -92,7 +100,7 @@ def compute_book_edges(log_df: pd.DataFrame, book_key: str, season: int | None =
                         min_field_books: int = MIN_FIELD_BOOKS) -> pd.DataFrame:
     """One row per side (home/away) per game the target book quoted, ranked
     nowhere here (caller sorts) - fair_prob vs required_prob (the target
-    book's own devigged break-even probability for that exact side), and
+    book's actual-price break-even probability for that exact side), and
     edge_pts = (fair_prob - required_prob) * 100. Positive edge_pts means
     that side is priced favorably relative to the field-implied fair value;
     negative means the book's price already more than compensates for
@@ -100,7 +108,7 @@ def compute_book_edges(log_df: pd.DataFrame, book_key: str, season: int | None =
 
     Games where fewer than `min_field_books` other books quoted the same
     (season, week, game_id) are skipped - not enough of a field to trust a
-    median. Rows where the target book's own price can't be devigged
+    median. Rows where the target book's own price is missing or invalid
     (missing/invalid odds) are skipped too.
     """
     if log_df is None or log_df.empty:
@@ -123,15 +131,16 @@ def compute_book_edges(log_df: pd.DataFrame, book_key: str, season: int | None =
         if len(field) < min_field_books:
             continue
 
-        req_home = t.get("home_implied_prob_devigged")
-        if req_home is None or pd.isna(req_home):
+        try:
+            req_home = break_even_probability(t["home_price"])
+            req_away = break_even_probability(t["away_price"])
+        except (TypeError, ValueError, KeyError):
             continue
 
         mu_field = field["home_spread_normalized"].median()
         l_book = t["home_spread_normalized"]
         fair_home = _fair_prob_home_covers(mu_field, l_book, sigma)
         fair_away = 1.0 - fair_home
-        req_away = 1.0 - req_home
 
         common = {"season": int(t["season"]), "week": int(t["week"]), "game_id": t["game_id"]}
         rows.append({
@@ -185,7 +194,7 @@ def main() -> None:
     for _, r in edges.iterrows():
         sign = "+" if r["line"] >= 0 else ""
         print(f"  wk{r['week']:>2}  {r['team']:>3} {sign}{r['line']:.1f} ({r['price']:+.0f}) "
-              f"vs {r['opponent']:<3}  fair {r['fair_prob']:.1%} / req {r['required_prob']:.1%}"
+              f"vs {r['opponent']:<3}  fair {r['fair_prob']:.1%} / break-even {r['required_prob']:.1%}"
               f"  ->  edge {r['edge_pts']:+.1f}pt")
 
     print(

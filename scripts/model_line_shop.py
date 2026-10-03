@@ -32,7 +32,7 @@ from pathlib import Path
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from spread_value_finder import MOV_SIGMA, _normal_cdf, _normal_ppf  # noqa: E402
+from spread_value_finder import MOV_SIGMA, _normal_cdf, _normal_ppf, break_even_probability  # noqa: E402
 
 DATA_DIR = "data_files"
 LOG_PATH = os.path.join(DATA_DIR, "spread_tracker_log.csv")
@@ -97,11 +97,11 @@ def compute_model_edges_for_game(game_id: str, predictions_df: pd.DataFrame,
     for _, b in books.iterrows():
         if underdog_is_home:
             book_line, book_price = b["home_point"], b["home_price"]
-            required = b["home_implied_prob_devigged"]
         else:
             book_line, book_price = b["away_point"], b["away_price"]
-            required = b["away_implied_prob_devigged"]
-        if required is None or pd.isna(required):
+        try:
+            required = break_even_probability(book_price)
+        except (TypeError, ValueError):
             continue
 
         extrapolated = extrapolate_prob(model_prob, nflverse_line, float(book_line), sigma)
@@ -229,7 +229,7 @@ def main() -> None:
         for _, r in grp.sort_values("edge_pts", ascending=False).iterrows():
             sign = "+" if r["book_line"] >= 0 else ""
             print(f"   {r['book_title']:<24} {sign}{r['book_line']:.1f} ({r['book_price']:+.0f})  "
-                  f"extrapolated {r['extrapolated_prob']:.1%} / required {r['required_prob']:.1%}"
+                  f"extrapolated {r['extrapolated_prob']:.1%} / break-even {r['required_prob']:.1%}"
                   f"  ->  edge {r['edge_pts']:+.1f}pt")
         print()
 
