@@ -86,3 +86,6 @@ fetch_nflfastR_games.py
 player_props/models/*_lgbm.txt
 # spread_tracker.py's ephemeral last-known-credits state - not a data artifact
 /data_files/.odds_api_last_remaining
+
+# Rolling spread backtest outputs (scripts/rolling_spread_backtest.py)
+/backtest_output/

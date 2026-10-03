@@ -92,6 +92,13 @@ underdog-covers space. This is a change of convention, not a fix for a
 "backwards" model — the earlier "-90% → +60% ROI" story was a variable mix-up
 (favorite-covers probability fed into underdog-covers bet logic).
 
+### Spread model audit: rolling backtest (Oct 2026)
+
+`scripts/rolling_spread_backtest.py` is a read-only, week-by-week backtest of
+the spread model with leak-free features. It never writes production files.
+Use it before trusting any change to the spread model. Method, command and how
+to read the output are in [ROLLING_SPREAD_BACKTEST.md](ROLLING_SPREAD_BACKTEST.md).
+
 ### Player Props (`player_props/`)
 XGBoost + LightGBM soft-voting ensembles per (stat, player-tier) at training
 time; **inference loads the XGB `.json` only** (the `_lgbm.txt` sidecars are
