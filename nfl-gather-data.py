@@ -52,13 +52,20 @@ def temporal_split(X, y, test_frac=0.2):
     return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
 
+def _shown(value) -> str:
+    """repr() of an original cell value, unwrapping numpy scalars (inf, not np.float64(inf))."""
+    return repr(value.item() if isinstance(value, np.generic) else value)
+
+
 def require_chronological(games: pd.DataFrame) -> None:
     """Raise ValueError unless `games` rows are in (season, week) order.
 
     The temporal splits below cut by row position, so out-of-order training
-    rows would put later games into the training slice. Every row must have a
-    numeric season and week first: a missing value compares False with
-    everything and would otherwise slip through the order check. Ties (same
+    rows would put later games into the training slice. Every row's season
+    and week must first be numeric, finite and whole-numbered (numeric
+    strings such as "2020" are fine): NaN compares False with everything,
+    inf sorts after every real week, and a fractional week has no place in
+    the schedule - any of them would quietly distort the split. Ties (same
     season and week) are allowed. Explicit raises (not `assert`) so the guard
     still runs under `python -O`.
     """
@@ -68,30 +75,35 @@ def require_chronological(games: pd.DataFrame) -> None:
             raise ValueError(f"nfl_games_historical.csv has no '{field}' column; "
                              "the temporal split needs season and week for every played game.")
         raw = games[field]
-        num = pd.to_numeric(raw, errors='coerce')
-        bad = np.flatnonzero(num.isna().to_numpy())
-        if len(bad):
-            i = bad[0]
-            row = games.iloc[i]
+        num = pd.to_numeric(raw, errors='coerce').to_numpy(dtype=float)
+        with np.errstate(invalid='ignore'):
+            missing = np.isnan(num)
+            infinite = np.isinf(num)
+            fractional = ~missing & ~infinite & (num != np.floor(num))
+        invalid = missing | infinite | fractional
+        if invalid.any():
+            i = int(np.flatnonzero(invalid)[0])
+            problem = ('missing or non-numeric' if missing[i]
+                       else 'non-finite' if infinite[i] else 'fractional')
             raise ValueError(
-                f"nfl_games_historical.csv played game {row.get('game_id', '?')} (row {i}) has a "
-                f"missing or non-numeric '{field}' ({raw.iloc[i]!r}); every played game needs a "
-                f"season and week for the temporal train/validation/test split "
-                f"({len(bad)} row(s) affected)."
+                f"nfl_games_historical.csv played game {games.iloc[i].get('game_id', '?')} (row {i}) "
+                f"has a {problem} '{field}' value {_shown(raw.iloc[i])}; every played game needs a "
+                f"whole-number season and week for the temporal train/validation/test split "
+                f"({int(invalid.sum())} row(s) with an invalid '{field}')."
             )
-        values[field] = num.to_numpy(dtype=float)
+        values[field] = num.astype(np.int64)
 
     season, week = values['season'], values['week']
     later_first = (season[:-1] > season[1:]) | ((season[:-1] == season[1:]) & (week[:-1] > week[1:]))
     back = np.flatnonzero(later_first)
     if len(back):
-        i = back[0] + 1
-        row, prev = games.iloc[i], games.iloc[i - 1]
+        i = int(back[0]) + 1
+        gid, prev_gid = games.iloc[i].get('game_id', '?'), games.iloc[i - 1].get('game_id', '?')
         raise ValueError(
             "nfl_games_historical.csv played games must be ordered by (season, week) "
             "for the temporal train/validation/test split; "
-            f"row {i} ({row.get('game_id', '?')}, {int(row['season'])} wk {int(row['week'])}) "
-            f"comes after {prev.get('game_id', '?')} ({int(prev['season'])} wk {int(prev['week'])}). "
+            f"row {i} ({gid}, {season[i]} wk {week[i]}) "
+            f"comes after {prev_gid} ({season[i - 1]} wk {week[i - 1]}). "
             "Sort the schedule by season and week (as nfl_data_py returns it) and rerun."
         )
 

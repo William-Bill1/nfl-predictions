@@ -103,7 +103,7 @@ class TestSeasonWeekValidation:
 
     def test_non_numeric_value_is_rejected(self):
         games = self._games([("g0", 2020, 1), ("g1", 2020, "wild card")])
-        with pytest.raises(ValueError, match=r"g1 \(row 1\).*'week' \('wild card'\)"):
+        with pytest.raises(ValueError, match=r"g1 \(row 1\) has a missing or non-numeric 'week' value 'wild card'"):
             self._gd().require_chronological(games)
 
     def test_missing_column_is_rejected(self):
@@ -209,3 +209,76 @@ class TestGenuinePickem:
         res = self._check(bad_root)
         assert res.returncode == 1
         assert message in res.stdout
+
+
+# ------------------------------------------ non-finite / fractional values --
+
+# (value, expected problem word, how the original value must appear in the message)
+_INVALID = [
+    (np.inf, "non-finite", "inf"),
+    (-np.inf, "non-finite", "-inf"),
+    ("inf", "non-finite", "'inf'"),
+    (1.5, "fractional", "1.5"),
+    ("2.5", "fractional", "'2.5'"),
+]
+
+
+def _with_invalid(field, value, rows=(("g0", 2020, 1), ("g1", 2020, 2), ("g2", 2021, 1))):
+    games = pd.DataFrame(list(rows), columns=["game_id", "season", "week"]).astype(object)
+    games.loc[1, field] = value
+    return games
+
+
+class TestFiniteWholeNumbers:
+    @staticmethod
+    def _gd():
+        return _load("nfl_gather_data_guard_finite", "nfl-gather-data.py")
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    @pytest.mark.parametrize("value,problem,shown", _INVALID, ids=["inf", "-inf", "inf-str", "frac", "frac-str"])
+    def test_invalid_value_is_rejected(self, field, value, problem, shown):
+        with pytest.raises(ValueError) as exc:
+            self._gd().require_chronological(_with_invalid(field, value))
+        msg = str(exc.value)
+        assert f"g1 (row 1) has a {problem} '{field}' value {shown};" in msg
+        assert msg.endswith(f"(1 row(s) with an invalid '{field}').")      # full message, not truncated
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    @pytest.mark.parametrize("value,problem,shown", [_INVALID[0], _INVALID[3]], ids=["inf", "frac"])
+    def test_invalid_value_in_out_of_order_input_is_reported_not_overflowed(self, field, value, problem, shown):
+        # Rows are also out of order (2021 before 2020): the invalid value must be
+        # reported as such - formerly an out-of-order inf raised OverflowError.
+        rows = (("g0", 2021, 5), ("g1", 2021, 3), ("g2", 2020, 1))
+        with pytest.raises(ValueError, match=rf"g1 \(row 1\) has a {problem} '{field}' value {shown};"):
+            self._gd().require_chronological(_with_invalid(field, value, rows))
+
+    def test_numeric_strings_and_integer_floats_still_pass(self):
+        games = pd.DataFrame({"game_id": ["a", "b", "c", "d"],
+                              "season": ["2020", "2020", 2020.0, "2021"],
+                              "week": ["1", "1.0", 22, 1]})
+        self._gd().require_chronological(games)                   # no exception
+
+    def test_ordering_message_uses_whole_numbers(self):
+        games = pd.DataFrame({"game_id": ["a", "b"], "season": ["2020", "2020"], "week": [3.0, "1"]})
+        with pytest.raises(ValueError, match=r"row 1 \(b, 2020 wk 1\) comes after a \(2020 wk 3\)"):
+            self._gd().require_chronological(games)
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    @pytest.mark.parametrize("value,problem", [("inf", "non-finite"), (2.5, "fractional")])
+    def test_rejected_under_python_O(self, tmp_path, field, value, problem):
+        # Out-of-order rows plus an invalid value, run with asserts disabled.
+        rows = (("g0", 2021, 5), ("g1", 2021, 3), ("g2", 2020, 1))
+        _with_invalid(field, value, rows).to_pickle(tmp_path / "games.pkl")
+        code = (
+            "import importlib.util, sys, pandas as pd\n"
+            f"sys.path.insert(0, r'{ROOT}')\n"
+            f"spec = importlib.util.spec_from_file_location('g', r'{ROOT / 'nfl-gather-data.py'}')\n"
+            "g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)\n"
+            "assert False, 'asserts are on'  # skipped under -O\n"
+            f"g.require_chronological(pd.read_pickle(r'{tmp_path / 'games.pkl'}'))\n"
+        )
+        res = subprocess.run([sys.executable, "-O", "-c", code], cwd=ROOT, capture_output=True, text=True)
+        assert res.returncode != 0
+        assert "asserts are on" not in res.stderr
+        assert "OverflowError" not in res.stderr
+        assert f"ValueError: nfl_games_historical.csv played game g1 (row 1) has a {problem} '{field}'" in res.stderr

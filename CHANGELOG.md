@@ -12,10 +12,13 @@ bottom.
   order is now an explicit `ValueError` (`require_chronological`) naming the
   first out-of-order game. It was an `assert`, which `python -O` silently
   skips; the temporal train/validation/test split depends on row order.
-  It first rejects any played game with a missing or non-numeric season or
-  week (or a missing column), naming the game and field. Missing values
-  compare False, so they had slipped through the order check. Same-week
-  ties and season boundaries (week resetting to 1) still pass.
+  It first rejects any played game whose season or week is missing,
+  non-numeric, infinite (`inf`, `-inf`, `"inf"`) or fractional (e.g. week
+  1.5), or a missing column, naming the game, field and original value.
+  Missing values compare False and slipped through the order check; `inf`
+  sorted after every real week; an out-of-order `inf` crashed the message
+  with `OverflowError`. Numeric strings ("2020", "1.0"), same-week ties,
+  playoff weeks and season boundaries (week resetting to 1) still pass.
   New tests cover genuine pick'em lines (`spread_line == 0`): no spread
   probability, EV, edge or recommendation, never in training, and
   `check_pipeline_outputs.py` fails if one carries a probability or signal.
