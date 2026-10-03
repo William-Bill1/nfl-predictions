@@ -21,6 +21,8 @@ from sklearn.model_selection import cross_val_score
 import random
 from sklearn.calibration import CalibratedClassifierCV
 
+from team_features import compute_team_features
+
 
 def _blend_proba(xgb_model, lgbm_model, X):
     """Return soft-voted probability (class=1) from XGB + optional LGBM ensemble."""
@@ -114,6 +116,13 @@ def main():
                & historical_game_level_data['away_score'].notna())
     print(f"Games: {len(historical_game_level_data)} total, {int(_played.sum())} played, "
           f"{int((~_played).sum())} upcoming (predicted but not trained on)")
+    # A spread prediction needs a posted, non-zero line (a 0 line has no underdog).
+    # Captured here, on the raw schedule, because fillna(0) below would turn a
+    # missing line into a fake pick'em.
+    _valid_line = (historical_game_level_data['spread_line'].notna()
+                   & (historical_game_level_data['spread_line'] != 0))
+    print(f"Spread lines: {int((~_valid_line).sum())} games without a valid line "
+          f"(no spread probability or recommendation)")
 
     historical_game_level_data['gameLineAccuracy'] = (historical_game_level_data['home_score'] - historical_game_level_data['away_score']).abs() / historical_game_level_data['spread_line'].abs()
     historical_game_level_data['overUnderAccuracy'] = (historical_game_level_data['total'] - (historical_game_level_data['home_score'] + historical_game_level_data['away_score'])).abs() / historical_game_level_data['total'].abs()
@@ -164,119 +173,18 @@ def main():
     historical_game_level_data['isCloseSpread'] = np.where(historical_game_level_data['spreadSize'] <= 3, 1, 0)
     historical_game_level_data['isMediumSpread'] = np.where((historical_game_level_data['spreadSize'] > 3) & (historical_game_level_data['spreadSize'] <= 7), 1, 0)
     historical_game_level_data['isLargeSpread'] = np.where(historical_game_level_data['spreadSize'] > 7, 1, 0)
-    def calc_rolling_stat(df, team_col, stat_col):
-        # For each row, calculate stat for team using only games prior to that row's week/season
-        stats = []
-        for idx, row in df.iterrows():
-            team = row[team_col]
-            week = row['week']
-            season = row['season']
-            prior_games = df[(df[team_col] == team) & ((df['season'] < season) | ((df['season'] == season) & (df['week'] < week)))]
-            if len(prior_games) == 0:
-                stats.append(0)
-            else:
-                stats.append(prior_games[stat_col].mean())
-        return stats
-
-    def calc_rolling_count(df, team_col):
-        counts = []
-        for idx, row in df.iterrows():
-            team = row[team_col]
-            week = row['week']
-            season = row['season']
-            prior_games = df[(df[team_col] == team) & ((df['season'] < season) | ((df['season'] == season) & (df['week'] < week)))]
-            counts.append(len(prior_games))
-        return counts
-
-    def calc_momentum_stat(df, team_col, stat_col, num_games=3):
-        """Calculate stat over last N games for momentum tracking"""
-        stats = []
-        for idx, row in df.iterrows():
-            team = row[team_col]
-            week = row['week']
-            season = row['season']
-            prior_games = df[(df[team_col] == team) & ((df['season'] < season) | ((df['season'] == season) & (df['week'] < week)))]
-            if len(prior_games) == 0:
-                stats.append(0)
-            else:
-                # Get last N games
-                recent_games = prior_games.tail(num_games)
-                stats.append(recent_games[stat_col].mean())
-        return stats
-
-    def calc_point_diff_trend(df, team_col, num_games=3):
-        """Calculate if point differential is improving or declining"""
-        trends = []
-        for idx, row in df.iterrows():
-            team = row[team_col]
-            week = row['week']
-            season = row['season']
-
-            # Get games for this team (home or away)
-            prior_games = df[
-                ((df['home_team'] == team) | (df['away_team'] == team)) & 
-                ((df['season'] < season) | ((df['season'] == season) & (df['week'] < week)))
-            ].copy()
-
-            if len(prior_games) < num_games:
-                trends.append(0)
-            else:
-                # Calculate point diff for each game
-                prior_games['team_point_diff'] = np.where(
-                    prior_games['home_team'] == team,
-                    prior_games['home_score'] - prior_games['away_score'],
-                    prior_games['away_score'] - prior_games['home_score']
-                )
-                recent_games = prior_games.tail(num_games)
-                # Positive trend = improving, negative = declining
-                trend = recent_games['team_point_diff'].diff().mean()
-                trends.append(trend if not pd.isna(trend) else 0)
-        return trends
-
-    historical_game_level_data['homeTeamWinPct'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'homeWin')
-    historical_game_level_data['awayTeamWinPct'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'awayWin')
-    historical_game_level_data['homeTeamCloseGamePct'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'isCloseGame')
-    historical_game_level_data['awayTeamCloseGamePct'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'isCloseGame')
-    historical_game_level_data['homeTeamBlowoutPct'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'isBlowout')
-    historical_game_level_data['awayTeamBlowoutPct'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'isBlowout')
-    historical_game_level_data['homeTeamAvgScore'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'home_score')
-    historical_game_level_data['awayTeamAvgScore'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'away_score')
-    historical_game_level_data['homeTeamAvgScoreAllowed'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'away_score')
-    historical_game_level_data['awayTeamAvgScoreAllowed'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'home_score')
-    historical_game_level_data['homeTeamAvgPointDiff'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'pointDiff')
-    historical_game_level_data['awayTeamAvgPointDiff'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'pointDiff')
-    historical_game_level_data['homeTeamAvgTotalScore'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'totalScore')
-    historical_game_level_data['awayTeamAvgTotalScore'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'totalScore')
-    historical_game_level_data['homeTeamGamesPlayed'] = calc_rolling_count(historical_game_level_data, 'home_team')
-    historical_game_level_data['awayTeamGamesPlayed'] = calc_rolling_count(historical_game_level_data, 'away_team')
-    historical_game_level_data['homeTeamAvgPointSpread'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'spread_line')
-    historical_game_level_data['awayTeamAvgPointSpread'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'spread_line')
-    historical_game_level_data['homeTeamAvgTotal'] = calc_rolling_stat(historical_game_level_data, 'home_team', 'total')
-    historical_game_level_data['awayTeamAvgTotal'] = calc_rolling_stat(historical_game_level_data, 'away_team', 'total')
-    # Season-long team rates: average over PLAYED games only, or the 272 unplayed
-    # rows (all-zero labels) drag every rate toward 0.
-    _pg = historical_game_level_data[_played]
-    historical_game_level_data['homeTeamFavoredPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['homeFavored'].mean())
-    historical_game_level_data['awayTeamFavoredPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['awayFavored'].mean())
-    historical_game_level_data['homeTeamSpreadCoveredPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['spreadCovered'].mean())
-    historical_game_level_data['awayTeamSpreadCoveredPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['spreadCovered'].mean())
-    historical_game_level_data['homeTeamOverHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['overHit'].mean())
-    historical_game_level_data['awayTeamOverHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['overHit'].mean())
-    historical_game_level_data['homeTeamUnderHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['underHit'].mean())
-    historical_game_level_data['awayTeamUnderHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['underHit'].mean())
-    historical_game_level_data['homeTeamTotalHitPct'] = historical_game_level_data['home_team'].map(_pg.groupby('home_team')['totalHit'].mean())
-    historical_game_level_data['awayTeamTotalHitPct'] = historical_game_level_data['away_team'].map(_pg.groupby('away_team')['totalHit'].mean())
-
-    # Add momentum features - last 3 games performance
-    print("Calculating momentum features (last 3 games)...")
-    historical_game_level_data['homeTeamLast3WinPct'] = calc_momentum_stat(historical_game_level_data, 'home_team', 'homeWin', 3)
-    historical_game_level_data['awayTeamLast3WinPct'] = calc_momentum_stat(historical_game_level_data, 'away_team', 'awayWin', 3)
-    historical_game_level_data['homeTeamLast3AvgScore'] = calc_momentum_stat(historical_game_level_data, 'home_team', 'home_score', 3)
-    historical_game_level_data['awayTeamLast3AvgScore'] = calc_momentum_stat(historical_game_level_data, 'away_team', 'away_score', 3)
-    historical_game_level_data['homeTeamLast3AvgScoreAllowed'] = calc_momentum_stat(historical_game_level_data, 'home_team', 'away_score', 3)
-    historical_game_level_data['awayTeamLast3AvgScoreAllowed'] = calc_momentum_stat(historical_game_level_data, 'away_team', 'home_score', 3)
-    historical_game_level_data['homeTeamPointDiffTrend'] = calc_point_diff_trend(historical_game_level_data, 'home_team', 3)
-    historical_game_level_data['awayTeamPointDiffTrend'] = calc_point_diff_trend(historical_game_level_data, 'away_team', 3)
+    # Team aggregates (win %, cover %, last-3 form, ...): team_features.py.
+    # Each game's values use only COMPLETED games from strictly EARLIER weeks -
+    # never the game's own result, a later result, or anything from its own
+    # week. Same feature names, same home-only / away-only definitions as
+    # before; a team with no earlier qualifying game gets 0 (cold start). This
+    # replaces per-row loops that counted unplayed earlier games as 0-results
+    # and full-history .groupby().mean() rates (FavoredPct, SpreadCoveredPct,
+    # Over/Under/TotalHitPct) that included every game's own outcome.
+    print("Computing leak-free team aggregate features ...")
+    _team_feats = compute_team_features(historical_game_level_data)
+    for _col in _team_feats.columns:
+        historical_game_level_data[_col] = _team_feats[_col]
 
     # Add rest advantage features (already have away_rest and home_rest from data)
     print("Adding rest advantage features...")
@@ -371,22 +279,27 @@ def main():
     # VALIDATION slice; accuracy / win-rate / ROI are reported on the TEST slice
     # the tuning never saw. (Was a 2-way split that picked the threshold on the
     # same games it then scored - optimistic by construction.)
+    # Train/evaluate only on played games with a valid line (a game without a
+    # line has no spread label). Every played game in the schedule has one, so
+    # this matches the previous `_played` split exactly; it guards against a
+    # lineless game ever being trained as a fake pick'em.
+    _trainable = _played & _valid_line
     X_train_spread, X_val_spread, X_test_spread, y_spread_train, y_spread_val, y_spread_test = \
-        temporal_split_3way(X_spread[_played], y_spread[_played])
+        temporal_split_3way(X_spread[_trainable], y_spread[_trainable])
 
     X_moneyline = historical_game_level_data[best_features_moneyline].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_moneyline) - set(X_moneyline.columns):
         print(f"Warning: Dropped non-numeric features for moneyline: {set(best_features_moneyline) - set(X_moneyline.columns)}")
     y_moneyline = historical_game_level_data['underdogWon']
     X_train_ml, X_val_ml, X_test_ml, y_train_ml, y_val_ml, y_test_ml = \
-        temporal_split_3way(X_moneyline[_played], y_moneyline[_played])
+        temporal_split_3way(X_moneyline[_trainable], y_moneyline[_trainable])
 
     X_totals = historical_game_level_data[best_features_totals].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_totals) - set(X_totals.columns):
         print(f"Warning: Dropped non-numeric features for totals: {set(best_features_totals) - set(X_totals.columns)}")
     y_totals = historical_game_level_data[target_overunder]
     X_train_tot, X_val_tot, X_test_tot, y_train_tot, y_val_tot, y_test_tot = \
-        temporal_split_3way(X_totals[_played], y_totals[_played])
+        temporal_split_3way(X_totals[_trainable], y_totals[_trainable])
 
 
     print('y_spread_train value counts:')
@@ -613,7 +526,10 @@ def main():
     # complement (a push is neither; handled via spreadPush). This is a change of
     # convention applied once here - NOT a fix for a "backwards" model.
     _prob_favorite_covers = _blend_proba(model_spread, lgbm_spread, X_spread)
-    historical_game_level_data['prob_underdogCovered'] = 1.0 - _prob_favorite_covers
+    # No valid line -> no underdog -> no spread probability (NaN), so ev_spread,
+    # edge_underdog_spread and the bet signal below are empty/0 for those games.
+    historical_game_level_data['prob_underdogCovered'] = pd.Series(
+        1.0 - _prob_favorite_covers, index=historical_game_level_data.index).where(_valid_line)
 
     # Totals: the trained model is noise out-of-time (temporal AUC ~0.50, i.e.
     # a coin flip; worse-calibrated than the P(over) base rate; shipped signal
@@ -710,7 +626,8 @@ def main():
     historical_game_level_data['pred_underdogWon_optimal'] = 0
 
     historical_game_level_data['pred_spreadCovered_optimal'] = (
-        (historical_game_level_data['prob_underdogCovered'] >= optimal_spread_threshold) & 
+        _valid_line &
+        (historical_game_level_data['prob_underdogCovered'] >= optimal_spread_threshold) &
         (historical_game_level_data['ev_spread'] > 0)
     ).astype(int)
 

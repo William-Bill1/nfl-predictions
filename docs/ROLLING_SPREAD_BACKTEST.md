@@ -46,13 +46,14 @@ The two reports are never combined:
 For each evaluated week W:
 
 1. **Features.** Production's selected features (`best_features_spread.txt`)
-   are rebuilt from strictly earlier completed games only. Team rates such as
-   win %, blowout % and cover % use each team's earlier home games, or earlier
-   away games, matching production's definitions. A game's own result and all
-   later results never affect its features. Production's cover, favored and
-   over/under rates currently include every game, the predicted game too; this
-   script fixes that only inside the backtest. Score-derived columns such as
-   `total` are refused.
+   are built by `team_features.py`, the same code the production pipeline
+   uses since Oct 2026. Only completed games from strictly earlier weeks count.
+   Team rates such as win %, blowout % and cover % use each team's earlier
+   home games, or earlier away games. A game's own result, later results and
+   same-week results never affect its features. Score-derived columns such as
+   `total` are refused. Before Oct 2026, production's cover, favored and
+   over/under rates included every game, the predicted one too. This backtest
+   was always leak-free, so its results don't measure that production fix.
 2. **Training pool.** Completed games with a line from weeks before W. The
    script stops with an error if any of them kicked off after W's first game.
 3. **Fit and calibration periods.** The most recent whole weeks with at least

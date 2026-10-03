@@ -121,12 +121,15 @@ hit rate measures line placement, not betting edge.
 
 ### Feature engineering
 
-~75 candidate features: rolling team win/scoring/differential rates, last-3-game
-momentum, rest-day advantage, weather flags, spread-size buckets. All are
-computed with a strict "prior games only" filter
-(`season < s OR (season == s AND week < w)`), so the **features** contain no
-future information. Best-feature subsets per target are cached in
-`data_files/best_features_*.txt`.
+~75 candidate features: rolling team win/scoring/differential/cover rates,
+last-3-game momentum, rest-day advantage, weather flags, spread-size buckets.
+Team aggregates come from [`team_features.py`](team_features.py), shared with
+the rolling backtest. Each game uses only **completed** games from strictly
+**earlier weeks**: never its own result, a later result, or any result from
+its own week. Teams with no earlier game get 0. Before Oct 2026 the cover,
+favored and over/under rates averaged every game, the predicted game included.
+Games without a posted line get no spread probability and no spread pick.
+Best-feature subsets per target are cached in `data_files/best_features_*.txt`.
 
 ---
 

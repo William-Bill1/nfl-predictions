@@ -41,7 +41,9 @@ for diagnostics only).
   registration and was invisible in the app until a follow-up fix).
 
 **Critical Constraints**:
-- Features must be pre-game only (rolling stats exclude the current game).
+- Features must be pre-game only. Team aggregates live in `team_features.py`
+  (completed games from strictly earlier weeks only; shared with the rolling
+  backtest). Never add a `.groupby(team).mean()` over the whole history.
 - Every XGB/LGBM estimator gets `**_XGB_KW` / `**_LGBM_KW` (seed + `n_jobs=1`);
   keep `sorted()` on the feature lists. Otherwise the pipeline stops being
   byte-reproducible.
@@ -213,7 +215,7 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
 - **File Path Handling**: Use `from pathlib import Path; root = Path(__file__).parent.parent; sys.path.append(str(root))` for project-relative imports.
 - **DataFrame Optimization**: Immediately convert dtypes after CSV loads: `df['float_col'].astype('float32')`, `df['int_col'].astype('Int32')` to reduce memory 50%.
 - **UI Layout Patterns**: Use `col1, col2 = st.columns([2,1])` for asymmetric inputs, dynamic dataframe heights with `height=get_dataframe_height(df)`.
-- **Feature Engineering**: Rolling stats exclude current game: `prior_games = df[(df['team']==team) & ((df['season']<season) | ((df['season']==season) & (df['week']<week)))]`.
+- **Feature Engineering**: Team aggregates come from `team_features.compute_team_features` (completed games, strictly earlier weeks, row-order independent, cold start 0). Games without a valid spread line get NaN spread probabilities and no signal.
 - **Adding an estimator**: pass `**_XGB_KW` / `**_LGBM_KW` or it reintroduces
   run-to-run drift.
 - **Season year**: `from season_utils import upcoming_or_current_season, latest_pbp_season` — don't compute it inline.

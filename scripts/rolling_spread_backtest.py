@@ -16,12 +16,11 @@ Two reports, never merged:
 
 Method (per evaluated NFL week W, whole weeks, chronological):
 
-1. Features: every team aggregate (win %, blowout %, cover %, ...) is the mean
-   over that team's strictly earlier COMPLETED games (earlier season/week),
-   using the same home-games-only / away-games-only split as production. A
-   game's own outcome and every later outcome never touch its features. This
-   replaces production's full-history `.groupby().mean()` cover/favored/hit
-   rates, which included each game's own result.
+1. Features: every team aggregate (win %, blowout %, cover %, ...) comes from
+   team_features.py - the same code production uses - i.e. the mean over that
+   team's COMPLETED games from strictly earlier weeks, with production's
+   home-games-only / away-games-only split. A game's own outcome, same-week
+   outcomes and every later outcome never touch its features.
 2. Training pool: completed games with a line from weeks before W. Asserted:
    every pool game kicked off before W's earliest kickoff.
 3. Models compared on W's games:
@@ -70,6 +69,8 @@ import pandas as pd
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
+from team_features import TEAM_FEATURES, compute_team_features  # noqa: E402
+
 SCHEDULE_PATH = ROOT / "data_files" / "nfl_games_historical.csv"
 LOG_PATH = ROOT / "data_files" / "betting_recommendations_log.csv"
 FEATURES_PATH = ROOT / "data_files" / "best_features_spread.txt"
@@ -89,24 +90,6 @@ PREGAME_COLUMNS = {
     "home_spread_odds", "total_line", "under_odds", "over_odds", "div_game",
     "temp", "wind", "away_rest", "home_rest", "week", "season",
 }
-# Team aggregates: suffix -> outcome column (or per-side column).
-TEAM_STATS = {
-    "WinPct": {"home": "homeWin", "away": "awayWin"},
-    "CloseGamePct": "isCloseGame",
-    "BlowoutPct": "isBlowout",
-    "AvgScore": {"home": "home_score", "away": "away_score"},
-    "AvgScoreAllowed": {"home": "away_score", "away": "home_score"},
-    "AvgPointDiff": "pointDiff",
-    "AvgTotalScore": "totalScore",
-    "AvgPointSpread": "spread_line",
-    "FavoredPct": {"home": "homeFavored", "away": "awayFavored"},
-    "SpreadCoveredPct": "spreadCovered",
-    "OverHitPct": "overHit",
-    "UnderHitPct": "underHit",
-    "TotalHitPct": "totalHit",
-}
-
-
 @dataclass
 class Config:
     start: tuple[int, int] = (2023, 1)
@@ -166,47 +149,21 @@ def prepare_games(raw: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
-def _prior_sums(df: pd.DataFrame, side: str, values: pd.Series) -> tuple[np.ndarray, np.ndarray]:
-    """(sum, count) of `values` over the side-team's completed games in strictly earlier weeks.
-
-    Sums are aggregated per (team, week key) and accumulated exclusively, so a
-    game's own week - and anything later - can never contribute.
-    """
-    team = df[f"{side}_team"]
-    vals = values.where(df["completed"])
-    g = pd.DataFrame({"team": team, "key": df["key"],
-                      "v": vals.fillna(0.0), "n": vals.notna().astype(int)})
-    per_week = g.groupby(["team", "key"])[["v", "n"]].sum().sort_index()
-    earlier = per_week.groupby(level=0).cumsum() - per_week
-    earlier = earlier.reindex(pd.MultiIndex.from_arrays([team, df["key"]]))
-    return earlier["v"].to_numpy(), earlier["n"].to_numpy()
-
-
-def _prior_mean(df: pd.DataFrame, side: str, col: str) -> np.ndarray:
-    v, n = _prior_sums(df, side, df[col])
-    return np.where(n > 0, v / np.maximum(n, 1), 0.0)   # production fills "no history" with 0
-
-
-def _prior_count(df: pd.DataFrame, side: str) -> np.ndarray:
-    return _prior_sums(df, side, pd.Series(1.0, index=df.index))[1].astype(float)
-
-
 def build_features(df: pd.DataFrame, names: list[str]) -> pd.DataFrame:
-    """Leak-free feature matrix for `names` (production feature names)."""
+    """Leak-free feature matrix for `names` (production feature names).
+
+    Team aggregates come from `team_features.py` - the same code the
+    production pipeline uses - so backtest and production features agree.
+    """
+    team_names = [n for n in names if n not in PREGAME_COLUMNS]
+    for name in team_names:
+        if name not in TEAM_FEATURES:
+            raise ValueError(f"Feature {name!r} has no leak-free definition in this backtest")
+    team = compute_team_features(df, team_names) if team_names else pd.DataFrame(index=df.index)
     out = pd.DataFrame(index=df.index)
     for name in names:
-        if name in PREGAME_COLUMNS:
-            out[name] = pd.to_numeric(df[name], errors="coerce").fillna(0.0)
-            continue
-        side = "home" if name.startswith("homeTeam") else "away" if name.startswith("awayTeam") else None
-        stat = name[len(f"{side}Team"):] if side else None
-        if stat == "GamesPlayed":
-            out[name] = _prior_count(df, side)
-        elif stat in TEAM_STATS:
-            spec = TEAM_STATS[stat]
-            out[name] = _prior_mean(df, side, spec[side] if isinstance(spec, dict) else spec)
-        else:
-            raise ValueError(f"Feature {name!r} has no leak-free definition in this backtest")
+        out[name] = (pd.to_numeric(df[name], errors="coerce").fillna(0.0)
+                     if name in PREGAME_COLUMNS else team[name])
     return out
 
 

@@ -8,6 +8,24 @@ bottom.
 
 ## October 2026
 
+- **Production team features no longer leak results.** Team aggregates
+  move to a shared `team_features.py`, used by both `nfl-gather-data.py`
+  and the rolling backtest. Each game now uses only completed games from
+  strictly earlier weeks. Two production bugs are removed:
+  - Full-history team rates (FavoredPct, SpreadCoveredPct, Over/Under/
+    TotalHitPct) averaged every played game, including the game being
+    predicted. They differed from a correct earlier-games-only value by up
+    to 0.91.
+  - The per-row loops counted unplayed earlier games as 0-results for games
+    2+ weeks out, and ordered "last 3" by row position.
+
+  Feature names, home/away definitions and the 0 cold-start value are
+  unchanged. Games without a valid spread line (193 upcoming games) now get
+  no spread probability and no signal; 58 lineless games had carried a
+  spread signal. Measured on the production validation/test split, accuracy
+  barely changes and is still no better than a 50% guess (test Brier 0.2527
+  → 0.2539, interval vs 50% includes 0). Model, calibration, thresholds and
+  feature selection are unchanged.
 - Added `scripts/rolling_spread_backtest.py`, a read-only weekly backtest
   of the spread model. Each week it retrains using only earlier games, with
   team stats built from earlier games only, and keeps the fit and calibration
