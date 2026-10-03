@@ -52,6 +52,20 @@ def temporal_split(X, y, test_frac=0.2):
     return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
 
+# Plausible NFL schedule identifiers, checked before any fixed-width integer
+# conversion so a corrupt value can never wrap or truncate.
+# * Season: named for the year it starts (see season_utils). 1920 is the
+#   NFL's first season; 2100 is a generous ceiling. This project's data starts
+#   in 2020 (season_utils.FIRST_SEASON) and nflverse schedules in 1999, so any
+#   value outside these bounds is corrupt, not old or future data.
+# * Week: nflverse numbers the regular season from 1 (weeks 1-18 since 2021,
+#   1-17 before) and continues through the playoffs to the Super Bowl: week 22
+#   since 2021, week 21 in 2020. There is no week 0 (preseason isn't in the
+#   schedule).
+SEASON_BOUNDS = (1920, 2100)
+WEEK_BOUNDS = (1, 22)
+
+
 def _shown(value) -> str:
     """repr() of an original cell value, unwrapping numpy scalars (inf, not np.float64(inf))."""
     return repr(value.item() if isinstance(value, np.generic) else value)
@@ -62,14 +76,17 @@ def require_chronological(games: pd.DataFrame) -> None:
 
     The temporal splits below cut by row position, so out-of-order training
     rows would put later games into the training slice. Every row's season
-    and week must first be numeric, finite and whole-numbered (numeric
-    strings such as "2020" are fine): NaN compares False with everything,
-    inf sorts after every real week, and a fractional week has no place in
-    the schedule - any of them would quietly distort the split. Ties (same
-    season and week) are allowed. Explicit raises (not `assert`) so the guard
-    still runs under `python -O`.
+    and week must first be numeric, finite, whole-numbered and inside
+    SEASON_BOUNDS / WEEK_BOUNDS (numeric strings such as "2020" are fine):
+    NaN compares False with everything, inf sorts after every real week, a
+    fractional week has no place in the schedule, and a huge value (>= 2**63)
+    would wrap in the int64 conversion - any of them would quietly distort the
+    split. All of this is checked in float space before converting to int64.
+    Ties (same season and week) are allowed. Explicit raises (not `assert`) so
+    the guard still runs under `python -O`.
     """
     values = {}
+    bounds = {'season': SEASON_BOUNDS, 'week': WEEK_BOUNDS}
     for field in ('season', 'week'):
         if field not in games.columns:
             raise ValueError(f"nfl_games_historical.csv has no '{field}' column; "
@@ -80,18 +97,24 @@ def require_chronological(games: pd.DataFrame) -> None:
             missing = np.isnan(num)
             infinite = np.isinf(num)
             fractional = ~missing & ~infinite & (num != np.floor(num))
-        invalid = missing | infinite | fractional
+            lo, hi = bounds[field]
+            out_of_range = ~missing & ~infinite & ~fractional & ((num < lo) | (num > hi))
+        invalid = missing | infinite | fractional | out_of_range
         if invalid.any():
             i = int(np.flatnonzero(invalid)[0])
             problem = ('missing or non-numeric' if missing[i]
-                       else 'non-finite' if infinite[i] else 'fractional')
+                       else 'non-finite' if infinite[i]
+                       else 'fractional' if fractional[i]
+                       else f'out-of-range (allowed {lo}-{hi})')
             raise ValueError(
                 f"nfl_games_historical.csv played game {games.iloc[i].get('game_id', '?')} (row {i}) "
-                f"has a {problem} '{field}' value {_shown(raw.iloc[i])}; every played game needs a "
-                f"whole-number season and week for the temporal train/validation/test split "
+                f"has {'an' if problem[0] in 'aeiou' else 'a'} {problem} '{field}' value "
+                f"{_shown(raw.iloc[i])}; every played game needs a "
+                f"whole-number season ({SEASON_BOUNDS[0]}-{SEASON_BOUNDS[1]}) and week "
+                f"({WEEK_BOUNDS[0]}-{WEEK_BOUNDS[1]}) for the temporal train/validation/test split "
                 f"({int(invalid.sum())} row(s) with an invalid '{field}')."
             )
-        values[field] = num.astype(np.int64)
+        values[field] = num.astype(np.int64)   # safe: every value is a whole number within bounds
 
     season, week = values['season'], values['week']
     later_first = (season[:-1] > season[1:]) | ((season[:-1] == season[1:]) & (week[:-1] > week[1:]))

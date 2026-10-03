@@ -4,6 +4,7 @@ All pipeline runs use a synthetic schedule in a temporary DATA_DIR and a
 fast stand-in for XGBoost; nothing under data_files/ is read or written.
 """
 
+import re
 import subprocess
 import sys
 import warnings
@@ -282,3 +283,87 @@ class TestFiniteWholeNumbers:
         assert "asserts are on" not in res.stderr
         assert "OverflowError" not in res.stderr
         assert f"ValueError: nfl_games_historical.csv played game g1 (row 1) has a {problem} '{field}'" in res.stderr
+
+
+# ------------------------------------------------------- documented bounds --
+
+class TestSeasonWeekBounds:
+    """Out-of-range values are rejected before the int64 conversion (no wrapping)."""
+
+    @staticmethod
+    def _gd():
+        return _load("nfl_gather_data_guard_bounds", "nfl-gather-data.py")
+
+    @staticmethod
+    def _games(rows):
+        return pd.DataFrame(list(rows), columns=["game_id", "season", "week"]).astype(object)
+
+    def test_bounds_are_documented_constants(self):
+        gd = self._gd()
+        assert gd.SEASON_BOUNDS == (1920, 2100)
+        assert gd.WEEK_BOUNDS == (1, 22)
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    @pytest.mark.parametrize("value,shown", [(1e19, "1e+19"), (1e20, "1e+20"), ("1e20", "'1e20'")],
+                             ids=["1e19", "1e20", "1e20-str"])
+    def test_huge_values_are_rejected_not_wrapped(self, field, value, shown):
+        games = _with_invalid(field, value)
+        lo, hi = (1920, 2100) if field == "season" else (1, 22)
+        with warnings.catch_warnings():
+            warnings.simplefilter("error")                 # the old int64 cast warned while wrapping
+            with pytest.raises(ValueError) as exc:
+                self._gd().require_chronological(games)
+        assert f"g1 (row 1) has an out-of-range (allowed {lo}-{hi}) '{field}' value {shown};" in str(exc.value)
+
+    @pytest.mark.parametrize("rows,bad", [
+        ((("g0", 1e20, 1), ("g1", 2020, 1)), "g0 (row 0)"),     # was silently accepted (out of order)
+        ((("g0", 2020, 1e19), ("g1", 2020, 1)), "g0 (row 0)"),   # was silently accepted (out of order)
+        ((("g0", 2020, 1), ("g1", 1e20, 1)), "g1 (row 1)"),      # was falsely reported as out of order
+        ((("g0", 2020, 3), ("g1", 2020, 1e19)), "g1 (row 1)"),   # was falsely reported, negative week shown
+    ])
+    def test_former_wraparound_cases_report_the_bad_value(self, rows, bad):
+        with pytest.raises(ValueError, match=rf"{re.escape(bad)} has an out-of-range"):
+            self._gd().require_chronological(self._games(rows))
+
+    @pytest.mark.parametrize("field,value,ok", [
+        ("season", 1919, False), ("season", 1920, True), ("season", "2100", True), ("season", 2101, False),
+        ("week", 0, False), ("week", -1, False), ("week", 1, True), ("week", "22", True), ("week", 23, False),
+    ])
+    def test_lower_and_upper_boundaries(self, field, value, ok):
+        row = ("g0", value, 1) if field == "season" else ("g0", 2020, value)
+        games = self._games([row])
+        if ok:
+            self._gd().require_chronological(games)
+        else:
+            lo, hi = (1920, 2100) if field == "season" else (1, 22)
+            with pytest.raises(ValueError, match=rf"g0 \(row 0\) has an out-of-range \(allowed {lo}-{hi}\) "
+                                                 rf"'{field}' value {re.escape(repr(value))};"):
+                self._gd().require_chronological(games)
+
+    def test_valid_playoff_weeks_and_season_transitions_pass(self):
+        games = self._games([
+            ("2020_17", 2020, 17), ("2020_wc", 2020, 18), ("2020_sb", 2020, 21),   # 2020: 17-week season, SB wk 21
+            ("2021_01", 2021, 1), ("2021_01b", 2021, 1), ("2021_18", 2021, 18),
+            ("2021_wc", 2021, 19), ("2021_sb", 2021, 22),                          # 2021+: SB wk 22
+            ("2022_01", "2022", "1"), ("2022_22", 2022.0, "22.0"),
+        ])
+        self._gd().require_chronological(games)
+
+    @pytest.mark.parametrize("field", ["season", "week"])
+    def test_rejected_under_python_O(self, tmp_path, field):
+        rows = (("g0", 2021, 5), ("g1", 2021, 3), ("g2", 2020, 1))   # also out of order
+        _with_invalid(field, 1e20, rows).to_pickle(tmp_path / "games.pkl")
+        code = (
+            "import importlib.util, sys, warnings, pandas as pd\n"
+            "warnings.simplefilter('error')\n"
+            f"sys.path.insert(0, r'{ROOT}')\n"
+            f"spec = importlib.util.spec_from_file_location('g', r'{ROOT / 'nfl-gather-data.py'}')\n"
+            "g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)\n"
+            "assert False, 'asserts are on'  # skipped under -O\n"
+            f"g.require_chronological(pd.read_pickle(r'{tmp_path / 'games.pkl'}'))\n"
+        )
+        res = subprocess.run([sys.executable, "-O", "-c", code], cwd=ROOT, capture_output=True, text=True)
+        assert res.returncode != 0
+        assert "asserts are on" not in res.stderr and "RuntimeWarning" not in res.stderr
+        assert f"ValueError: nfl_games_historical.csv played game g1 (row 1) has an out-of-range" in res.stderr
+        assert f"'{field}' value 1e+20" in res.stderr
