@@ -52,6 +52,28 @@ def temporal_split(X, y, test_frac=0.2):
     return X.iloc[:cut], X.iloc[cut:], y.iloc[:cut], y.iloc[cut:]
 
 
+def require_chronological(games: pd.DataFrame) -> None:
+    """Raise ValueError unless `games` rows are in (season, week) order.
+
+    The temporal splits below cut by row position, so out-of-order training
+    rows would put later games into the training slice. An explicit raise
+    (not `assert`) so the guard still runs under `python -O`.
+    """
+    key = (pd.to_numeric(games['season'], errors='coerce') * 100
+           + pd.to_numeric(games['week'], errors='coerce')).to_numpy()
+    back = np.flatnonzero(key[1:] < key[:-1])
+    if len(back):
+        i = back[0] + 1
+        row, prev = games.iloc[i], games.iloc[i - 1]
+        raise ValueError(
+            "nfl_games_historical.csv played games must be ordered by (season, week) "
+            "for the temporal train/validation/test split; "
+            f"row {i} ({row.get('game_id', '?')}, {int(row['season'])} wk {int(row['week'])}) "
+            f"comes after {prev.get('game_id', '?')} ({int(prev['season'])} wk {int(prev['week'])}). "
+            "Sort the schedule by season and week (as nfl_data_py returns it) and rerun."
+        )
+
+
 def temporal_split_3way(X, y, val_frac=0.2, test_frac=0.2):
     """Chronological train / validation / test hold-out.
 
@@ -270,9 +292,7 @@ def main():
     # The three targets share one chronological cut-off (a temporal split can't be
     # stratified per target the way the old random split was). Guard the ordering
     # the split relies on.
-    _season_week = historical_game_level_data.loc[_played, ['season', 'week']]
-    assert _season_week.equals(_season_week.sort_values(['season', 'week'], kind='stable')), \
-        "nfl_games_historical.csv rows must be ordered by (season, week) for the temporal split"
+    require_chronological(historical_game_level_data.loc[_played])
 
     # Three-way chronological split: train (earliest ~60%) / validation (~20%) /
     # test (latest ~20%). The EV + F1 betting thresholds are fitted on the

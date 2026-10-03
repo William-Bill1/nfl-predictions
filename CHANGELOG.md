@@ -8,6 +8,14 @@ bottom.
 
 ## October 2026
 
+- `nfl-gather-data.py`'s check that played games are in (season, week)
+  order is now an explicit `ValueError` (`require_chronological`) naming the
+  first out-of-order game. It was an `assert`, which `python -O` silently
+  skips; the temporal train/validation/test split depends on row order.
+  New tests cover genuine pick'em lines (`spread_line == 0`): no spread
+  probability, EV, edge or recommendation, never in training, and
+  `check_pipeline_outputs.py` fails if one carries a probability or signal.
+  No model settings or predictions changed.
 - **Production team features no longer leak results.** Team aggregates
   move to a shared `team_features.py`, used by both `nfl-gather-data.py`
   and the rolling backtest. Each game now uses only completed games from
