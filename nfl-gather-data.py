@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from os import path
+from pathlib import Path
 # from xgboost import XGBClassifier
 # from sklearn.model_selection import train_test_split
 # from sklearn.metrics import mean_absolute_error, accuracy_score
@@ -22,6 +23,7 @@ import random
 from sklearn.calibration import CalibratedClassifierCV
 
 from team_features import compute_team_features
+from pregame_snapshots import parse_tsv, read_bytes_once, remove_stale_manifest, write_run_manifest
 
 
 def _blend_proba(xgb_model, lgbm_model, X):
@@ -184,7 +186,15 @@ def main():
     All pipeline work lives here so importing this module (e.g. via runpy or
     importlib) has no side effects.
     """
-    historical_game_level_data = pd.read_csv(path.join(DATA_DIR, 'nfl_games_historical.csv'), sep='\t')
+    # Provenance: a run that doesn't finish leaves no manifest, so pregame
+    # snapshots can't attach an old run's identity to new (or half-written)
+    # predictions. The schedule hash records exactly which input was read.
+    remove_stale_manifest(DATA_DIR)
+    # Read the schedule ONCE: hash and parse the same bytes, so the recorded hash
+    # always describes exactly what was trained on (no hash-then-reopen race).
+    _schedule_bytes, _schedule_sha256 = read_bytes_once(path.join(DATA_DIR, 'nfl_games_historical.csv'))
+    historical_game_level_data = parse_tsv(_schedule_bytes)
+    del _schedule_bytes
 
     # Rows with a final score. Unplayed future games (this season's remaining
     # schedule) still flow through the whole pipeline so their pre-game features
@@ -1047,6 +1057,44 @@ def main():
     with open(path.join(DATA_DIR, 'best_features_spread.txt'), 'w') as f:
         f.write("\n".join(sorted(best_features)))
         f.write(f"\nBest mean CV accuracy: {best_score:.4f}\n")
+
+    # Last step of a successful run: record this run's provenance next to the
+    # predictions CSV it wrote (pregame_snapshots.py validates the pair before
+    # capturing). Separate from the deterministic artifacts above, so the
+    # timestamped run ID doesn't affect the determinism check.
+    import inspect, sklearn, xgboost
+    _train_rows = historical_game_level_data.loc[X_train_spread.index]
+    _data_rows = historical_game_level_data.loc[_trainable]
+
+    def _cutoff(rows):
+        last = rows.iloc[-1]
+        return {"season": int(last['season']), "week": int(last['week']),
+                "gameday": str(last['gameday']), "games": int(len(rows))}
+
+    _split_defaults = {k: v.default for k, v in inspect.signature(temporal_split_3way).parameters.items()
+                       if v.default is not inspect.Parameter.empty}
+    write_run_manifest(
+        DATA_DIR,
+        schedule_sha256=_schedule_sha256,
+        code_files=[Path(__file__), Path(__file__).with_name('team_features.py')],
+        repo_dir=Path(__file__).resolve().parent,
+        config={
+            "spread_target": target_spread,
+            "spread_models": {name: m.get_params(deep=True)
+                              for name, m in (("xgb", model_spread), ("lgbm", lgbm_spread)) if m is not None},
+            "lgbm_available": bool(_LGBM_AVAILABLE),
+            "temporal_split": _split_defaults,
+            "spread_ev_min_edge": spread_ev_analysis.get('min_edge'),
+            "libraries": {"xgboost": xgboost.__version__, "scikit-learn": sklearn.__version__,
+                          "lightgbm": lgb.__version__ if _LGBM_AVAILABLE else None,
+                          "pandas": pd.__version__, "numpy": np.__version__},
+        },
+        features=list(X_spread.columns),
+        training_cutoff=_cutoff(_train_rows),
+        data_cutoff=_cutoff(_data_rows),
+        spread_threshold=optimal_spread_threshold,
+    )
+    print("Wrote pipeline_run_manifest.json (provenance for pregame snapshots)")
 
 
 if __name__ == "__main__":

@@ -13,6 +13,9 @@ from pathlib import Path
 
 import pandas as pd
 
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from pregame_snapshots import ProvenanceError, load_verified_manifest  # noqa: E402
+
 DATA = Path("data_files")
 PRED = DATA / "nfl_games_historical_with_predictions.csv"
 METRICS = DATA / "model_metrics.json"
@@ -94,6 +97,16 @@ if METRICS.exists():
 
 # --- feature file ------------------------------------------------------
 check(FEATS.exists() and FEATS.stat().st_size > 0, f"missing/empty {FEATS}")
+
+# --- run provenance ----------------------------------------------------
+# The manifest must describe exactly the predictions CSV and schedule on disk
+# (pregame snapshots refuse to capture otherwise).
+try:
+    manifest = load_verified_manifest(DATA)
+    check(bool(manifest.get("run_id")) and bool(manifest.get("feature_set_id"))
+          and bool(manifest.get("config_id")), "pipeline_run_manifest.json missing run/config/feature ids")
+except (ProvenanceError, OSError, ValueError, KeyError) as exc:
+    check(False, f"run provenance: {exc}")
 
 if errors:
     print("PIPELINE SMOKE FAILED:")

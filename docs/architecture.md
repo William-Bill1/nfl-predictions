@@ -23,6 +23,18 @@ Step 1 — build/train  (python build_and_train_pipeline.py):
                                                Spread_OOS_Test)
                data_files/model_feature_importances.csv
                data_files/best_features_spread.txt  (fixed point)
+               data_files/pipeline_run_manifest.json  (provenance of this run:
+                 unique run_id, revision, config/feature ids, cutoffs, artifact
+                 + schedule sha256 - schedule read once, hash of the parsed
+                 bytes; written last, deleted at start; NOT a deterministic
+                 artifact)
+
+Pregame capture  (python pregame_snapshots.py capture - nightly, after step 1):
+    manifest hashes verified against the predictions CSV + schedule
+        → data_files/pregame_snapshots/<run_id>.json   (immutable, one per run,
+          schema-validated + whole-payload checksum; eligible upcoming games
+          with a usable kickoff after capture time; no outcomes; a failed
+          capture fails the nightly run after data is published)
 
 Results tracking  (python betting_log.py ; python scripts/weekly_spread_report.py):
     nfl_games_historical_with_predictions.csv
@@ -51,6 +63,9 @@ Step 2 — UI:
 - Every XGB/LGBM estimator takes `RANDOM_STATE=42` + `n_jobs=1` (via `_XGB_KW` /
   `_LGBM_KW`); feature lists are `sorted()` on load and `best_features_spread.txt`
   is written sorted. `python nfl-gather-data.py` byte-reproduces its own outputs.
+- `pipeline_run_manifest.json` holds the run's timestamp/run ID and is kept
+  out of the determinism comparison; everything else above is byte-identical
+  across runs (the manifest's non-volatile fields are identical too).
 - `nfl-gather-data.py` computes a `_played` mask (rows with both final scores).
   Features and the probability write cover **all** rows so upcoming games get
   predictions; the train/test split, EV threshold, accuracy/MAE and season-long
@@ -201,6 +216,8 @@ All data in `data_files/` (committed to git):
 - `market_spreads_week{W}_{season}.csv` — opt-in raw US+CA sportsbook game-spread quotes (write-once cache); `spread_tracker_log.csv` — accumulating season-long spread-line-vs-nflverse comparison, upserted weekly by `spread_tracker.py`
 - `spread_tracker_report.json` — season-to-date per-book ranking + best-line-per-game + anomaly flags, rolled up from `spread_tracker_log.csv` by `scripts/spread_tracker_report.py`
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
+- `pipeline_run_manifest.json` — provenance of the latest successful pipeline run (written by `nfl-gather-data.py`)
+- `pregame_snapshots/<run_id>.json` — immutable pregame spread predictions, one file per nightly run (`pregame_snapshots.py`; see `docs/PREGAME_SNAPSHOTS.md`)
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed
 - `data_files/exports/` — PDF exports
