@@ -8,6 +8,29 @@ bottom.
 
 ## October 2026
 
+- **Pregame spread snapshots.** `nfl-gather-data.py` now ends a successful
+  run by writing `data_files/pipeline_run_manifest.json`, recording the code
+  revision, config and feature-set ids, cutoffs, a unique run ID assigned
+  once, and SHA-256 of the exact schedule bytes it parsed (read once) and
+  the predictions it wrote. A stale manifest is deleted when a run starts.
+  The nightly job then runs `pregame_snapshots.py capture`, which reads each
+  input once, verifies it against the manifest, and writes an immutable,
+  schema-validated `data_files/pregame_snapshots/<run_id>.json` for the
+  eligible upcoming games: not completed, with a usable kickoff time
+  strictly after the capture time. That covers valid predictions with or
+  without a bet signal, and lineless or pick'em games with explicit
+  statuses and no probability. Kickoffs are US Eastern converted to UTC;
+  missing, ambiguous and nonexistent times are skipped with a reason.
+  Outcomes are never stored. Files are created with an exclusive link; a
+  retry is accepted only if it validates and matches every provenance field,
+  so a changed provenance is refused even with identical predictions. An
+  unkeyed whole-payload checksum detects accidental changes, but doesn't
+  authenticate a file. A failed capture marks the nightly run failed after
+  the data is published. `pregame_snapshots.py select` returns the earliest
+  or latest eligible capture per game, read-only and after validating every
+  file. `check_pipeline_outputs.py` verifies the manifest. Training,
+  calibration, thresholds and predictions are unchanged, and the
+  determinism check is unaffected. Docs: `docs/PREGAME_SNAPSHOTS.md`.
 - `nfl-gather-data.py`'s check that played games are in (season, week)
   order is now an explicit `ValueError` (`require_chronological`) naming the
   first out-of-order game. It was an `assert`, which `python -O` silently

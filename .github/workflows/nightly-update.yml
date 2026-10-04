@@ -95,6 +95,33 @@ jobs:
           python build_and_train_pipeline.py
         timeout-minutes: 30  # Pipeline takes ~5 min but allow buffer
 
+      - name: Capture pregame spread snapshot
+        id: pregame_capture
+        # Runs only after the pipeline step succeeded (a failed pipeline stops
+        # the job). Validates pipeline_run_manifest.json against the predictions
+        # CSV and schedule, then writes data_files/pregame_snapshots/<run_id>.json
+        # for every eligible upcoming game - never overwriting an earlier capture.
+        # See docs/PREGAME_SNAPSHOTS.md.
+        #
+        # continue-on-error is deliberate: failing here immediately would skip
+        # committing tonight's predictions, grading the betting log and the
+        # best-bets export. A failure is NOT silent - the "Fail the run if the
+        # pregame capture failed" step at the end marks the whole run failed
+        # (red, with an error annotation and a summary section) after the data
+        # has been published.
+        if: steps.season_check.outputs.in_season == 'true'
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          python pregame_snapshots.py capture | tee "$RUNNER_TEMP/pregame_capture.txt"
+          {
+            echo "### Pregame spread snapshot"
+            echo
+            echo '```'
+            cat "$RUNNER_TEMP/pregame_capture.txt"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Retrain player prop models
         if: steps.season_check.outputs.in_season == 'true'
         run: |
@@ -139,6 +166,7 @@ jobs:
           path: |
             data_files/nfl_games_historical_with_predictions.csv
             data_files/model_metrics.json
+            data_files/pipeline_run_manifest.json
             data_files/model_feature_importances.csv
             data_files/betting_recommendations_log.csv
             player_props/models/model_metrics.json
@@ -152,7 +180,9 @@ jobs:
           
           # Check if there are changes to commit
           git add data_files/*.csv data_files/*.json
-          
+          # Immutable pregame snapshots (new files only - existing ones are never rewritten)
+          if [ -d data_files/pregame_snapshots ]; then git add data_files/pregame_snapshots; fi
+
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
@@ -179,7 +209,8 @@ jobs:
       - name: Summary
         if: steps.season_check.outputs.in_season == 'true'
         run: |
-          echo "✅ Nightly update completed successfully"
+          echo "Nightly update steps finished (see step results above)."
+          echo "Pregame snapshot capture: ${{ steps.pregame_capture.outcome }}"
           echo "📊 Updated predictions available as artifact: nfl-predictions-${{ github.run_number }}"
           
           # Show some stats
@@ -187,3 +218,17 @@ jobs:
             LINES=$(wc -l < data_files/nfl_games_historical_with_predictions.csv)
             echo "📈 Total games in predictions file: $((LINES - 1))"
           fi
+
+      - name: Fail the run if the pregame capture failed
+        # Last step: by now tonight's data has been committed, so failing here
+        # only makes the missed capture impossible to overlook.
+        if: always() && steps.season_check.outputs.in_season == 'true' && steps.pregame_capture.outcome == 'failure'
+        run: |
+          echo "::error title=Pregame snapshot capture failed::No pregame snapshot was written for this run. See the 'Capture pregame spread snapshot' step log."
+          {
+            echo "### ❌ Pregame spread snapshot capture FAILED"
+            echo
+            echo "No snapshot was written for this run, so these predictions are not recorded as pregame."
+            echo "Check the 'Capture pregame spread snapshot' step log (provenance mismatch, invalid manifest or an existing conflicting snapshot)."
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit 1

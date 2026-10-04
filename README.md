@@ -203,6 +203,23 @@ python update_pbp_smart.py             # refresh the play-by-play LFS file (only
 4. If the dashboard reads the new column, add it there too — `predictions.py`
    and `pages/` load the same predictions CSV.
 
+### Pregame spread snapshots
+
+Each successful pipeline run writes `data_files/pipeline_run_manifest.json`:
+a unique run ID, code revision, config and feature-set ids, cutoffs, and hashes
+of the exact schedule bytes parsed and the predictions CSV written. The nightly
+job then runs `python pregame_snapshots.py capture`, which verifies those hashes
+and freezes the run's spread probability and bet signal into a new, validated
+`data_files/pregame_snapshots/<run_id>.json`. It covers every **eligible**
+upcoming game: not completed, with a usable kickoff time strictly after the
+capture time. Coverage isn't guaranteed; a failed or skipped nightly leaves no
+snapshot for that night, and a failed capture marks the run failed. Earlier
+captures are never overwritten, and played games are never backfilled.
+`python pregame_snapshots.py select --which earliest|latest` returns one capture
+per game, read-only. Schema, eligibility and selection rules, failure behavior
+and limitations: [`docs/PREGAME_SNAPSHOTS.md`](docs/PREGAME_SNAPSHOTS.md). This
+records predictions; it doesn't show an edge.
+
 ### Spread pricing and settlement
 
 Value Finder's **Break-even %** uses the actual offered American odds,
@@ -248,10 +265,10 @@ win rate, profit and ROI, and are listed under `unresolved_games` in
 
 | Workflow | Schedule | Purpose |
 |---|---|---|
-| `nightly-update.yml` | 03:00 UTC, Sep–Feb | refresh PBP, run pipeline, retrain prop models, **freeze the week's prop snapshot**, `betting_log.py` (grade finished spread bets), `export_best_bets.py`, commit |
+| `nightly-update.yml` | 03:00 UTC, Sep–Feb | refresh PBP, run pipeline, **capture the immutable pregame spread snapshot** (`pregame_snapshots.py capture`), retrain prop models, **freeze the week's prop snapshot**, `betting_log.py` (grade finished spread bets), `export_best_bets.py`, commit |
 | `weekly-model-performance.yml` | Mondays 06:00 UTC, Sep–Feb | prop backtest, `betting_log.py`, `weekly_spread_report.py` → `spread_performance.json`; persist `accuracy_results_*.json` |
 | `update-schedule.yml` | daily 06:00 UTC | refresh `nfl_schedule_<year>.csv` |
-| `tests.yml` | on push / PR | `pytest -q` on Python 3.12 and 3.13, plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces) |
+| `tests.yml` | on push / PR | `pytest -q` on Python 3.14, plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces) |
 | `send_predictions_schedule.yml` | Wed evenings (in season) | email predictions |
 | `rss_test.yml` | on push | regenerate + link-check `alerts_feed.xml` |
 | `keep-alive.yml` | twice daily | ping the deployed app so Streamlit Cloud doesn't sleep |
