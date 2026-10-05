@@ -31,8 +31,12 @@ bottom.
     captured no later than the quote's own provider timestamp; without one,
     no time-aligned link is claimed. No probabilities are copied.
   - **Windows:** Wednesday 12:00–15:00 and Sunday 09:00–11:00 Toronto, so a
-    much later run can't be labelled as the slot. An empty response is kept
-    as evidence but leaves the slot open for a retry.
+    much later run can't be labelled as the slot. An empty response, or one
+    where only the US FanDuel reference quoted, is kept as evidence but
+    leaves the slot open for a retry inside the window.
+  - **Persistence:** capture files are uploaded as a run artifact even when
+    the capture or commit fails. A final step fails the run if any capture
+    didn't reach `main`, naming the artifact that holds it.
   - **Failures** fail the workflow. `spread_tracker.py` and its files are
     unchanged.
 

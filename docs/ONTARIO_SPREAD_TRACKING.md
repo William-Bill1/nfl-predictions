@@ -91,9 +91,10 @@ explicit. The keys and titles were checked against The Odds API's
    (`provider_reports_started`), even if the schedule says otherwise.
 7. **Write.** The capture is sealed with a checksum, validated, and written
    once (see "Immutability").
-8. **Empty captures.** If no requested book quoted any in-scope game (for
-   example, an empty provider response), the file is still written as
-   evidence, with `usable: false`. The result is `empty`: the run fails, and
+8. **Empty captures.** If no **Ontario** book quoted any in-scope game, the
+   file is still written as evidence, with `usable: false`. This covers an
+   empty provider response, and also a response where only the US FanDuel
+   reference quoted: US quotes never make a capture usable. The result is `empty`: the run fails, and
    the slot stays open, so the next run inside the window can capture it. The
    provider doesn't charge for an `/odds` request that returns no events.
 
@@ -128,7 +129,7 @@ from an earlier capture.
 | `schedule` | path and sha256 of the schedule bytes used |
 | `games[]` | `game_id`, `season`, `week`, teams, scheduled `kickoff_utc`, `provider_event_id`, `provider_commence_time`, `orientation`, `match_problem`, `quotes[]`, `unrequested_books` |
 | `quotes[]` | `book_key`, `book_title`, `jurisdiction`, `role`, `source` (always `the_odds_api`), `status`, `home_point`, `home_price`, `away_point`, `away_price`, `bookmaker_last_update`, `market_last_update`, `age_minutes`, `problem`, `model_snapshot` |
-| `usable` | `true` if at least one requested book quoted (or stale-quoted) an in-scope game; an unusable capture doesn't fill its slot |
+| `usable` | `true` if at least one **Ontario** (`CA-ON`) feed quoted (or stale-quoted) an in-scope game; US reference quotes don't count. An unusable capture doesn't fill its slot |
 | `excluded_games`, `unmatched_provider_events` | games left out, with reasons; provider events that matched no in-scope game |
 | `coverage` | per book: whether it was requested, game count, counts by status, and a note (BET99 paid tier, FanDuel US reference) |
 | `provider_response` | the provider's events, as returned. Any string containing the key or an `apiKey=` URL is removed |
@@ -208,10 +209,12 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
 - **Conflicts:** the same `run_id` with different content, or an existing file
   that isn't a valid artifact, raises `CaptureConflictError`. Nothing is
   written.
-- **One capture per slot.** A slot that already has a usable capture is
-  skipped without an API call. A failed request writes nothing, and an empty
-  capture doesn't fill the slot, so in both cases a later run inside the
-  window can still capture it. Completed captures are never changed. Two local runs for the same slot at once are
+- **One capture per slot.** A slot that already has a usable capture (one
+  with an Ontario quote) is skipped without an API call. A failed request
+  writes nothing, and an empty or Ontario-less capture doesn't fill the slot,
+  so a later run inside the window can still capture it. After the window,
+  the slot stays `empty` (or `missed`); a later run never fills it. Completed
+  captures are never changed. Two local runs for the same slot at once are
   blocked by an exclusive lock file (`.<slot_id>.lock`, git-ignored); the
   second run fails without calling the API. In Actions, a `concurrency` group
   serializes the runs.
@@ -274,8 +277,14 @@ plain push, retried 3 times; it never force-pushes. Other workflows (the
 nightly, the US+CA tracker) also push plain commits to `main`, so neither side
 can drop the other's commits; a racing push fails rather than overwrites.
 Every run also uploads the capture files as a workflow artifact (kept 90
-days), so a capture survives even if its push fails. Re-committing it is a
-manual step.
+days), including runs where the capture or commit step failed, so a capture
+survives a failed push.
+
+A final **Report persistence** step runs on every run. It fails the run with
+an `::error::` if any capture file is still uncommitted or unpushed, naming
+the artifact that holds it, or saying it is lost if the upload also failed.
+Re-committing from the artifact is a manual step. A manual run on a branch
+other than `main` doesn't commit, so it is reported the same way.
 
 ## Credit budget
 
