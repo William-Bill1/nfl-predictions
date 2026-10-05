@@ -72,6 +72,7 @@ jobs:
       # Runs even when the capture step failed, so an empty capture (kept as
       # evidence; the run still fails) is committed too.
       - name: Commit new capture files
+        id: commit
         if: >-
           always() && github.ref == 'refs/heads/main' &&
           (steps.capture.outputs.status == 'captured' || steps.capture.outputs.status == 'empty')
@@ -93,6 +94,7 @@ jobs:
 
       # Keeps a copy of any capture file even if the commit or push fails.
       - name: Upload capture files
+        id: upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -100,6 +102,38 @@ jobs:
           path: data_files/ontario_spreads/captures/*.json
           if-no-files-found: ignore
           retention-days: 90
+
+      # The run's final word on whether new capture files reached main and the
+      # artifact store. Any capture file still uncommitted at this point (push
+      # failed, run on a branch, or a crash after writing) is reported, and the
+      # run fails unless the file is at least in the artifact.
+      - name: Report persistence
+        if: always()
+        env:
+          STATUS: ${{ steps.capture.outputs.status }}
+          COMMIT: ${{ steps.commit.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+          ARTIFACT: ontario-spread-capture-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          pending=$(git status --porcelain --untracked-files=all -- data_files/ontario_spreads/captures | grep '\.json$' || true)
+          unpushed=$(git log --oneline '@{u}..HEAD' -- data_files/ontario_spreads/captures 2>/dev/null || true)
+          {
+            echo "### Capture persistence"
+            echo "- capture status: ${STATUS:-none}; commit step: ${COMMIT:-n/a}; artifact upload: ${UPLOAD:-n/a}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$pending" ] && [ -z "$unpushed" ]; then
+            echo "- no unpersisted capture files" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "- NOT on main: $(echo $pending $unpushed)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$UPLOAD" = "success" ]; then
+            echo "::error::Capture file(s) were not persisted to main; they are only in workflow artifact $ARTIFACT (kept 90 days) - re-commit them by hand"
+            echo "- only in artifact **$ARTIFACT** ❌" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Capture file(s) were neither committed to main nor uploaded as an artifact - they are lost when this runner ends"
+            echo "- not uploaded either ❌" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
 
       - name: Slot coverage (last 28 days)
         if: always()

@@ -643,10 +643,10 @@ def build_capture(*, run_id: str, slot: dict, captured_at: datetime, received_at
                           "only - no model probabilities are stored here",
         },
         "games": games,
-        # False when no requested book quoted any in-scope game (e.g. an empty
-        # provider response). Such a capture is kept as evidence but doesn't
-        # fill its slot, so a retry can still capture it.
-        "usable": any(q["status"] in ("quoted", "stale") for g in games for q in g["quotes"]),
+        # False when no ONTARIO book quoted any in-scope game (an empty
+        # response, or only the US FanDuel reference). Such a capture is kept
+        # as evidence but doesn't fill its slot, so a retry can still capture it.
+        "usable": has_ontario_quote(games),
         "excluded_games": sorted(excluded, key=lambda x: x["game_id"]),
         "unmatched_provider_events": sorted(
             [{"id": e.get("id"), "home_team": e.get("home_team"), "away_team": e.get("away_team"),
@@ -656,6 +656,14 @@ def build_capture(*, run_id: str, slot: dict, captured_at: datetime, received_at
         "provider_response": events,
     }
     return _seal(doc)
+
+
+def has_ontario_quote(games: list[dict]) -> bool:
+    """True if at least one Ontario (CA-ON) feed quoted an in-scope game.
+    Quotes from the US FanDuel reference never count."""
+    return any(q["status"] in ("quoted", "stale") and q["jurisdiction"] == "CA-ON"
+               and BOOKS_BY_KEY.get(q["book_key"]) in ONTARIO_BOOKS + (BET99,)
+               for g in games for q in g["quotes"])
 
 
 _CAPTURE_FIELDS = ("schema_version", "kind", "run_id", "slot", "captured_at", "received_at",
@@ -713,8 +721,7 @@ def validate_capture(doc, where="capture") -> None:
                       and as_of <= parse_provider_time(q["market_last_update"])
                       and parse_utc(link["captured_at"]) <= as_of, gw,
                       f"{q['book_key']} model snapshot postdates the quote")
-    _need(doc["usable"] == any(q["status"] in ("quoted", "stale")
-                               for g in doc["games"] for q in g["quotes"]), where, "usable flag")
+    _need(doc["usable"] == has_ontario_quote(doc["games"]), where, "usable flag")
 
 
 def _accept_existing(path: Path, text: str, validate) -> dict:
@@ -848,9 +855,10 @@ def capture(*, now: datetime | None = None, slot: str = "auto", api_key: str | N
                             code=ps.code_revision(repo_dir), books=books)
         path, created = write_artifact(doc, capture_dir, validate_capture)
     if not doc["usable"]:
-        return CaptureResult("empty", f"no requested book quoted any in-scope game for slot "
-                                      f"{resolved['slot_id']}; kept as {path.name}, but the "
-                                      "slot stays open for a retry", path, doc)
+        return CaptureResult("empty", f"no Ontario book quoted any in-scope game for slot "
+                                      f"{resolved['slot_id']} (US reference quotes don't count); "
+                                      f"kept as {path.name}, but the slot stays open for a retry "
+                                      "within its window", path, doc)
     return CaptureResult("captured", f"captured slot {resolved['slot_id']} "
                                      f"({resolved['status']}) as {path.name}", path, doc)
 

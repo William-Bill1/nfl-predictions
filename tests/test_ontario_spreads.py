@@ -853,6 +853,42 @@ class TestEmptyCaptureRetry:
                                dirs["capture_dir"])
         assert [c["status"] for c in cov] == ["empty"]
 
+    def test_us_reference_quotes_alone_do_not_fill_the_slot(self, monkeypatch, schedule_path, dirs):
+        # Only FanDuel US quoted: kept as evidence, but no Ontario book has a price.
+        us_only = [_event(g, _quotes("2026-10-07T15:55:00Z", keys=("fanduel",)))
+                   for g in ("2026_05_TB_DAL", "2026_05_CHI_GB")]
+        first = _capture(monkeypatch, FakeAPI(us_only), schedule_path, dirs, WED_SLOT)
+        assert first.status == "empty" and first.doc["usable"] is False
+        assert "Ontario" in first.message
+        assert _quote(first.doc, "2026_05_TB_DAL", "fanduel")["status"] == "quoted"
+        assert first.path.exists()
+        evidence = first.path.read_bytes()
+        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=2),
+                               dirs["capture_dir"])
+        assert [c["status"] for c in cov] == ["empty"]
+        # The slot is still open: a later run in the window calls the API and fills it.
+        api = FakeAPI(_wed_events("2026-10-07T16:55:00Z"))
+        second = _capture(monkeypatch, api, schedule_path, dirs, WED_SLOT + timedelta(hours=1))
+        assert second.status == "captured" and len(api.paid_calls) == 1
+        assert first.path.read_bytes() == evidence
+
+    def test_us_only_slot_cannot_be_retried_after_its_window(self, monkeypatch, schedule_path, dirs):
+        us_only = [_event("2026_05_TB_DAL", _quotes("2026-10-07T15:55:00Z", keys=("fanduel",)))]
+        _capture(monkeypatch, FakeAPI(us_only), schedule_path, dirs, WED_SLOT)
+        api = FakeAPI(_wed_events())
+        late = _capture(monkeypatch, api, schedule_path, dirs, WED_SLOT + timedelta(hours=4))
+        assert late.status == "not_due" and api.calls == []
+        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=5),
+                               dirs["capture_dir"])
+        assert [c["status"] for c in cov] == ["empty"]
+
+    def test_validation_rejects_usable_set_by_a_us_reference_quote(self, monkeypatch, schedule_path, dirs):
+        us_only = [_event("2026_05_TB_DAL", _quotes("2026-10-07T15:55:00Z", keys=("fanduel",)))]
+        doc = _capture(monkeypatch, FakeAPI(us_only), schedule_path, dirs, WED_SLOT).doc
+        doc["usable"] = True
+        with pytest.raises(on.ValidationError, match="usable flag"):
+            on.validate_capture(on._seal(doc))
+
     def test_failed_request_writes_nothing_and_allows_retry(self, monkeypatch, schedule_path, dirs):
         with pytest.raises(on.CaptureError):
             _capture(monkeypatch, FakeAPI(odds_status=503), schedule_path, dirs, WED_SLOT)
@@ -906,3 +942,23 @@ def test_credit_check_errors_are_redacted(monkeypatch, schedule_path, dirs):
         _capture(monkeypatch, failing, schedule_path, dirs, WED_SLOT)
     assert KEY not in str(exc.value) and "apiKey=***" in str(exc.value)
     assert not list(dirs["capture_dir"].glob("*.json"))
+
+
+
+def test_workflow_reports_persistence_after_any_failure(workflow):
+    steps = workflow["jobs"]["capture"]["steps"]
+    names = [s.get("name") for s in steps]
+    upload = next(s for s in steps if s.get("id") == "upload")
+    report = next(s for s in steps if s.get("name") == "Report persistence")
+    commit = next(s for s in steps if s.get("id") == "commit")
+    # Upload and report run even when the capture or commit step failed,
+    # and come after both of them.
+    assert upload["if"] == "always()" and report["if"] == "always()"
+    assert names.index("Capture Ontario spreads") < names.index(commit["name"]) \
+        < names.index(upload["name"]) < names.index("Report persistence")
+    run = report["run"]
+    assert "git status --porcelain" in run and "@{u}..HEAD" in run
+    assert "::error::" in run and "exit 1" in run
+    assert report["env"]["UPLOAD"] == "${{ steps.upload.outcome }}"
+    assert report["env"]["COMMIT"] == "${{ steps.commit.outcome }}"
+    assert "ODDS_API_KEY" not in json.dumps(report)
