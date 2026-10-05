@@ -182,6 +182,7 @@ rollout history in `docs/ODDS_API_INTEGRATION_PLAN.md`.
 | Open-Meteo | Player-prop weather adjustments | `player_props/weather.py` (nightly: `--no-weather`) |
 | ESPN injuries JSON feed | Player-prop injury adjustments | `player_props/injuries.py` (on in the nightly since 2026-09-26); was an HTML scrape that silently returned 0 rows by 2026 |
 | The Odds API | Real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork since 2026-09-16 |
+| The Odds API | Immutable Ontario sportsbook spread captures (Wed 12:00 / Sun 09:00 Toronto) + manual FanDuel Ontario quotes | `ontario_spreads.py` + `.github/workflows/ontario-spread-capture.yml`; opt-in (same `ODDS_API_KEY`), bulk endpoint by bookmaker key, 1 credit per capture; see `docs/ONTARIO_SPREAD_TRACKING.md` |
 | The Odds API | Season-long US+CA sportsbook game-spread tracker vs. nflverse's line, a price-adjusted per-book value finder, and a model-vs-book line shopper | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `scripts/model_line_shop.py` + `pages/5_Spread_Tracker.py` + `pages/6_Value_Finder.py`; opt-in (same `ODDS_API_KEY`), bulk endpoint, live since 2026-09-16; see `docs/MARKET_SPREAD_TRACKER_PLAN.md` |
 | SMTP email | Bet notifications | `emailer.py`, Gmail App Passwords |
 
@@ -200,6 +201,7 @@ score fetch is gone.
 - `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); `market_odds_week{W}_{season}.csv` doubles as its own cache, filled in incrementally (cached games never re-fetched; uncovered games re-tried each run - free until props are posted)
 - `spread_tracker.py` — opt-in season-long US+CA sportsbook game-spread tracker (`ODDS_API_KEY`, bulk endpoint); upserts `spread_tracker_log.csv` against nflverse's `spread_line`
+- `ontario_spreads.py` — opt-in Ontario sportsbook spread captures (`capture`, `manual-quote`, `coverage`, `validate`); separate from `spread_tracker.py`, whose files it never touches
 - `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
 - `scripts/spread_value_finder.py` — reads `spread_tracker_log.csv`; for one book, ranks sides by fair-value edge (normal approx of margin of victory vs. the book's own devigged price) — point-divergence alone isn't the same as a favorable price
 - `scripts/model_line_shop.py` — reads `spread_tracker_log.csv` + `nfl_games_historical_with_predictions.csv`; extends the spread model's own probability (evaluated against nflverse's line only) to every tracked book's specific line, ranked by edge vs. the model instead of vs. the field
@@ -220,6 +222,7 @@ All data in `data_files/` (committed to git):
 - `spread_tracker_report.json` — season-to-date per-book ranking + best-line-per-game + anomaly flags, rolled up from `spread_tracker_log.csv` by `scripts/spread_tracker_report.py`
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
 - `pipeline_run_manifest.json` — provenance of the latest successful pipeline run (written by `nfl-gather-data.py`)
+- `ontario_spreads/captures/<run_id>.json` — immutable Ontario spread captures, one per scheduled slot (quotes by bookmaker with jurisdiction, provider timestamps, coverage, model-snapshot link; no model probabilities); `ontario_spreads/manual/<quote_id>.json` — manual FanDuel Ontario quotes (source `manual`)
 - `pregame_snapshots/<run_id>.json` — immutable pregame spread predictions, one file per nightly run (`pregame_snapshots.py`; see `docs/PREGAME_SNAPSHOTS.md`)
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed

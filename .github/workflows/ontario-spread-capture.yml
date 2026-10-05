@@ -1,0 +1,144 @@
+name: Ontario Spread Capture
+
+# Immutable Ontario sportsbook spread captures (ontario_spreads.py), twice a
+# week during the season:
+#   - Wednesday 12:00 America/Toronto
+#   - Sunday    09:00 America/Toronto
+# GitHub cron is UTC-only, so each slot has two entries: one for EDT (UTC-4)
+# and one for EST (UTC-5). ontario_spreads.py decides from the Toronto wall
+# clock whether a slot is due. The entry an hour early does nothing; the one an
+# hour late finds the slot already captured and makes no API call. A run that
+# GitHub delays is still captured inside the slot's window and labelled "late"
+# (windows: Wednesday until 15:00, Sunday until 11:00 Toronto); a slot with no
+# capture shows as "missed" in `python ontario_spreads.py coverage`. A capture
+# with no quotes at all ("empty") is committed as evidence, fails the run, and
+# leaves the slot open for the next run inside the window.
+#
+# Opt-in: without the ODDS_API_KEY secret, no API calls are made.
+# A failed capture fails the run (no continue-on-error), and so does a capture
+# skipped to protect the shared credit reserve.
+
+permissions:
+  contents: write
+
+on:
+  schedule:
+    - cron: '0 16 * 9-12,1-2 3'   # Wed 12:00 EDT
+    - cron: '0 17 * 9-12,1-2 3'   # Wed 12:00 EST
+    - cron: '0 13 * 9-12,1-2 0'   # Sun 09:00 EDT
+    - cron: '0 14 * 9-12,1-2 0'   # Sun 09:00 EST
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: "auto (the due slot, if any), wednesday_noon, sunday_morning, or ad_hoc"
+        required: false
+        default: auto
+
+# One capture at a time, never cancelled midway: the second run of a slot sees
+# the first one's committed capture and skips without calling the API.
+concurrency:
+  group: ontario-spread-capture
+  cancel-in-progress: false
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Capture Ontario spreads
+        id: capture
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+          SLOT: ${{ github.event.inputs.slot || 'auto' }}
+        run: |
+          set -o pipefail
+          python ontario_spreads.py capture --slot "$SLOT" | tee "$RUNNER_TEMP/ontario_capture.txt"
+
+      # Runs even when the capture step failed, so an empty capture (kept as
+      # evidence; the run still fails) is committed too.
+      - name: Commit new capture files
+        id: commit
+        if: >-
+          always() && github.ref == 'refs/heads/main' &&
+          (steps.capture.outputs.status == 'captured' || steps.capture.outputs.status == 'empty')
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add data_files/ontario_spreads/captures
+          if git diff --staged --quiet; then
+            echo "::error::capture reported success but produced no new file"
+            exit 1
+          fi
+          git commit -m "Ontario spread capture [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase --quiet && git push && exit 0
+            sleep $((attempt * 10))
+          done
+          echo "::error::could not push the new capture"
+          exit 1
+
+      # Keeps a copy of any capture file even if the commit or push fails.
+      - name: Upload capture files
+        id: upload
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ontario-spread-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: data_files/ontario_spreads/captures/*.json
+          if-no-files-found: ignore
+          retention-days: 90
+
+      # The run's final word on whether new capture files reached main and the
+      # artifact store. Any capture file still uncommitted at this point (push
+      # failed, run on a branch, or a crash after writing) is reported, and the
+      # run fails unless the file is at least in the artifact.
+      - name: Report persistence
+        if: always()
+        env:
+          STATUS: ${{ steps.capture.outputs.status }}
+          COMMIT: ${{ steps.commit.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+          ARTIFACT: ontario-spread-capture-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          pending=$(git status --porcelain --untracked-files=all -- data_files/ontario_spreads/captures | grep '\.json$' || true)
+          unpushed=$(git log --oneline '@{u}..HEAD' -- data_files/ontario_spreads/captures 2>/dev/null || true)
+          {
+            echo "### Capture persistence"
+            echo "- capture status: ${STATUS:-none}; commit step: ${COMMIT:-n/a}; artifact upload: ${UPLOAD:-n/a}"
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ -z "$pending" ] && [ -z "$unpushed" ]; then
+            echo "- no unpersisted capture files" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          echo "- NOT on main: $(echo $pending $unpushed)" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$UPLOAD" = "success" ]; then
+            echo "::error::Capture file(s) were not persisted to main; they are only in workflow artifact $ARTIFACT (kept 90 days) - re-commit them by hand"
+            echo "- only in artifact **$ARTIFACT** ❌" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "::error::Capture file(s) were neither committed to main nor uploaded as an artifact - they are lost when this runner ends"
+            echo "- not uploaded either ❌" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit 1
+
+      - name: Slot coverage (last 28 days)
+        if: always()
+        run: |
+          echo "### Slot coverage (last 28 days)" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          python ontario_spreads.py coverage --days 28 | tee -a "$GITHUB_STEP_SUMMARY" || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"

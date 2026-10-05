@@ -89,3 +89,6 @@ player_props/models/*_lgbm.txt
 
 # Rolling spread backtest outputs (scripts/rolling_spread_backtest.py)
 /backtest_output/
+
+# Ontario spread capture: per-slot lock files (local only)
+/data_files/ontario_spreads/captures/.*.lock
