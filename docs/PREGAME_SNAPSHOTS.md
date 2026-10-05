@@ -81,6 +81,104 @@ hash-checked, and parsed from those same bytes. Any mismatch raises
 `ProvenanceError` and nothing is written. A run that fails leaves **no**
 manifest, because the stale one was deleted when the run started.
 
+### Line endings: hashed files are byte-exact
+
+The manifest hashes the **exact bytes** of the schedule and predictions files,
+line endings included, and verification never normalizes them. Git for
+Windows defaults to `core.autocrlf=true`, which converts LF to CRLF on
+checkout. That gave a correct checkout different bytes from the ones the
+nightly committed, so the provenance check failed. `.gitattributes` therefore
+marks exactly the two hashed files `-text`, so Git checks them out (and
+commits them) byte-for-byte:
+
+```
+data_files/nfl_games_historical.csv -text
+data_files/nfl_games_historical_with_predictions.csv -text
+```
+
+Other files keep normal line-ending handling. Snapshot files don't need the
+rule: their checksum is computed over the parsed, canonical JSON, not the
+file bytes.
+
+**Refreshing a checkout made before the rule.** New attributes don't rewrite
+files that are already checked out. Git's cached file metadata may also still
+mark them as clean, so `git status` can show nothing and a plain
+`git checkout -- <file>` can leave the converted bytes in place. Check each of
+the two files first:
+
+```
+git diff --ignore-cr-at-eol --quiet -- <file>
+```
+
+| Exit code | Meaning | What to do |
+|---|---|---|
+| `0` | No content differences from the committed file once CRs at line ends are ignored. This does **not** show that a line-ending difference exists; the file may already be byte-identical. | Safe to restore: delete the file and check it out again. That always writes the committed bytes, and nothing is lost because there are no content edits. |
+| `1` | Real content differences: local edits, or data regenerated locally. | **Leave the file alone.** Don't check it out, and don't delete it. Edited data won't match the committed manifest anyway, even after converting its line endings, so there's nothing to gain. If you want the committed file back, save a copy of your version elsewhere first and decide yourself. |
+| `>1` | The command failed (not a repository, bad path, and so on). | Change nothing; fix the error and rerun. |
+
+PowerShell (Windows):
+
+```powershell
+foreach ($f in 'data_files/nfl_games_historical_with_predictions.csv',
+               'data_files/nfl_games_historical.csv') {
+    git diff --ignore-cr-at-eol --quiet -- $f
+    $rc = $LASTEXITCODE
+    if ($rc -eq 1) {
+        Write-Host "$f has content changes - left untouched"
+    } elseif ($rc -ne 0) {
+        Write-Host "git diff failed for $f (exit $rc) - nothing changed"
+    } else {
+        try {
+            Remove-Item -LiteralPath $f -ErrorAction Stop
+        } catch {
+            Write-Host "could not delete $f - nothing changed: $($_.Exception.Message)"
+            continue
+        }
+        git checkout -- $f
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host "$f restored to the committed bytes"
+        } else {
+            Write-Host "git checkout failed for $f (exit $LASTEXITCODE) - run: git checkout -- $f"
+        }
+    }
+}
+```
+
+Bash (Git Bash, Linux, macOS):
+
+```bash
+for f in data_files/nfl_games_historical_with_predictions.csv data_files/nfl_games_historical.csv; do
+    git diff --ignore-cr-at-eol --quiet -- "$f"; rc=$?
+    case $rc in
+        0) if ! rm -- "$f"; then echo "could not delete $f - nothing changed"
+           elif git checkout -- "$f"; then echo "$f restored to the committed bytes"
+           else echo "git checkout failed for $f - run: git checkout -- $f"; fi ;;
+        1) echo "$f has content changes - left untouched" ;;
+        *) echo "git diff failed for $f (exit $rc) - nothing changed" ;;
+    esac
+done
+```
+
+Both scripts report every outcome. A failed delete leaves the file as it
+was. On Windows, deletes can be refused while another program (an editor,
+the app, antivirus) has the file open; close it and rerun. If the checkout
+fails after a successful delete, nothing is lost: the file had no content
+edits, so `git checkout -- <file>` brings it back.
+
+Afterwards, `git ls-files --eol <file>` shows `w/lf` for a restored file. A
+fresh clone, or any later pull that updates these files, gets the exact bytes
+automatically. `python scripts/check_pipeline_outputs.py` then passes for
+committed, unedited data.
+
+**Running the pipeline on Windows.** pandas writes CRLF on Windows. A local
+run therefore produces CRLF files, and its manifest records the hashes of
+those CRLF bytes, so local capture and verification stay consistent. Because
+the files are `-text`, Git now shows them as changed in full against the
+committed LF versions, and committing them would commit CRLF bytes. Before,
+autocrlf converted them to LF on commit, which silently broke their match
+with the manifest. Don't commit locally generated data. The nightly on Linux
+produces the committed versions.
+
 ## Snapshot file: `data_files/pregame_snapshots/<run_id>.json`
 
 Top level: `schema_version` (1), `kind` (`pregame_spread_snapshot`),

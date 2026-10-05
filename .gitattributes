@@ -1,1 +1,8 @@
 data_files/nfl_play_by_play_historical.csv.gz filter=lfs diff=lfs merge=lfs -text
+
+# Byte-exact files: pipeline_run_manifest.json records the SHA-256 of these
+# exact bytes and pregame_snapshots.py verifies it. -text stops Git from
+# converting line endings (core.autocrlf), so a checkout's bytes match the
+# committed bytes. See docs/PREGAME_SNAPSHOTS.md ("Line endings").
+data_files/nfl_games_historical.csv -text
+data_files/nfl_games_historical_with_predictions.csv -text

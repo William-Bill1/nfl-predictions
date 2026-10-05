@@ -8,6 +8,56 @@ bottom.
 
 ## October 2026
 
+- **Model Performance page: default week.** The page treated
+  `selected_season == 2025` as the current season, so from 2026 it offered
+  Weeks 1–18 and opened on Week 18, a week not yet played ("No play-by-play
+  data found"). Weeks now come from completed games in
+  `nfl_games_historical.csv` (`season_utils.completed_weeks`). Only
+  regular-season weeks with results are listed, and the default is the
+  latest week whose games have all finished. A week with a Monday night game
+  still to come isn't picked, or cached, early. The season defaults to the
+  newest one with results. If the selected season has none (preseason), the
+  page says so and skips the week analyses, instead of opening an unplayed
+  week. The unused date-based `get_current_nfl_week` /
+  `get_season_for_week` helpers were removed.
+- **Player-prop accuracy results are only cached when final.**
+  `player_props/backtest.py` saved every analysis it ran, including a week
+  with a game still to play or play-by-play missing a game. The page then
+  served that saved file as the week's result. Completeness is now checked
+  game by game: `collect_actual_results` records, for each play-by-play
+  `game_id`, whether its `END GAME` play is present and the score on that
+  play, both totals read from the same row (`pbp_game_completion`).
+  Per-column maxima aren't used: running totals aren't monotonic (a reversed
+  score dips and recovers; 737 of 1,680 games in 2020–2025 do), so maxima
+  could pair scores that never stood together and hide a corrected scoring
+  event. `week_results_status` calls results final
+  only when every scheduled regular-season game has final scores in the
+  schedule, has play-by-play ending in `END GAME`, and that play's score
+  matches the schedule. A game with no `END GAME` play, or with ambiguous or
+  null `END GAME` scores, stays provisional. Seeing every team in the stats isn't
+  enough, since a game whose play-by-play stops early still lists both
+  teams. Provisional results are shown with a warning and never saved.
+  Checked against the local 2020–2025 play-by-play, all 107 regular-season
+  weeks verify as final. Limitations: pre-aggregated weekly stats have no
+  game IDs, so their completeness can't be shown and results from them are
+  never cached (they're recalculated on each view). The check can't detect
+  non-scoring plays missing from the middle of a game whose `END GAME` play
+  and final score are both present.
+  Saved files now record their season, and
+  `load_accuracy_results_for_week` only serves files for the requested
+  season. Older files that don't record a season are recalculated rather
+  than served. The loader also picked the "newest" file by time of day
+  alone; it now uses the date too. `scripts/run_weekly_backtest.py` no
+  longer saves a second copy of each result.
+- **Byte-exact manifest-hashed files.** `.gitattributes` marks
+  `data_files/nfl_games_historical.csv` and
+  `nfl_games_historical_with_predictions.csv` `-text`. Git for Windows'
+  `core.autocrlf=true` had converted them to CRLF on checkout, so committed,
+  correct data failed the pregame-snapshot provenance check. Verification is
+  unchanged and still hashes exact bytes. Checkouts made before the rule
+  need a one-time refresh (see "Line endings" in
+  `docs/PREGAME_SNAPSHOTS.md`); new attributes alone don't rewrite existing
+  files.
 - **Pregame spread snapshots.** `nfl-gather-data.py` now ends a successful
   run by writing `data_files/pipeline_run_manifest.json`, recording the code
   revision, config and feature-set ids, cutoffs, a unique run ID assigned
