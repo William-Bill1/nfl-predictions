@@ -25,8 +25,12 @@ bottom.
     Only fresh, valid, in-window quotes from before kickoff are compared;
     Thursday games and early-Sunday kickoffs stay unmatched.
   - **Groups:** Ontario feeds by default. The US FanDuel reference and manual
-    FanDuel Ontario quotes are separate, opt-in groups, and a manual quote is
-    used only if observed inside a slot window.
+    FanDuel Ontario quotes are separate, opt-in groups. A manual quote is
+    used only if observed inside the game week's intended Wednesday or Sunday
+    slot (four days apart); quotes from other calendar slots, such as an
+    earlier Wednesday, are noted and never substituted. Games whose recorded
+    kickoffs imply different weeks (e.g. postponed), or whose week can't be
+    pinned to one Sunday, are reported as unmatched rather than guessed.
   - **Rollups** count sides, game/book pairs and games separately, and
     declare no best book.
   - **Output:** deterministic JSON/CSV in the git-ignored

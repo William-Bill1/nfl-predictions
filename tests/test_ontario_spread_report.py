@@ -371,7 +371,7 @@ class TestManual:
         r = row(week5.report(include_manual=True), "2026_05_CHI_GB", "fanduel_on_manual", "GB",
                 group=rpt.GROUP_MANUAL)
         assert r["status"] == "unmatched"
-        assert r["reasons"] == ["no_sunday_manual_observation_in_slot_window"]
+        assert r["reasons"] == ["no_sunday_manual_observation_in_intended_slot"]
 
     def test_manual_earliest_in_slot_wins(self, week5):
         week5.manual("2026-10-07T17:00:00Z", WED_SLOT + timedelta(hours=2), handicap=-4.5)
@@ -654,3 +654,204 @@ class TestOutputSafety:
         for out in (on.DATA_DIR / "ontario_spreads" / ".." / "x", on.STORE_DIR / "captures"):
             with pytest.raises(rpt.ReportError):
                 rpt.write_report(rep, out)
+
+
+
+# ------------------------------------- manual calendar-slot pairing --
+
+# Week 5 game CHI@GB kicks off Sunday 2026-10-11 13:00 ET. Its intended slots
+# are Wednesday 2026-10-07 noon and Sunday 2026-10-11 morning.
+SEP30_WED = ("2026-09-30T16:30:00Z", datetime(2026, 9, 30, 17, tzinfo=UTC))
+OCT04_SUN = ("2026-10-04T13:20:00Z", datetime(2026, 10, 4, 14, tzinfo=UTC))
+OCT07_WED = ("2026-10-07T16:30:00Z", datetime(2026, 10, 7, 17, tzinfo=UTC))
+OCT11_SUN = ("2026-10-11T13:20:00Z", datetime(2026, 10, 11, 14, tzinfo=UTC))
+
+
+def _mq(store, when, **kw):
+    observed, entered = when
+    return store.manual(observed, entered, opponent_price=-110, **kw)
+
+
+def _manual_gb(rep):
+    return row(rep, "2026_05_CHI_GB", "fanduel_on_manual", "GB", group=rpt.GROUP_MANUAL)
+
+
+@pytest.fixture(params=["manual_only", "with_captures"])
+def mstore(request, store):
+    if request.param == "with_captures":
+        store.capture(WED_SLOT, wed_events())
+        store.capture(SUN_SLOT, sun_events())
+    return store
+
+
+class TestManualCalendarPairing:
+    def test_week_sunday_mapping(self):
+        assert str(rpt.week_sunday("2026-10-11T17:00:00Z")) == "2026-10-11"   # Sunday
+        assert str(rpt.week_sunday("2026-10-09T00:15:00Z")) == "2026-10-11"   # Thursday night
+        assert str(rpt.week_sunday("2026-10-13T00:15:00Z")) == "2026-10-11"   # Monday night
+        assert str(rpt.week_sunday("2026-10-11T13:30:00Z")) == "2026-10-11"   # London 09:30
+
+    def test_sep30_wednesday_vs_oct11_sunday_not_compared(self, mstore):
+        _mq(mstore, SEP30_WED, handicap=-4.5)
+        _mq(mstore, OCT11_SUN, handicap=-3.0)
+        rep = mstore.report(include_manual=True)
+        r = _manual_gb(rep)
+        assert r["status"] == "unmatched" and r["outcome"] is None
+        assert r["reasons"] == ["no_wednesday_manual_observation_in_intended_slot"]
+        assert r["wed_handicap"] is None and r["sun_slot_id"] == "2026-10-11_sunday_morning"
+        note = next(n for n in rep["manual_notes"] if "not_in_intended_slot" in n["reason"])
+        assert "2026-09-30_wednesday_noon" in note["reason"]
+        assert "2026-10-07_wednesday_noon" in note["reason"]
+
+    def test_oct7_wednesday_vs_oct11_sunday_compared(self, mstore):
+        _mq(mstore, OCT07_WED, handicap=-3.5)
+        _mq(mstore, OCT11_SUN, handicap=-3.0)
+        rep = mstore.report(include_manual=True)
+        r = _manual_gb(rep)
+        assert r["status"] == "compared"
+        assert (r["wed_slot_id"], r["sun_slot_id"]) == ("2026-10-07_wednesday_noon",
+                                                        "2026-10-11_sunday_morning")
+        assert (r["wed_handicap"], r["sun_handicap"], r["spread_change"]) == (-3.5, -3.0, 0.5)
+        week = next(w for w in rep["weeks"] if w["week"] == 5)
+        assert (week["intended_wednesday"], week["intended_sunday"]) == (
+            "2026-10-07_wednesday_noon", "2026-10-11_sunday_morning")
+
+    def test_multiple_calendar_slots_for_same_future_game(self, mstore):
+        # Quotes for the week-5 game in four calendar slots, two of them early.
+        _mq(mstore, SEP30_WED, handicap=-6.5)
+        _mq(mstore, OCT04_SUN, handicap=-5.5)
+        _mq(mstore, OCT07_WED, handicap=-3.5)
+        _mq(mstore, OCT11_SUN, handicap=-3.0)
+        rep = mstore.report(include_manual=True)
+        r = _manual_gb(rep)
+        assert (r["wed_slot_id"], r["wed_handicap"]) == ("2026-10-07_wednesday_noon", -3.5)
+        assert (r["sun_slot_id"], r["sun_handicap"]) == ("2026-10-11_sunday_morning", -3.0)
+        set_aside = sorted(n["reason"].split("observed in ")[1].split(";")[0]
+                           for n in rep["manual_notes"] if "not_in_intended_slot" in n["reason"])
+        assert set_aside == ["2026-09-30_wednesday_noon", "2026-10-04_sunday_morning"]
+        # Same answer whatever order the files were written in.
+        assert len([x for x in rep["rows"] if x["group"] == rpt.GROUP_MANUAL]) == 2
+
+    def test_missing_intended_wednesday_older_quote_not_substituted(self, mstore):
+        _mq(mstore, SEP30_WED, handicap=-6.5)
+        _mq(mstore, OCT11_SUN, handicap=-3.0)
+        rep = mstore.report(include_manual=True)
+        for team in ("GB", "CHI"):
+            r = row(rep, "2026_05_CHI_GB", "fanduel_on_manual", team, group=rpt.GROUP_MANUAL)
+            assert r["status"] == "unmatched" and r["wed_run_id"] is None
+            assert r["spread_change"] is None and r["outcome"] is None
+        overall = rep["rollups"][rpt.GROUP_MANUAL]["overall"]
+        assert overall["sides"]["compared"] == 0 and overall["sides"]["unmatched"] == 2
+
+    def test_earliest_observation_within_exact_slot_kept(self, mstore):
+        _mq(mstore, ("2026-10-07T18:00:00Z", datetime(2026, 10, 7, 18, 30, tzinfo=UTC)),
+            handicap=-4.0)
+        _mq(mstore, ("2026-10-07T16:05:00Z", datetime(2026, 10, 7, 18, 30, tzinfo=UTC)),
+            handicap=-3.5)
+        _mq(mstore, OCT11_SUN, handicap=-3.0)
+        rep = mstore.report(include_manual=True)
+        r = _manual_gb(rep)
+        assert r["wed_observed_at"] == "2026-10-07T16:05:00Z" and r["wed_handicap"] == -3.5
+        assert any(n["reason"] == "superseded_by_earlier_manual_observation_in_slot"
+                   for n in rep["manual_notes"])
+
+    def test_intended_pair_from_kickoffs_when_sunday_capture_missing(self, store):
+        # No Sunday capture: the intended pair is derived from the week's
+        # kickoffs, and the same-week Wednesday capture is still recognized.
+        store.capture(WED_SLOT, wed_events())
+        rep = store.report()
+        week = next(w for w in rep["weeks"] if w["week"] == 5)
+        assert week["intended_wednesday"] == "2026-10-07_wednesday_noon"
+        assert week["wednesday"]["slot_id"] == "2026-10-07_wednesday_noon"
+
+
+
+# ---------------------------------- postponed / inconsistent kickoffs --
+
+def _set_kickoff(store, game_id, gameday, gametime):
+    df = pd.read_csv(store.schedule, sep="\t")
+    df.loc[df["game_id"] == game_id, ["gameday", "gametime"]] = [gameday, gametime]
+    df.to_csv(store.schedule, sep="\t", index=False)
+
+
+class TestAmbiguousAnchors:
+    def test_manual_quotes_with_kickoffs_in_different_weeks_are_unmatched(self, store):
+        # Wednesday quote entered while CHI@GB was on Sunday Oct 11; the game is
+        # then postponed to Tuesday Oct 20 (which belongs to Sunday Oct 18), and
+        # a Sunday-Oct-18 quote is entered. Neither pair can be chosen safely.
+        _mq(store, OCT07_WED, handicap=-3.5)
+        _set_kickoff(store, "2026_05_CHI_GB", "2026-10-20", "20:15")
+        _mq(store, ("2026-10-18T13:20:00Z", datetime(2026, 10, 18, 14, tzinfo=UTC)), handicap=-3.0)
+        rep = store.report(include_manual=True)
+        for team in ("GB", "CHI"):
+            r = row(rep, "2026_05_CHI_GB", "fanduel_on_manual", team, group=rpt.GROUP_MANUAL)
+            assert r["status"] == "unmatched" and r["outcome"] is None
+            assert rpt.ANCHOR_DATES_DISAGREE in r["reasons"]
+            assert r["wed_handicap"] is None and r["sun_handicap"] is None
+        assert sum("manual_observation_not_compared" in n["reason"] for n in rep["manual_notes"]) == 2
+
+    def test_postponed_game_between_captures_is_unmatched(self, store):
+        store.capture(WED_SLOT, wed_events())
+        _set_kickoff(store, "2026_05_CHI_GB", "2026-10-20", "20:15")
+        events = sun_events()
+        events[1] = _event("2026_05_CHI_GB", {"betmgm_ca_on": (-2.5, -115, 2.5, -105, SUN_UPD)},
+                           commence="2026-10-21T00:15:00Z")
+        store.capture(SUN_SLOT, events)
+        rep = store.report()
+        r = row(rep, "2026_05_CHI_GB", "betmgm_ca_on", "GB")
+        assert r["status"] == "unmatched" and r["outcome"] is None and r["spread_change"] is None
+        assert rpt.ANCHOR_DATES_DISAGREE in r["reasons"]
+        # The week's other games are still compared.
+        assert row(rep, "2026_05_DEN_LAC", "betano_ca_on", "LAC")["status"] == "compared"
+        week = next(w for w in rep["weeks"] if w["week"] == 5)
+        assert week["intended_sunday"] == "2026-10-11_sunday_morning"
+
+    def test_manual_quote_for_game_moved_out_of_the_sunday_capture_week(self, store):
+        store.capture(WED_SLOT, wed_events())
+        store.capture(SUN_SLOT, sun_events())
+        # A week-5 game whose recorded kickoff is now the following week.
+        _set_kickoff(store, "2026_05_BUF_LA", "2026-10-15", "20:15")      # Thursday -> Oct 18
+        store.manual("2026-10-11T13:20:00Z", datetime(2026, 10, 11, 14, tzinfo=UTC),
+                     game_id="2026_05_BUF_LA", team="LA", handicap=-1.5, price=-110)
+        rep = store.report(include_manual=True)
+        r = row(rep, "2026_05_BUF_LA", "fanduel_on_manual", "LA", group=rpt.GROUP_MANUAL)
+        # Captures put BUF@LA on Monday Oct 12 (Sunday Oct 11); the manual quote's
+        # recorded kickoff implies Sunday Oct 18.
+        assert r["status"] == "unmatched" and rpt.ANCHOR_DATES_DISAGREE in r["reasons"]
+        assert rpt.ANCHOR_NOT_SUNDAY_WEEK not in r["reasons"]
+
+    def test_game_anchored_to_another_sunday_than_the_capture(self):
+        # Direct check of the week-vs-game rule: a game whose only kickoff
+        # implies Oct 18, in a week whose Sunday capture is Oct 11.
+        sunday_capture = {"slot": {"intended_utc": "2026-10-11T13:00:00Z"},
+                          "games": [], "excluded_games": []}
+        pair = {"season": 2026, "week": 5, "wednesday": None, "sunday": sunday_capture}
+        manual = {("sunday_morning", "2026-10-11_sunday_morning", "2026_05_X_Y", "Y"):
+                  {"season": 2026, "week": 5, "game_id": "2026_05_X_Y",
+                   "kickoff_utc": "2026-10-16T00:15:00Z"}}                 # Thu Oct 15 ET
+        rpt.resolve_anchors(pair, manual)
+        assert pair["intended_sunday"] == "2026-10-11_sunday_morning"
+        assert pair["game_slots"] == {"2026_05_X_Y": rpt.ANCHOR_NOT_SUNDAY_WEEK}
+
+    def test_week_without_sunday_capture_and_disagreeing_kickoffs_is_not_guessed(self, store):
+        _mq(store, OCT07_WED, handicap=-3.5)                                  # CHI@GB, Oct 11
+        _set_kickoff(store, "2026_05_DEN_LAC", "2026-10-20", "20:15")         # -> Oct 18
+        store.manual("2026-10-07T16:40:00Z", datetime(2026, 10, 7, 17, tzinfo=UTC),
+                     game_id="2026_05_DEN_LAC", team="LAC", handicap=-6.5, price=-110)
+        _mq(store, OCT11_SUN, handicap=-3.0)
+        rep = store.report(include_manual=True)
+        week = next(w for w in rep["weeks"] if w["week"] == 5)
+        assert week["intended_wednesday"] is None and week["intended_sunday"] is None
+        manual = [x for x in rep["rows"] if x["group"] == rpt.GROUP_MANUAL]
+        assert manual and all(x["status"] == "unmatched" for x in manual)
+        assert all(rpt.ANCHOR_WEEK_DISAGREES in x["reasons"] for x in manual)
+
+    def test_kickoff_time_change_within_the_week_still_compared(self, store):
+        store.capture(WED_SLOT, wed_events())
+        _set_kickoff(store, "2026_05_CHI_GB", "2026-10-11", "16:25")          # flexed, same day
+        events = sun_events()
+        events[1] = _event("2026_05_CHI_GB", {"betmgm_ca_on": (-2.5, -115, 2.5, -105, SUN_UPD)},
+                           commence="2026-10-11T20:25:00Z")
+        store.capture(SUN_SLOT, events)
+        r = row(store.report(), "2026_05_CHI_GB", "betmgm_ca_on", "GB")
+        assert r["status"] == "compared" and r["kickoff_changed"] is True

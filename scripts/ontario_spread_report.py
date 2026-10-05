@@ -35,7 +35,7 @@ import json
 import os
 import sys
 import tempfile
-from datetime import timedelta
+from datetime import date, timedelta
 from fractions import Fraction
 from pathlib import Path
 
@@ -245,6 +245,124 @@ def week_pairs(chosen: dict[str, dict]) -> tuple[list[dict], list[dict]]:
     return pairs, notes
 
 
+# Days from a kickoff's Toronto weekday to the Sunday of its NFL week. A week
+# runs Thursday to Monday (occasionally Tuesday, or a Wednesday holiday game):
+# Monday/Tuesday games belong to the previous Sunday, Wednesday-Saturday
+# games to the next one.
+_TO_WEEK_SUNDAY = {0: -1, 1: -2, 2: 4, 3: 3, 4: 2, 5: 1, 6: 0}
+
+
+def week_sunday(kickoff_utc: str) -> date:
+    local = on.parse_utc(kickoff_utc).astimezone(on.TORONTO).date()
+    return local + timedelta(days=_TO_WEEK_SUNDAY[local.weekday()])
+
+
+# Anchor problems: the game's week can't be pinned to one calendar Sunday, so
+# no slot pair is guessed and the game is reported as unmatched.
+ANCHOR_DATES_DISAGREE = "no_anchor_kickoff_dates_disagree"
+ANCHOR_NOT_SUNDAY_WEEK = "no_anchor_kickoff_not_in_sunday_capture_week"
+ANCHOR_WEEK_DISAGREES = "no_anchor_week_kickoffs_disagree"
+
+
+def game_anchors(pair: dict, manual_assigned: dict) -> dict[str, set]:
+    """game_id -> the set of week-Sundays implied by every kickoff recorded for
+    it (in this week's captures and manual quotes). One element = consistent;
+    more = the kickoff moved to another week (postponed) or sources disagree."""
+    season, week = pair["season"], pair["week"]
+    anchors: dict[str, set] = {}
+    for c in (pair["wednesday"], pair["sunday"]):
+        if c is None:
+            continue
+        for g in c["games"] + c["excluded_games"]:
+            if (g["season"], g["week"]) == (season, week) and g.get("kickoff_utc"):
+                anchors.setdefault(g["game_id"], set()).add(week_sunday(g["kickoff_utc"]))
+    for m in manual_assigned.values():
+        if (m["season"], m["week"]) == (season, week):
+            anchors.setdefault(m["game_id"], set()).add(week_sunday(m["kickoff_utc"]))
+    return anchors
+
+
+def _slot_ids(sunday: date) -> tuple[str, str]:
+    wednesday = sunday - timedelta(days=4)
+    return f"{wednesday:%Y-%m-%d}_{WEDNESDAY}", f"{sunday:%Y-%m-%d}_{SUNDAY}"
+
+
+def resolve_anchors(pair: dict, manual_assigned: dict) -> None:
+    """Pin the week, and each of its games, to one calendar Sunday.
+
+    Sets on `pair`:
+      intended_wednesday / intended_sunday - the week's slot IDs, or None;
+      game_slots - game_id -> (wednesday_id, sunday_id), or an anchor-problem
+                   reason when the game can't be pinned without guessing.
+
+    The week's Sunday is the automated Sunday capture's date when there is
+    one; otherwise all of the week's games must agree on one Sunday. A game
+    whose own kickoffs imply different Sundays, or a Sunday other than the
+    week's, gets a reason instead of slots."""
+    anchors = game_anchors(pair, manual_assigned)
+    if pair["sunday"] is not None:
+        week_anchor = _local_date(pair["sunday"])
+    else:
+        implied = set().union(*anchors.values()) if anchors else set()
+        week_anchor = next(iter(implied)) if len(implied) == 1 else None
+    if week_anchor is None:
+        pair["intended_wednesday"] = pair["intended_sunday"] = None
+    else:
+        pair["intended_wednesday"], pair["intended_sunday"] = _slot_ids(week_anchor)
+    slots = {}
+    for game_id, sundays in sorted(anchors.items()):
+        if len(sundays) > 1:
+            slots[game_id] = ANCHOR_DATES_DISAGREE
+        elif week_anchor is None:
+            slots[game_id] = ANCHOR_WEEK_DISAGREES
+        elif next(iter(sundays)) != week_anchor:
+            slots[game_id] = ANCHOR_NOT_SUNDAY_WEEK
+        else:
+            slots[game_id] = _slot_ids(week_anchor)
+    pair["game_slots"] = slots
+
+
+def apply_intended_slots(pairs: list[dict], manual_assigned: dict) -> list[dict]:
+    """Resolve each week's anchors, drop an automated Wednesday that isn't the
+    intended one (or any Wednesday when the week can't be anchored), and
+    return notes for anything set aside."""
+    notes = []
+    for p in pairs:
+        resolve_anchors(p, manual_assigned)
+        w = p["wednesday"]
+        if w is not None and w["slot"]["slot_id"] != p["intended_wednesday"]:
+            notes.append({"file": w["_file"], "run_id": w["run_id"], "slot_id": w["slot"]["slot_id"],
+                          "reason": (f"wednesday_not_intended_slot_for_week_"
+                                     f"{p['season']}_{p['week']:02d}"
+                                     if p["intended_wednesday"] else
+                                     f"week_{p['season']}_{p['week']:02d}_not_anchored_"
+                                     f"{ANCHOR_WEEK_DISAGREES}")})
+            p["wednesday"] = None
+    return notes
+
+
+def manual_slot_notes(pairs: list[dict], manual_assigned: dict) -> list[dict]:
+    """Manual observations not used because they sit outside their game's
+    intended Wednesday/Sunday slot, or their game can't be anchored."""
+    by_week = {(p["season"], p["week"]): p for p in pairs}
+    notes = []
+    for (name, slot_id, game_id, team), m in sorted(manual_assigned.items()):
+        p = by_week.get((m["season"], m["week"]))
+        if p is None:
+            continue
+        want = p["game_slots"].get(game_id)
+        if isinstance(want, str):
+            notes.append({"file": m["_file"], "quote_id": m["quote_id"], "game_id": game_id,
+                          "reason": f"manual_observation_not_compared ({want}; observed in "
+                                    f"{slot_id})"})
+        elif want is not None and slot_id not in want:
+            notes.append({"file": m["_file"], "quote_id": m["quote_id"], "game_id": game_id,
+                          "reason": f"manual_observation_not_in_intended_slot "
+                                    f"(observed in {slot_id}; week {m['season']}_{m['week']:02d} "
+                                    f"uses {want[0]} and {want[1]})"})
+    return notes
+
+
 # --------------------------------------------------------------------------
 # Observations
 # --------------------------------------------------------------------------
@@ -313,20 +431,29 @@ def assign_manual_to_slots(manual: list[dict]) -> tuple[dict, list[dict]]:
     return assigned, sorted(notes, key=lambda n: (n["game_id"], n["file"]))
 
 
-def _manual_observations(assigned: dict, slot_name: str, season: int, week: int) -> dict:
-    """Manual quotes for one slot of one week: {(group, game_id, book, side): obs}.
+def _manual_sides(m: dict) -> list[tuple]:
+    """(side, team, handicap, price) for a manual quote: the quoted team's side,
+    plus the opponent's only when its price was entered (handicap mirrored)."""
+    sides = [(m["team_side"], m["team"], m["handicap"], m["price"])]
+    if m["opponent_price"] is not None:
+        other = "away" if m["team_side"] == "home" else "home"
+        sides.append((other, m[f"{other}_team"], m["opponent_handicap"], m["opponent_price"]))
+    return sides
 
-    The quoted team's side always exists; the opponent's side only when its
-    price was entered (its handicap is the mirror)."""
+
+def _manual_observations(assigned: dict, game_slots: dict, which: int, season: int,
+                         week: int) -> dict:
+    """Manual quotes from each game's exact intended calendar slot
+    (`which`: 0 = Wednesday, 1 = Sunday) for one week:
+    {(group, game_id, book, side): obs}. Quotes in any other slot - an older
+    Wednesday, say - and games without an unambiguous anchor are never used."""
     obs = {}
     for (name, slot_id, game_id, team), m in sorted(assigned.items()):
-        if name != slot_name or m["season"] != season or m["week"] != week:
+        want = game_slots.get(game_id)
+        if (not isinstance(want, tuple) or slot_id != want[which]
+                or m["season"] != season or m["week"] != week):
             continue
-        sides = [(m["team_side"], m["team"], m["handicap"], m["price"])]
-        if m["opponent_price"] is not None:
-            other = "away" if m["team_side"] == "home" else "home"
-            sides.append((other, m[f"{other}_team"], m["opponent_handicap"], m["opponent_price"]))
-        for side, t, handicap, price in sides:
+        for side, t, handicap, price in _manual_sides(m):
             obs[(GROUP_MANUAL, game_id, m["book_key"], side)] = {
                 "team": t, "handicap": handicap, "price": price, "quote_status": "quoted",
                 "book_title": m["book_title"], "jurisdiction": m["jurisdiction"],
@@ -446,15 +573,27 @@ def compare_week(pair: dict, groups: tuple[str, ...], books: set[str] | None,
     season, week = pair["season"], pair["week"]
     wed_obs, wed_games, wed_excl = _api_observations(pair["wednesday"])
     sun_obs, sun_games, sun_excl = _api_observations(pair["sunday"])
+    slots = pair["game_slots"]
     if GROUP_MANUAL in groups:
-        wed_obs.update(_manual_observations(manual_assigned, WEDNESDAY, season, week))
-        sun_obs.update(_manual_observations(manual_assigned, SUNDAY, season, week))
+        wed_obs.update(_manual_observations(manual_assigned, slots, 0, season, week))
+        sun_obs.update(_manual_observations(manual_assigned, slots, 1, season, week))
     games = {**sun_games, **wed_games}
     rows, not_quoted = [], set()
-    keys = sorted({k for k in set(wed_obs) | set(sun_obs) if k[0] in groups
-                   and (books is None or k[2] in books)})
+    keys = {k for k in set(wed_obs) | set(sun_obs) if k[0] in groups
+            and (books is None or k[2] in books)}
+    # Manual quotes for games that can't be anchored still get (unmatched) rows.
+    unanchored_manual = set()
+    if GROUP_MANUAL in groups:
+        for (_, _, game_id, _), m in manual_assigned.items():
+            if (m["season"], m["week"]) == (season, week) and isinstance(slots.get(game_id), str) \
+                    and (books is None or m["book_key"] in books):
+                for side, *_ in _manual_sides(m):
+                    unanchored_manual.add((GROUP_MANUAL, game_id, m["book_key"], side))
+    keys = sorted(keys | unanchored_manual)
     for group, game_id, book_key, side in keys:
-        if not (_has_values(wed_obs.get((group, game_id, book_key, side)))
+        anchor_problem = slots.get(game_id) if isinstance(slots.get(game_id), str) else None
+        if anchor_problem is None and not (
+                _has_values(wed_obs.get((group, game_id, book_key, side)))
                 or _has_values(sun_obs.get((group, game_id, book_key, side)))):
             not_quoted.add((group, season, week, game_id, book_key))
             continue
@@ -466,13 +605,21 @@ def compare_week(pair: dict, groups: tuple[str, ...], books: set[str] | None,
             missing = _no_obs_reason("wednesday", pair["wednesday"], wed_excl, game_id,
                                      pair["wednesday"] is not None or group == GROUP_MANUAL)
             if group == GROUP_MANUAL:
-                missing = "no_wednesday_manual_observation_in_slot_window"
+                missing = "no_wednesday_manual_observation_in_intended_slot"
         elif sun is None:
             missing = _no_obs_reason("sunday", pair["sunday"], sun_excl, game_id,
                                      pair["sunday"] is not None or group == GROUP_MANUAL)
             if group == GROUP_MANUAL:
-                missing = "no_sunday_manual_observation_in_slot_window"
-        rows.append(_row(group, season, week, game, book_key, side, wed, sun, missing))
+                missing = "no_sunday_manual_observation_in_intended_slot"
+        r = _row(group, season, week, game, book_key, side, wed, sun, missing)
+        if anchor_problem is not None:
+            r["reasons"] = sorted(set(r["reasons"]) | {anchor_problem})
+            r.update(status="unmatched", outcome=None, spread_change=None,
+                     break_even_change=None, key_3=None, key_7=None)
+            if r["book_title"] is None and group == GROUP_MANUAL:
+                b = on.FANDUEL_ONTARIO_MANUAL
+                r.update(book_title=b.title, jurisdiction=b.jurisdiction, source=b.source)
+        rows.append(r)
     return rows, [{"group": g, "season": s, "week": w, "game_id": gid, "book_key": b}
                   for g, s, w, gid, b in sorted(not_quoted)]
 
@@ -572,6 +719,11 @@ def build_report(capture_dir: Path = on.CAPTURE_DIR, manual_dir: Path = on.MANUA
                 pairs.append({"season": m["season"], "week": m["week"],
                               "wednesday": None, "sunday": None})
         pairs.sort(key=lambda p: (p["season"], p["week"]))
+    capture_notes = sorted(capture_notes + apply_intended_slots(pairs, manual_assigned),
+                           key=lambda n: (n["slot_id"], n["file"]))
+    if include_manual:
+        manual_notes = sorted(manual_notes + manual_slot_notes(pairs, manual_assigned),
+                              key=lambda n: (n["game_id"], n["file"]))
     if season is not None:
         pairs = [p for p in pairs if p["season"] == season]
     if week is not None:
@@ -584,6 +736,8 @@ def build_report(capture_dir: Path = on.CAPTURE_DIR, manual_dir: Path = on.MANUA
         rows.extend(week_rows)
         not_quoted.extend(week_nq)
         weeks.append({"season": p["season"], "week": p["week"],
+                      "intended_wednesday": p["intended_wednesday"],
+                      "intended_sunday": p["intended_sunday"],
                       "wednesday": _slot_ref(p["wednesday"]), "sunday": _slot_ref(p["sunday"])})
     rows.sort(key=lambda r: (r["season"], r["week"], GROUPS.index(r["group"]), r["game_id"],
                              r["book_key"], r["side"]))
@@ -597,21 +751,34 @@ def build_report(capture_dir: Path = on.CAPTURE_DIR, manual_dir: Path = on.MANUA
         "groups": list(groups),
         "rules": {
             "comparison": "same season, week, game_id, sportsbook, jurisdiction, team and "
-                          "spread market; Wednesday-noon vs Sunday-morning slot of that week",
+                          "spread market; the week's intended Wednesday-noon slot vs its "
+                          "Sunday-morning slot, exactly four days apart (Toronto dates)",
             "slot_selection": "earliest usable capture per scheduled slot (ties by run_id); "
                               "empty/US-only, ad_hoc and later duplicate captures are not used",
             "handicap": "each team's own handicap; larger is better for that team; "
                         "spread_change = Sunday - Wednesday",
             "price": "break-even = win rate needed at the American price, pushes excluded; "
                      "lower is a better payout",
-            "outcome": "sunday_dominates / wednesday_dominates = at least as good on both "
-                       "handicap and payout and strictly better on one; trade_off = better "
-                       "on one, worse on the other; unchanged = identical",
+            "outcome": "decided by payoffs: both bets are settled (win = profit at the "
+                       "price, push = 0, loss = -1 stake) for every integer final margin. "
+                       "sunday_dominates / wednesday_dominates = at least as good for every "
+                       "margin and better for at least one; trade_off = each better for some "
+                       "margins; equivalent = different quotes with identical payoffs for "
+                       "every margin (e.g. -100 vs +100); unchanged = identical quotes",
+            "anchors": "each game is pinned to its week's Sunday from every kickoff recorded "
+                       "for it; if those imply different weeks (e.g. a postponement), or a "
+                       "week other than the Sunday capture's, or the week has no Sunday "
+                       "capture and its games disagree, the game is unmatched - no slot pair "
+                       "is guessed. A kickoff time change within the same week is compared "
+                       "and flagged kickoff_changed",
             "eligibility": "only 'quoted' observations from in-window scheduled slots, both "
                            "before kickoff; stale, missing, invalid or out-of-window quotes "
                            "never produce an outcome",
-            "manual": "manual FanDuel Ontario observations only when requested, assigned to a "
-                      "slot only if observed inside its window, compared only with manual",
+            "manual": "manual FanDuel Ontario observations only when requested; assigned to "
+                      "a calendar slot only if observed inside its window; compared only "
+                      "with manual, and only between the week's intended Wednesday and "
+                      "Sunday slots (earliest observation per slot); observations in any "
+                      "other slot are listed in manual_notes and never substituted",
             "not_claimed": "Sunday 09:00 is not a closing line; no best betting time, edge "
                            "or ROI is claimed",
         },

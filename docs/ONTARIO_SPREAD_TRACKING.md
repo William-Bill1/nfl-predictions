@@ -357,25 +357,53 @@ python scripts/ontario_spread_report.py --output-dir some/dir
    `coverage` reports. Empty and US-only captures (`usable: false`) never
    represent a slot. Later usable duplicates are noted as superseded, and
    their quotes are never used, not even to fill a gap.
-3. **Week pairing.** For each (season, week), the Sunday slot that contains
-   the week's games is paired with the Wednesday slot of the **same NFL
-   week**: exactly four days earlier, by Toronto date. If that Wednesday is
-   missing, the week has no Wednesday side. An earlier Wednesday never
-   stands in, even one that contains the same games (such as the Wednesday
-   eight days before a season opener). Such captures are listed in
-   `capture_notes`.
+3. **Week pairing.** Each (season, week) has one **intended calendar pair**:
+   a Sunday-morning slot, and the Wednesday-noon slot exactly four days
+   earlier (Toronto dates).
+   - **The Sunday** is the date of the week's automated Sunday capture. With
+     no Sunday capture, it's the Sunday of the week's own kickoffs: Thursday
+     to Saturday games map forward to it, and Monday or Tuesday games map back
+     to it.
+   - **Only that pair is compared,** for automated and manual quotes alike.
+     If the intended Wednesday is missing, the week has no Wednesday side. An
+     earlier Wednesday never stands in, even one that contains the same games
+     (such as the Wednesday eight days before a season opener). Set-aside
+     captures are listed in `capture_notes`.
+   - **The report lists each week's** `intended_wednesday` and
+     `intended_sunday`.
+   - **Anchors are never guessed.** Each game is pinned to a week's Sunday
+     using every kickoff recorded for it, in the captures and in manual
+     quotes. The game is **unmatched**, with no slot pair chosen, if:
+     - those kickoffs imply different weeks, e.g. after a postponement
+       (`no_anchor_kickoff_dates_disagree`);
+     - they imply a week other than the Sunday capture's
+       (`no_anchor_kickoff_not_in_sunday_capture_week`);
+     - or the week has no Sunday capture and its games disagree about which
+       Sunday it is (`no_anchor_week_kickoffs_disagree`; the week then has
+       no intended slots).
+
+     A kickoff time change within the same week, such as a flex from 13:00
+     to 16:25, is still compared and flagged `kickoff_changed`.
 4. **Matching.** A quote is compared only with the same game, sportsbook,
    jurisdiction, team (home or away side) and spread market at the other slot.
    Captures hold only the main `spreads` market.
 5. **Separate groups.** Ontario feeds (`ontario_api`, the default), the US
    FanDuel reference (`us_reference_api`) and manual FanDuel Ontario quotes
    (`fanduel_ontario_manual`) are never merged, and each has its own rollup.
-6. **Manual quotes.** These are used only with `--include-manual`. A manual
-   observation is assigned to a slot only if its `observed_at` falls inside
-   that slot's Phase 1 window (Wednesday 12:00–15:00, Sunday 09:00–11:00
-   Toronto). Otherwise it's listed in `manual_notes` as outside the windows.
-   Within a slot, the earliest observation is used and later ones are noted.
-   Manual quotes are compared only with manual quotes.
+6. **Manual quotes.** These are used only with `--include-manual`.
+   - **Slot assignment:** a manual observation is assigned to a calendar slot
+     only if its `observed_at` falls inside that slot's Phase 1 window
+     (Wednesday 12:00–15:00, Sunday 09:00–11:00 Toronto). Otherwise it's
+     listed in `manual_notes` as outside the windows.
+   - **Comparison:** quotes are compared only between the game week's
+     **intended** Wednesday and Sunday slots, matched on the exact slot, not
+     just "a Wednesday" for that week. Within a slot, the earliest
+     observation is used and later ones are noted.
+   - **Other slots:** an observation in any other slot, such as one taken a
+     week earlier (e.g. Sep 30 for a game whose intended slots are Oct 7 and
+     Oct 11), is listed in `manual_notes` and never substitutes for a missing
+     intended observation. The row stays unmatched.
+   - **No mixing:** manual quotes are compared only with manual quotes.
 7. **No filling.** A missing quote is never filled from another book, another
    week, another capture or an earlier stale observation.
 
