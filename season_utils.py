@@ -66,3 +66,32 @@ def season_range(today: date | None = None) -> range:
     """``range(FIRST_SEASON, upcoming_or_current_season() + 1)`` - the seasons to
     request when building the full historical schedule dataset."""
     return range(FIRST_SEASON, upcoming_or_current_season(today) + 1)
+
+
+def completed_weeks(schedule, season: int) -> tuple[list[int], int | None]:
+    """Regular-season weeks of ``season`` that have results, plus a default.
+
+    ``schedule`` is the nflverse schedule (``nfl_games_historical.csv``); a game
+    counts as completed when both final scores are present.
+
+    Returns ``(weeks, default)``:
+
+    * ``weeks`` - sorted weeks with at least one completed regular-season game,
+      i.e. the weeks that have results to analyse;
+    * ``default`` - the latest week in which *every* scheduled game is
+      completed, so a partly played week (a Monday night game still to come)
+      isn't picked, and cached, before its results are final. If no week is
+      fully completed yet, the latest week with any results; ``None`` when the
+      season has no completed games at all (preseason, or a season that isn't
+      in the data).
+    """
+    reg = schedule[(schedule['season'] == season) & (schedule['game_type'] == 'REG')]
+    if reg.empty:
+        return [], None
+    done = reg['home_score'].notna() & reg['away_score'].notna()
+    by_week = done.groupby(reg['week']).agg(['any', 'all'])
+    weeks = sorted(int(w) for w in by_week.index[by_week['any']])
+    if not weeks:
+        return [], None
+    full = [int(w) for w in by_week.index[by_week['all']]]
+    return weeks, max(full) if full else weeks[-1]

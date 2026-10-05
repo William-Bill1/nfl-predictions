@@ -11,7 +11,6 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
-from datetime import datetime, timedelta
 import sys
 import os
 
@@ -19,6 +18,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from footer import add_betting_oracle_footer
+from season_utils import completed_weeks, upcoming_or_current_season
 
 try:
     from player_props.backtest import (
@@ -29,7 +29,8 @@ try:
         calculate_hit_rate,
         calculate_roi,
         profitable_subset,
-        collect_actual_results
+        collect_actual_results,
+        week_results_status,
     )
 except ImportError:
     st.error("❌ Could not import backtest module. Please ensure player_props/backtest.py exists.")
@@ -44,90 +45,6 @@ Track prediction accuracy, ROI analysis, and model calibration over time.
 Validate that our model improvements are actually working!
 """)
 
-
-def get_current_nfl_week() -> int:
-    """
-    Calculate the current NFL week based on the actual date.
-
-    NFL season structure:
-    - Regular season: 18 weeks (Weeks 1-18)
-    - Playoffs: Weeks 19-22 (Wild Card, Divisional, Conference Championships, Super Bowl)
-
-    Returns:
-        Current NFL week number (1-22)
-    """
-    today = datetime.now()
-
-    # Determine NFL season year
-    # NFL season runs from September to February, so if we're in Jan-Feb, it's the previous year
-    if today.month <= 2:  # January-February
-        season_year = today.year - 1
-    else:
-        season_year = today.year
-
-    # NFL season typically starts on the first Thursday in September
-    # Find the first Thursday in September of the season year
-    from datetime import date
-    import calendar
-
-    # Start from September 1st of the season year
-    sept_1 = date(season_year, 9, 1)
-
-    # Find the first Thursday in September
-    # weekday() returns 0=Monday, 3=Thursday
-    days_to_first_thursday = (3 - sept_1.weekday()) % 7
-    season_start = sept_1 + timedelta(days=days_to_first_thursday)
-
-    # If we're before the season start, return week 1
-    if today.date() < season_start:
-        return 1
-
-    # Calculate weeks since season start
-    days_since_start = (today.date() - season_start).days
-    weeks_since_start = days_since_start // 7 + 1  # +1 because week 1 starts immediately
-
-    # NFL regular season is 18 weeks, then playoffs
-    if weeks_since_start <= 18:
-        return min(weeks_since_start, 18)  # Cap at 18 for regular season
-    else:
-        # Playoffs: Week 19 = Wild Card, 20 = Divisional, 21 = Conference Championships, 22 = Super Bowl
-        playoff_week = 18 + ((weeks_since_start - 18) // 7) + 1
-        return min(playoff_week, 22)  # Cap at 22 for Super Bowl week
-
-
-def get_season_for_week(week: int) -> int:
-    """
-    Determine the NFL season year for a given week number.
-
-    This accounts for the fact that playoff games (weeks 19-22) from season N
-    are played in January/February of year N+1.
-
-    Args:
-        week: NFL week number (1-22)
-
-    Returns:
-        Season year for the given week
-    """
-    current_week = get_current_nfl_week()
-    today = datetime.now()
-
-    # Determine current season year
-    # NFL season runs from September to February
-    if today.month <= 2:  # January-February (playoffs)
-        current_season = today.year - 1  # 2025 season plays in Jan/Feb 2026
-    else:
-        current_season = today.year
-
-    # If the requested week is <= current week, it's from the current season
-    if week <= current_week:
-        return current_season
-
-    # If the requested week > current week, we need to look backwards
-    # This handles historical analysis (e.g., analyzing week 18 when we're in week 19)
-    else:
-        # For now, assume we're only looking at recent weeks within the same season
-        # If we need to analyze older seasons, this logic would need enhancement
-        return current_season
 
 def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_height=600):
     """
@@ -158,48 +75,54 @@ def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_hei
 st.sidebar.header("📊 Analysis Controls")
 
 # Season selection - current season and two prior seasons
-today = datetime.now()
-if today.month <= 2:  # January-February (playoffs)
-    current_season = today.year - 1
-else:
-    current_season = today.year
-
+current_season = upcoming_or_current_season()
 available_seasons = [current_season - 2, current_season - 1, current_season]
-season_labels = {
-    current_season - 2: f"{current_season - 2} Season",
-    current_season - 1: f"{current_season - 1} Season",
-    current_season: f"{current_season} Season"
-}
+season_labels = {season: f"{season} Season" for season in available_seasons}
 
+SCHEDULE_PATH = Path(__file__).resolve().parent.parent / "data_files" / "nfl_games_historical.csv"
+
+
+@st.cache_data(show_spinner=False)
+def load_schedule_results(path: str, mtime: float) -> pd.DataFrame:
+    """Season/week/scores from the nightly schedule. ``path`` and ``mtime`` key
+    the cache, so a refreshed file is re-read."""
+    return pd.read_csv(path, sep="\t",
+                       usecols=["season", "game_type", "week", "home_score", "away_score"])
+
+
+try:
+    schedule_results = load_schedule_results(str(SCHEDULE_PATH), SCHEDULE_PATH.stat().st_mtime)
+except (OSError, ValueError) as e:
+    schedule_results = pd.DataFrame(columns=["season", "game_type", "week", "home_score", "away_score"])
+    st.sidebar.warning(f"⚠️ Could not read the schedule to find completed weeks: {e}")
+
+weeks_by_season = {season: completed_weeks(schedule_results, season) for season in available_seasons}
+
+# Default to the newest season that has completed games (the current season
+# before its Week 1 has none), falling back to the current season.
+seasons_with_results = [i for i, s in enumerate(available_seasons) if weeks_by_season[s][0]]
 selected_season_idx = st.sidebar.selectbox(
     "Select Season to Analyze",
     options=range(len(available_seasons)),
     format_func=lambda i: season_labels[available_seasons[i]],
-    index=len(available_seasons)-1,  # Default to current season
-    help="Choose which NFL season to analyze. Note: Current season data may not be available yet from the API."
+    index=seasons_with_results[-1] if seasons_with_results else len(available_seasons) - 1,
+    help="Choose which NFL season to analyze. Only weeks with completed games are listed."
 )
 selected_season = available_seasons[selected_season_idx]
 
-# Week selection - show appropriate weeks for selected season
-if selected_season == 2025:
-    # Current season - we're in week 19 (playoffs)
-    current_week = get_current_nfl_week()
-    max_week = min(current_week, 18)  # Regular season only for now
-    st.sidebar.info(f"ℹ️ **2025 Season Note**: We're currently in Week {current_week}. Data for 2025 may not be available yet. If analysis fails, try 2024 Season.")
-elif selected_season == 2024:
-    max_week = 18  # Full regular season available
-elif selected_season == 2023:
-    max_week = 18  # Full regular season available
+# Week selection - only regular-season weeks with completed games, defaulting
+# to the latest fully completed week (never an unplayed week).
+available_weeks, default_week = weeks_by_season[selected_season]
+if available_weeks:
+    selected_week = st.sidebar.selectbox(
+        "Select Week to Analyze",
+        options=available_weeks,
+        index=available_weeks.index(default_week),
+        help=f"Weeks of the {selected_season} season with completed games. Defaults to the latest week whose games have all finished."
+    )
 else:
-    max_week = 18
-
-available_weeks = list(range(1, max_week + 1))
-selected_week = st.sidebar.selectbox(
-    "Select Week to Analyze",
-    options=available_weeks,
-    index=len(available_weeks)-1,  # Default to most recent
-    help=f"Choose which week from {selected_season} season to analyze against actual results"
-)
+    selected_week = None
+    st.sidebar.info(f"ℹ️ No {selected_season} regular-season games have been completed yet, so there are no weeks to analyze. Choose an earlier season.")
 
 # Analysis type
 analysis_type = st.sidebar.radio(
@@ -209,7 +132,7 @@ analysis_type = st.sidebar.radio(
 )
 
 # Auto-run analysis button
-if st.sidebar.button("🔄 Run Fresh Analysis", help="Re-run accuracy analysis for selected week and update cached results"):
+if selected_week is not None and st.sidebar.button("🔄 Run Fresh Analysis", help="Re-run accuracy analysis for selected week and update cached results"):
     with st.spinner("Running fresh accuracy analysis..."):
         # First check if we can collect actual results
         test_df, error_msg = collect_actual_results(selected_week, selected_season)
@@ -223,9 +146,12 @@ if st.sidebar.button("🔄 Run Fresh Analysis", help="Re-run accuracy analysis f
                            "- Try selecting an earlier week with completed games")
         else:
             accuracy_results = run_weekly_accuracy_check(selected_week, selected_season)
-            if accuracy_results:
+            if accuracy_results and accuracy_results.get('final'):
                 st.sidebar.success(f"✅ Fresh analysis complete for Week {selected_week} (results cached)")
                 st.rerun()
+            elif accuracy_results:
+                st.sidebar.warning(f"⚠️ Week {selected_week} results are provisional and were not cached: "
+                                   f"{accuracy_results.get('provisional_reason')}")
             else:
                 st.sidebar.error("❌ Analysis failed - check data availability")
 
@@ -295,9 +221,16 @@ def display_current_week_analysis(week: int, season: int):
             st.warning("⚠️ No matching predictions found with actual results")
             return
 
-        # Save results for future caching
-        save_accuracy_results(accuracy_metrics, week)
-    
+        # Cache only final results. Provisional ones (a game not final, or
+        # play-by-play still missing a game) are shown but not saved, so they
+        # can't be served later as the week's result.
+        final, reason = week_results_status(actuals_df, week, season)
+        if final:
+            save_accuracy_results(accuracy_metrics, week, season=season)
+        else:
+            st.warning(f"⚠️ **Provisional results, not cached:** {reason}. "
+                       "Figures may change once all of the week's data is available.")
+
     # Display key metrics
     col1, col2, col3, col4 = st.columns(4)
 
@@ -536,6 +469,11 @@ def display_roi_analysis(week: int, season: int):
         st.warning("⚠️ No matching predictions found with actual results")
         return
 
+    final, reason = week_results_status(actuals_df, week, season)
+    if not final:
+        st.warning(f"⚠️ **Provisional results:** {reason}. "
+                   "Figures may change once all of the week's data is available.")
+
     # ROI analysis for different confidence thresholds
     roi_table = profitable_subset(accuracy_metrics['detailed_results'])
 
@@ -620,11 +558,15 @@ def display_roi_analysis(week: int, season: int):
 
 
 # Main content based on analysis type
-if analysis_type == "Current Week":
-    display_current_week_analysis(selected_week, selected_season)
-
-elif analysis_type == "Historical Trends":
+if analysis_type == "Historical Trends":
     display_historical_trends()
+
+elif selected_week is None:
+    st.info(f"ℹ️ The {selected_season} season has no completed regular-season games yet. "
+            "Choose an earlier season, or use Historical Trends.")
+
+elif analysis_type == "Current Week":
+    display_current_week_analysis(selected_week, selected_season)
 
 elif analysis_type == "ROI Analysis":
     display_roi_analysis(selected_week, selected_season)

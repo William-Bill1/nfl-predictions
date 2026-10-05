@@ -54,7 +54,7 @@ Step 2 — UI:
     pages/1_Historical_Data.py
     pages/2_Player_Props.py        [includes the DK Pick 6 calculator]
     pages/3_Parlay_Builder.py
-    pages/4_Model_Performance.py
+    pages/4_Model_Performance.py   [weeks with completed games only; defaults to the latest fully completed week]
     pages/5_Spread_Tracker.py      [opt-in; display-only, reads spread_tracker_report.json]
     pages/6_Value_Finder.py        [opt-in; display-only, book-vs-field + model-vs-book edges]
 ```
@@ -66,6 +66,9 @@ Step 2 — UI:
 - `pipeline_run_manifest.json` holds the run's timestamp/run ID and is kept
   out of the determinism comparison; everything else above is byte-identical
   across runs (the manifest's non-volatile fields are identical too).
+- The manifest hashes the schedule and predictions CSVs' exact bytes, so
+  `.gitattributes` marks both `-text` (no `core.autocrlf` conversion on
+  checkout). See "Line endings" in `docs/PREGAME_SNAPSHOTS.md`.
 - `nfl-gather-data.py` computes a `_played` mask (rows with both final scores).
   Features and the probability write cover **all** rows so upcoming games get
   predictions; the train/test split, EV threshold, accuracy/MAE and season-long

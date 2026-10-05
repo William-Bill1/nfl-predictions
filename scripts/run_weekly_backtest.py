@@ -26,7 +26,7 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from season_utils import upcoming_or_current_season  # noqa: E402
-from player_props.backtest import run_weekly_accuracy_check, save_accuracy_results  # noqa: E402
+from player_props.backtest import run_weekly_accuracy_check  # noqa: E402
 
 DATA_DIR = "data_files"
 PREDICTIONS_PATH = os.path.join(DATA_DIR, "nfl_games_historical_with_predictions.csv")
@@ -76,9 +76,13 @@ def main() -> None:
         return
 
     print(f"[weekly_backtest] running accuracy check for season {season}, week {week}")
+    # run_weekly_accuracy_check saves the results itself, and only when they're
+    # final (every game final and covered by the play-by-play/stats data).
     results = run_weekly_accuracy_check(week, season)
-    if results:
-        save_accuracy_results(results, week)
+    if results and not results.get("final"):
+        print(f"[weekly_backtest] results for week {week} are provisional and were not saved: "
+              f"{results.get('provisional_reason')}")
+    elif results:
         print("[weekly_backtest] backtest complete:", results)
     else:
         print(f"[weekly_backtest] no backtest results returned for week {week}")

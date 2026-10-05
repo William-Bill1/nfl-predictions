@@ -8,6 +8,40 @@ bottom.
 
 ## October 2026
 
+- **Model Performance page: default week.** The page treated
+  `selected_season == 2025` as the current season, so from 2026 it offered
+  Weeks 1–18 and opened on Week 18, a week not yet played ("No play-by-play
+  data found"). Weeks now come from completed games in
+  `nfl_games_historical.csv` (`season_utils.completed_weeks`). Only
+  regular-season weeks with results are listed, and the default is the
+  latest week whose games have all finished. A week with a Monday night game
+  still to come isn't picked, or cached, early. The season defaults to the
+  newest one with results. If the selected season has none (preseason), the
+  page says so and skips the week analyses, instead of opening an unplayed
+  week. The unused date-based `get_current_nfl_week` /
+  `get_season_for_week` helpers were removed.
+- **Player-prop accuracy results are only cached when final.**
+  `player_props/backtest.py` saved every analysis it ran, including a week
+  with a game still to play or play-by-play missing a game. The page then
+  served that saved file as the week's result. `collect_actual_results` now
+  records which teams' games its data covers, and `week_results_status`
+  calls results final only when every scheduled game has final scores and
+  is covered. Provisional results are shown with a warning and never saved.
+  Saved files now record their season, and
+  `load_accuracy_results_for_week` only serves files for the requested
+  season. Older files that don't record a season are recalculated rather
+  than served. The loader also picked the "newest" file by time of day
+  alone; it now uses the date too. `scripts/run_weekly_backtest.py` no
+  longer saves a second copy of each result.
+- **Byte-exact manifest-hashed files.** `.gitattributes` marks
+  `data_files/nfl_games_historical.csv` and
+  `nfl_games_historical_with_predictions.csv` `-text`. Git for Windows'
+  `core.autocrlf=true` had converted them to CRLF on checkout, so committed,
+  correct data failed the pregame-snapshot provenance check. Verification is
+  unchanged and still hashes exact bytes. Checkouts made before the rule
+  need a one-time refresh (see "Line endings" in
+  `docs/PREGAME_SNAPSHOTS.md`); new attributes alone don't rewrite existing
+  files.
 - **Pregame spread snapshots.** `nfl-gather-data.py` now ends a successful
   run by writing `data_files/pipeline_run_manifest.json`, recording the code
   revision, config and feature-set ids, cutoffs, a unique run ID assigned

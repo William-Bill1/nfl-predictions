@@ -12,6 +12,49 @@ from datetime import datetime, timedelta
 import nfl_data_py as nfl
 from typing import Dict, List, Tuple, Optional
 
+SCHEDULE_PATH = "data_files/nfl_games_historical.csv"
+# collect_actual_results() records, in DataFrame.attrs, the teams whose games
+# its data covers, so a partial week (play-by-play still missing a game) can be
+# told apart from a complete one.
+TEAMS_ATTR = "teams_covered"
+
+
+def week_results_status(actuals_df: pd.DataFrame, week: int, season: int,
+                        schedule: Optional[pd.DataFrame] = None) -> Tuple[bool, str]:
+    """Whether ``actuals_df`` holds final results for every game of the week.
+
+    Final means every regular-season game of (season, week) has both final
+    scores in the schedule, and the actual results cover every team scheduled
+    to play. Only final results may be cached; anything else is provisional.
+
+    Returns ``(final, reason)``; ``reason`` explains why results aren't final.
+    """
+    if schedule is None:
+        try:
+            schedule = pd.read_csv(SCHEDULE_PATH, sep="\t", usecols=[
+                "season", "game_type", "week", "home_team", "away_team",
+                "home_score", "away_score"])
+        except (OSError, ValueError) as e:
+            return False, f"the schedule couldn't be read to confirm the week is complete ({e})"
+    games = schedule[(schedule["season"] == season) & (schedule["week"] == week)
+                     & (schedule["game_type"] == "REG")]
+    if games.empty:
+        return False, f"no Week {week} {season} regular-season games are in the schedule"
+    unfinished = int((games["home_score"].isna() | games["away_score"].isna()).sum())
+    if unfinished:
+        return False, f"{unfinished} of {len(games)} Week {week} games aren't final yet"
+    if actuals_df is None or actuals_df.empty:
+        return False, "no actual results are available yet"
+    covered = set(actuals_df.attrs.get(TEAMS_ATTR, ()))
+    if not covered:
+        return False, "the actual results don't say which games they cover"
+    expected = set(games["home_team"]) | set(games["away_team"])
+    missing = sorted(expected - covered)
+    if missing:
+        return False, ("play-by-play/stats are missing for " + ", ".join(missing)
+                       + " (data may be delayed)")
+    return True, ""
+
 
 def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame, str]:
     """
@@ -32,7 +75,7 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
     try:
         print(f"📊 Attempting to load pre-aggregated stats for {season} Season, Week {week}...")
         actual_stats = nfl.import_weekly_data([season], columns=[
-            'player_name', 'week', 'season', 'passing_yards', 'passing_tds',
+            'player_name', 'recent_team', 'week', 'season', 'passing_yards', 'passing_tds',
             'rushing_yards', 'rushing_tds', 'receiving_yards', 'receiving_tds',
             'receptions', 'completions', 'attempts'
         ])
@@ -48,6 +91,7 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
         week_stats['player_name'] = week_stats['player_name'].str.strip()
         
         print(f"✅ Collected pre-aggregated stats for {len(week_stats)} players in Week {week}")
+        week_stats.attrs[TEAMS_ATTR] = sorted(week_stats['recent_team'].dropna().unique())
         return week_stats, ""
         
     except Exception as e:
@@ -126,7 +170,9 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
             combined_stats['player_name'] = combined_stats['player_name'].str.strip()
             
             print(f"✅ Collected PBP-aggregated stats for {len(combined_stats)} players in Week {week}")
-            
+            combined_stats.attrs[TEAMS_ATTR] = sorted(
+                set(week_pbp['home_team'].dropna()) | set(week_pbp['away_team'].dropna()))
+
             return combined_stats, ""
             
         except Exception as pbp_error:
@@ -365,14 +411,21 @@ def profitable_subset(results_df: pd.DataFrame, min_confidence: float = 0.65) ->
     return pd.DataFrame(roi_by_threshold).T
 
 
-def save_accuracy_results(accuracy_metrics: Dict, week: int, filepath: Optional[str] = None) -> None:
+def save_accuracy_results(accuracy_metrics: Dict, week: int, filepath: Optional[str] = None,
+                          season: Optional[int] = None) -> None:
     """
     Save accuracy results to a timestamped file for historical tracking.
+
+    Only final results should be saved (see ``week_results_status``):
+    ``load_accuracy_results_for_week`` serves a saved file as the week's
+    result. ``season`` is recorded in the file so it's only served for that
+    season.
 
     Args:
         accuracy_metrics: Dictionary returned by calculate_hit_rate
         week: NFL week number
         filepath: Optional custom filepath
+        season: NFL season year
     """
     if filepath is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -385,6 +438,9 @@ def save_accuracy_results(accuracy_metrics: Dict, week: int, filepath: Optional[
 
     # Convert detailed results to dict (without the DataFrame)
     results_to_save['detailed_results'] = accuracy_metrics['detailed_results'].to_dict('records')
+    if season is not None:
+        results_to_save['season'] = int(season)
+        results_to_save['week'] = int(week)
 
     import json
     with open(filepath, 'w') as f:
@@ -466,7 +522,11 @@ def load_accuracy_history() -> pd.DataFrame:
 
 def load_accuracy_results_for_week(week: int, season: int = 2025) -> Optional[Dict]:
     """
-    Load the most recent accuracy results for a specific week.
+    Load the most recent saved accuracy results for a specific season and week.
+
+    Only files that record this ``season`` are used. Older files that don't
+    record a season are never served, because they can't be attributed to a
+    season; the week is recalculated instead.
 
     Args:
         week: NFL week number
@@ -477,31 +537,33 @@ def load_accuracy_results_for_week(week: int, season: int = 2025) -> Optional[Di
     """
     import glob
     import json
+    import os
 
-    # Find all accuracy result files for this week
-    pattern = f"data_files/accuracy_results_week{week}_*.json"
-    accuracy_files = glob.glob(pattern)
+    # Newest first, by the YYYYMMDD_HHMMSS timestamp in the filename.
+    def _timestamp(path):
+        parts = os.path.basename(path)[:-len('.json')].split('_')
+        return parts[-2:]
 
-    if not accuracy_files:
-        return None
+    accuracy_files = sorted(glob.glob(f"data_files/accuracy_results_week{week}_*.json"),
+                            key=_timestamp, reverse=True)
 
-    # Find the most recent file (by timestamp in filename)
-    most_recent_file = max(accuracy_files, key=lambda f: f.split('_')[-1].replace('.json', ''))
+    for path in accuracy_files:
+        try:
+            with open(path, 'r') as f:
+                data = json.load(f)
+            if data.get('season') != season or data.get('week', week) != week:
+                continue
 
-    try:
-        with open(most_recent_file, 'r') as f:
-            data = json.load(f)
+            # Convert back to proper format
+            data['by_confidence_tier'] = pd.Series(data['by_confidence_tier'])
+            data['by_prop_type'] = pd.Series(data['by_prop_type'])
+            data['detailed_results'] = pd.DataFrame(data['detailed_results'])
 
-        # Convert back to proper format
-        data['by_confidence_tier'] = pd.Series(data['by_confidence_tier'])
-        data['by_prop_type'] = pd.Series(data['by_prop_type'])
-        data['detailed_results'] = pd.DataFrame(data['detailed_results'])
+            return data
 
-        return data
-
-    except Exception as e:
-        print(f"⚠️  Error loading {most_recent_file}: {e}")
-        return None
+        except Exception as e:
+            print(f"⚠️  Error loading {path}: {e}")
+    return None
 
 
 # Example usage and testing functions
@@ -566,11 +628,19 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
             print(f"   [reliable models only, n={len(rel)}] "
                   f"Hit Rate: {roi_rel['hit_rate']:.1%}, ROI: {roi_rel['roi']:.1f}%")
 
-    # Save results
-    save_accuracy_results(accuracy_metrics, week)
-
-    print("=" * 60)
-    print("✅ Weekly accuracy check complete!")
+    # Save results - only when they're final. Provisional results (a game not
+    # final yet, or play-by-play still missing a game) are returned but never
+    # cached, so they can't later be served as the week's result.
+    final, reason = week_results_status(actuals_df, week, season)
+    accuracy_metrics['final'] = final
+    accuracy_metrics['provisional_reason'] = reason
+    if final:
+        save_accuracy_results(accuracy_metrics, week, season=season)
+        print("=" * 60)
+        print("✅ Weekly accuracy check complete!")
+    else:
+        print("=" * 60)
+        print(f"⚠️  Provisional results, not saved: {reason}")
 
     return accuracy_metrics
 
