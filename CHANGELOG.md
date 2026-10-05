@@ -8,6 +8,40 @@ bottom.
 
 ## October 2026
 
+- **Ontario spread comparison report (Phase 2).** New
+  `scripts/ontario_spread_report.py` is a read-only report comparing each
+  side's Wednesday-noon quote with its Sunday-morning quote, for the same NFL
+  week, game, sportsbook, jurisdiction and team.
+  - **Input:** Phase 1-validated captures only. Each slot uses its earliest
+    usable capture; empty, US-only, `ad_hoc` and duplicate captures are never
+    used, and missing quotes are never filled from elsewhere. A Sunday pairs
+    only with the Wednesday of the same NFL week (four days earlier); an
+    earlier Wednesday never stands in for a missing one.
+  - **Per side:** both quotes with provenance, spread change, break-even
+    change (pushes excluded), key numbers 3 and 7 crossed, landed on or left,
+    and an outcome: unchanged, equivalent, Sunday or Wednesday dominates, or
+    trade-off. The outcome is decided by settling both bets for every integer
+    margin (win, push, loss).
+    Only fresh, valid, in-window quotes from before kickoff are compared;
+    Thursday games and early-Sunday kickoffs stay unmatched.
+  - **Groups:** Ontario feeds by default. The US FanDuel reference and manual
+    FanDuel Ontario quotes are separate, opt-in groups. A manual quote is
+    used only if observed inside the game week's intended Wednesday or Sunday
+    slot (four days apart); quotes from other calendar slots, such as an
+    earlier Wednesday, are noted and never substituted. Games whose recorded
+    kickoffs imply different weeks (e.g. postponed), or whose week can't be
+    pinned to one Sunday, are reported as unmatched rather than guessed.
+  - **Rollups** count sides, game/book pairs and games separately, and
+    declare no best book.
+  - **Output:** deterministic JSON/CSV in the git-ignored
+    `reports/ontario_spreads/`, written atomically. Locations that resolve
+    into source data are refused, including via symlinks or alternate paths.
+    An empty history gives a `no_observations_yet` report.
+
+  This describes movement only: Sunday isn't called a closing line, and
+  there's no best-time or ROI claim. Docs: "Comparison report" in
+  `docs/ONTARIO_SPREAD_TRACKING.md`.
+
 - **Ontario sportsbook spread captures (Phase 1: collection and storage).**
   New `ontario_spreads.py` and `ontario-spread-capture.yml` record NFL
   spreads and prices from Ontario feeds at Wednesday 12:00 and Sunday 09:00

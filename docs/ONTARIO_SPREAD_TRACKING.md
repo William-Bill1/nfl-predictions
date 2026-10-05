@@ -1,4 +1,4 @@
-# Ontario sportsbook spread tracking (Phase 1: collection and storage)
+# Ontario sportsbook spread tracking
 
 `ontario_spreads.py` records the NFL spreads and prices that Ontario-licensed
 sportsbooks show at two fixed times a week:
@@ -6,10 +6,13 @@ sportsbooks show at two fixed times a week:
 - **Wednesday 12:00** America/Toronto
 - **Sunday 09:00** America/Toronto
 
-The goal is a later comparison of Wednesday versus Sunday-morning lines and
-prices. This phase only collects and stores them; there is no analysis, UI or
-betting rule. Nothing here shows that either time is better to bet, or that
-any book or strategy has an edge.
+- **Phase 1** (`ontario_spreads.py`) collects and stores the quotes.
+- **Phase 2** (`scripts/ontario_spread_report.py`, see "Comparison report")
+  is a read-only report comparing each side's Wednesday and Sunday-morning
+  quotes.
+
+There's no UI or betting rule. Nothing here shows that either time is better
+to bet, or that any book or strategy has an edge.
 
 Each capture is a new, immutable, checksummed JSON file. A later capture never
 replaces or edits an earlier one, and nothing is carried forward between
@@ -309,6 +312,182 @@ cost nothing. The Wednesday Ontario capture and the Wednesday US+CA tracker
 are separate requests: they ask for different scopes, and folding them
 together would change the existing tracker, which this phase leaves alone.
 
+## Comparison report (Phase 2: `scripts/ontario_spread_report.py`)
+
+A read-only report on how each side's Wednesday-noon quote compares with its
+Sunday-morning quote for the same NFL week. It describes movement only. It
+doesn't call Sunday 09:00 a closing line, say when to bet, or claim an edge or
+ROI.
+
+```bash
+python scripts/ontario_spread_report.py                         # Ontario feeds, all weeks
+python scripts/ontario_spread_report.py --season 2026 --week 5 --book betmgm_ca_on
+python scripts/ontario_spread_report.py --include-manual        # + FanDuel Ontario (manual), separately
+python scripts/ontario_spread_report.py --include-us-reference  # + FanDuel US, separately
+python scripts/ontario_spread_report.py --output-dir some/dir
+```
+
+- **Output:** `ontario_spread_comparison.json` and `.csv`, written to
+  `reports/ontario_spreads/` by default. That directory is git-ignored.
+- **Output safety:**
+  - **Refused locations:** the script won't write to any directory that is
+    inside, contains or is the same as `data_files/` or the capture and manual
+    directories in use. Paths are compared after resolving symlinks,
+    junctions, `..` and letter case.
+  - **Atomic writes:** files are written to a temp file and renamed into
+    place, so an existing symlink or hard link at a report's name is
+    replaced, never written through.
+- **Deterministic:** the same inputs give byte-identical files. There are no
+  wall-clock timestamps; rows are sorted, and the JSON includes the input
+  files' checksums and its own `report_sha256`.
+- **Read-only:** source captures, manual quotes and the schedule are never
+  modified.
+- **Validation:** every file is validated with Phase 1's validators first. An
+  invalid file stops the report with an error rather than being skipped.
+- **Empty history:** with no captures, the report has status
+  `no_observations_yet`, no rows and a header-only CSV.
+
+### Selection rules
+
+1. **Scheduled slots only.** Only `wednesday_noon` and `sunday_morning`
+   captures are compared. `ad_hoc` captures are listed in `capture_notes` and
+   never used.
+2. **One capture per slot.** Each slot is represented by its **earliest usable
+   capture**, with ties broken by `run_id`; this is the capture Phase 1's
+   `coverage` reports. Empty and US-only captures (`usable: false`) never
+   represent a slot. Later usable duplicates are noted as superseded, and
+   their quotes are never used, not even to fill a gap.
+3. **Week pairing.** Each (season, week) has one **intended calendar pair**:
+   a Sunday-morning slot, and the Wednesday-noon slot exactly four days
+   earlier (Toronto dates).
+   - **The Sunday** is the date of the week's automated Sunday capture. With
+     no Sunday capture, it's the Sunday of the week's own kickoffs: Thursday
+     to Saturday games map forward to it, and Monday or Tuesday games map back
+     to it.
+   - **Only that pair is compared,** for automated and manual quotes alike.
+     If the intended Wednesday is missing, the week has no Wednesday side. An
+     earlier Wednesday never stands in, even one that contains the same games
+     (such as the Wednesday eight days before a season opener). Set-aside
+     captures are listed in `capture_notes`.
+   - **The report lists each week's** `intended_wednesday` and
+     `intended_sunday`.
+   - **Anchors are never guessed.** Each game is pinned to a week's Sunday
+     using every kickoff recorded for it, in the captures and in manual
+     quotes. The game is **unmatched**, with no slot pair chosen, if:
+     - those kickoffs imply different weeks, e.g. after a postponement
+       (`no_anchor_kickoff_dates_disagree`);
+     - they imply a week other than the Sunday capture's
+       (`no_anchor_kickoff_not_in_sunday_capture_week`);
+     - or the week has no Sunday capture and its games disagree about which
+       Sunday it is (`no_anchor_week_kickoffs_disagree`; the week then has
+       no intended slots).
+
+     A kickoff time change within the same week, such as a flex from 13:00
+     to 16:25, is still compared and flagged `kickoff_changed`.
+4. **Matching.** A quote is compared only with the same game, sportsbook,
+   jurisdiction, team (home or away side) and spread market at the other slot.
+   Captures hold only the main `spreads` market.
+5. **Separate groups.** Ontario feeds (`ontario_api`, the default), the US
+   FanDuel reference (`us_reference_api`) and manual FanDuel Ontario quotes
+   (`fanduel_ontario_manual`) are never merged, and each has its own rollup.
+6. **Manual quotes.** These are used only with `--include-manual`.
+   - **Slot assignment:** a manual observation is assigned to a calendar slot
+     only if its `observed_at` falls inside that slot's Phase 1 window
+     (Wednesday 12:00–15:00, Sunday 09:00–11:00 Toronto). Otherwise it's
+     listed in `manual_notes` as outside the windows.
+   - **Comparison:** quotes are compared only between the game week's
+     **intended** Wednesday and Sunday slots, matched on the exact slot, not
+     just "a Wednesday" for that week. Within a slot, the earliest
+     observation is used and later ones are noted.
+   - **Other slots:** an observation in any other slot, such as one taken a
+     week earlier (e.g. Sep 30 for a game whose intended slots are Oct 7 and
+     Oct 11), is listed in `manual_notes` and never substitutes for a missing
+     intended observation. The row stays unmatched.
+   - **No mixing:** manual quotes are compared only with manual quotes.
+7. **No filling.** A missing quote is never filled from another book, another
+   week, another capture or an earlier stale observation.
+
+### Per-side rows
+
+Each game/book pair gives two rows, one for each team. Each row has:
+- **The matchup:** the comparison team and opponent, the book, its
+  jurisdiction and source.
+- **Each slot's quote:** handicap, American price and break-even probability,
+  with the quote status, slot ID and status (`on_time` or `late`), capture
+  time, provider update time and its basis, age, run ID and file.
+- **The comparison:**
+  - `spread_change` = Sunday handicap − Wednesday handicap, in that team's own
+    terms; positive means more points for that team;
+  - `break_even_change` = Sunday − Wednesday; negative means a better payout;
+  - `key_3` / `key_7`: `through`, `onto`, `off`, `on_both_sides` (e.g. −3 to
+    +3), `stays_on`, `unchanged` or `none`, for either sign of the key number;
+  - `status`, `outcome` and `reasons`.
+
+**Break-even** is the win rate needed at the American price, with pushes
+excluded: 110/210 = 52.38% at −110, and 100/250 = 40% at +150.
+
+Outcomes are decided by **payoffs**. Both bets are settled for every
+integer final margin (team minus opponent): a win pays the profit at its
+price, a push pays 0, and a loss costs the stake. This covers whole-number
+lines, where a push is possible, and odds-on prices, where a win pays less
+than the stake.
+
+| outcome | meaning, for the same team |
+|---|---|
+| `unchanged` | identical handicap and price |
+| `equivalent` | different quotes with identical payoffs for every margin (e.g. −100 vs +100) |
+| `sunday_dominates` | Sunday's result is at least as good for every margin and better for some |
+| `wednesday_dominates` | the same, the other way |
+| `trade_off` | each is better for some margins, e.g. more points at a worse price (−3 −110 to −2.5 −120: margin 3 goes from push to win, but every win pays less) |
+
+This is the same as "a larger signed handicap and a lower break-even rate".
+A test checks that across a grid of lines and prices.
+
+A larger signed handicap is always better for the team, whether it is the
+favourite (−3.5 to −2.5) or the underdog (+3.5 to +4.5). A favourite that
+becomes an underdog (−1.5 to +1.5) is a +3.0 change. A trade-off is reported
+as a trade-off. No model or extrapolation is used to decide whether it was
+worth it.
+
+| status | meaning |
+|---|---|
+| `compared` | both slots `quoted` (fresh, valid), observed before kickoff, in a scheduled slot window |
+| `unmatched` | one slot has no observation of the game at all, e.g. a Thursday game at the Sunday slot (`no_sunday_observation_kicked_off`), an early-Sunday kickoff missed by a late run, or a missing slot capture |
+| `missing_quote` | the game was observed, but this book had no usable quote (absent, no market, incomplete, unmatched event) |
+| `quality_excluded` | a quote exists but is `stale`, `invalid`, out of window, or not before kickoff |
+
+Only `compared` rows have an `outcome`. Stale, missing, invalid and
+out-of-window quotes never produce one.
+
+### Rollups
+
+For each group, there's an overall rollup and one per book:
+- **Sides:** compared, unmatched, missing-quote and quality-excluded, plus the
+  outcome counts. The denominator is compared sides, and each compared
+  game/book pair gives two sides.
+- **Game/book pairs:** compared, partially compared, unmatched, missing quote,
+  quality excluded, and requested books that quoted neither slot (those have
+  no rows).
+- **Games:** with or without any compared pair.
+
+Side, pair and game counts are kept apart, so nothing is double-counted.
+Per-book rollups cover different games and sample sizes, so **no overall best
+book is declared**.
+
+### Report limitations
+
+- **These are two snapshots,** Wednesday noon and Sunday morning, not opening
+  or closing lines.
+- **Small samples:** a season has about 18 regular-season weeks of pairs per
+  book, so outcome counts describe what happened and don't predict anything.
+- **Kickoff changes:** if the schedule's kickoff changed between captures,
+  `kickoff_changed` is set and the earlier kickoff is used for the
+  before-kickoff check.
+- **Manual comparisons** are only as good as the manual entries, and exist
+  only where both slots have an in-window observation.
+- **No live data yet:** the first real captures are pending, so all
+  validation so far uses Phase 1-generated fixtures.
+
 ## Limitations
 
 - **Two snapshots a week.** These are Wednesday and Sunday-morning quotes,
@@ -329,6 +508,6 @@ together would change the existing tracker, which this phase leaves alone.
 - **Lock files.** A process killed mid-capture can leave a local lock file
   behind. The next run says so and names the file to delete.
 - **Unkeyed checksum:** see above.
-- **No analysis.** This phase collects data only. It doesn't show that
-  Wednesday or Sunday lines are better, and it doesn't validate any
-  betting-time strategy.
+- **No betting conclusions.** Phase 1 collects data; Phase 2 only describes
+  how quotes moved between the two slots. Neither shows that Wednesday or
+  Sunday lines are better, and neither validates any betting-time strategy.
