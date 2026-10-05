@@ -8,6 +8,36 @@ bottom.
 
 ## October 2026
 
+- **Ontario sportsbook spread captures (Phase 1: collection and storage).**
+  New `ontario_spreads.py` and `ontario-spread-capture.yml` record NFL
+  spreads and prices from Ontario feeds at Wednesday 12:00 and Sunday 09:00
+  America/Toronto. The feeds are `betano_ca_on`, `betmgm_ca_on`,
+  `betrivers_ca_on`, `pointsbetca`, `proline_ca_on` and
+  `sportsinteraction_ca_on`, with `bet99_ca_on` opt-in as paid tier.
+  - **Request:** one bulk `/odds` call per slot, by bookmaker key (1 credit),
+    after a free credit check against the shared reserve. No key, no calls;
+    the key is redacted everywhere.
+  - **Storage:** each capture is a new immutable, checksummed file with run
+    ID, slot (intended vs actual time, on time or late), code revision,
+    request scope and usage headers, the sanitized provider response, and
+    per-book quotes with jurisdiction and provider timestamps.
+  - **Explicit gaps:** missing, stale and invalid quotes are labelled and
+    never carried forward. Events match on teams **and** kickoff; games
+    underway are excluded.
+  - **FanDuel:** the API's `fanduel` is labelled a US reference. FanDuel
+    Ontario comes only from the new `manual-quote` command (source
+    `manual`).
+  - **Model link:** each quote links to the latest pregame model snapshot
+    captured no later than the quote's own provider timestamp; without one,
+    no time-aligned link is claimed. No probabilities are copied.
+  - **Windows:** Wednesday 12:00–15:00 and Sunday 09:00–11:00 Toronto, so a
+    much later run can't be labelled as the slot. An empty response is kept
+    as evidence but leaves the slot open for a retry.
+  - **Failures** fail the workflow. `spread_tracker.py` and its files are
+    unchanged.
+
+  Docs: `docs/ONTARIO_SPREAD_TRACKING.md`.
+
 - **Model Performance page: default week.** The page treated
   `selected_season == 2025` as the current season, so from 2026 it offered
   Weeks 1–18 and opened on Week 18, a week not yet played ("No play-by-play

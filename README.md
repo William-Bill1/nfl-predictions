@@ -141,6 +141,7 @@ Best-feature subsets per target are cached in `data_files/best_features_*.txt`.
 | **Open-Meteo** | player-prop weather adjustments | `player_props/weather.py` (nightly runs `--no-weather`) |
 | **ESPN** injuries JSON feed | player-prop injury adjustments | `player_props/injuries.py` (on in the nightly: Out/IR drops the prop, Questionable/Doubtful lowers confidence) |
 | **The Odds API** | real DK/FanDuel player-prop lines | `player_props/market_odds.py`; opt-in design (no-ops without `ODDS_API_KEY`), live in this fork; see [`docs/ODDS_API_INTEGRATION_PLAN.md`](docs/ODDS_API_INTEGRATION_PLAN.md) |
+| **The Odds API (Ontario spreads)** | immutable Wednesday-noon and Sunday-morning (Toronto) captures of Ontario sportsbook spreads and prices, plus manual FanDuel Ontario quotes | `ontario_spreads.py`; opt-in (same `ODDS_API_KEY`), 1 credit per capture; see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
 | **The Odds API (spreads)** | season-long US+CA sportsbook game-spread lines vs. nflverse's line, a price-adjusted per-book value finder, and a model-vs-book line shopper | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `scripts/model_line_shop.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`); see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 
 All artifacts live in `data_files/` and are committed. The big one,
@@ -220,6 +221,24 @@ per game, read-only. Schema, eligibility and selection rules, failure behavior
 and limitations: [`docs/PREGAME_SNAPSHOTS.md`](docs/PREGAME_SNAPSHOTS.md). This
 records predictions; it doesn't show an edge.
 
+### Ontario spread captures
+
+`python ontario_spreads.py capture` records the spreads and prices that
+Ontario sportsbook feeds show at Wednesday 12:00 and Sunday 09:00 Toronto time.
+The feeds are `betano_ca_on`, `betmgm_ca_on`, `betrivers_ca_on`, `pointsbetca`,
+`proline_ca_on` and `sportsinteraction_ca_on`; `bet99_ca_on` is opt-in (paid
+tier). Each capture is one new, immutable, checksummed file in
+`data_files/ontario_spreads/captures/`. Missing and stale quotes are labelled,
+never carried forward, and games already underway are excluded.
+
+The API's `fanduel` feed is FanDuel US and is kept only as a US reference.
+FanDuel Ontario quotes are entered by hand with
+`python ontario_spreads.py manual-quote`. Each quote is linked to the latest
+pregame model snapshot captured no later than the quote's own provider
+timestamp; no model probabilities are stored with them. `coverage` lists on-time, late and missed
+slots. This phase only collects data; it doesn't evaluate betting times or
+show an edge. See [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md).
+
 ### Spread pricing and settlement
 
 Value Finder's **Break-even %** uses the actual offered American odds,
@@ -268,6 +287,7 @@ win rate, profit and ROI, and are listed under `unresolved_games` in
 | `nightly-update.yml` | 03:00 UTC, Sep–Feb | refresh PBP, run pipeline, **capture the immutable pregame spread snapshot** (`pregame_snapshots.py capture`), retrain prop models, **freeze the week's prop snapshot**, `betting_log.py` (grade finished spread bets), `export_best_bets.py`, commit |
 | `weekly-model-performance.yml` | Mondays 06:00 UTC, Sep–Feb | prop backtest, `betting_log.py`, `weekly_spread_report.py` → `spread_performance.json`; persist `accuracy_results_*.json` |
 | `update-schedule.yml` | daily 06:00 UTC | refresh `nfl_schedule_<year>.csv` |
+| `ontario-spread-capture.yml` | Wed 12:00 and Sun 09:00 America/Toronto, Sep–Feb (two UTC crons per slot for DST) | `ontario_spreads.py capture`: one immutable Ontario spread capture per slot; fails the run on a failed or budget-skipped capture |
 | `tests.yml` | on push / PR | `pytest -q` on Python 3.14, plus a `pipeline-smoke` job (runs `nfl-gather-data.py`, `check_pipeline_outputs.py`, asserts a 2nd run byte-reproduces) |
 | `send_predictions_schedule.yml` | Wed evenings (in season) | email predictions |
 | `rss_test.yml` | on push | regenerate + link-check `alerts_feed.xml` |
@@ -288,7 +308,9 @@ Optional features (email, RSS) read environment variables. For local dev, copy
 |---|---|
 | `EMAIL_FROM`, `EMAIL_TO`, `EMAIL_PASSWORD`, `SMTP_SERVER`, `SMTP_PORT` | email notifications (Gmail App Password) |
 | `ALERTS_SITE_URL` | base URL for RSS per-alert links |
-| `ODDS_API_KEY` | opt-in real DK/FanDuel player-prop lines, and the US+CA game-spread tracker (unset = no-op for both) |
+| `ODDS_API_KEY` | opt-in real DK/FanDuel player-prop lines, the US+CA game-spread tracker, and Ontario spread captures (unset = no API calls for all three) |
+| `ODDS_API_MIN_REMAINING` | credit reserve shared by the Odds API features (default 20) |
+| `ONTARIO_SPREADS_INCLUDE_BET99` | `1` to also request BET99 (paid Odds API plans only) |
 
 Never commit real secrets. On Streamlit Cloud use the platform's secrets
 manager (`st.secrets`), not a `.env` file.
