@@ -1,0 +1,141 @@
+{
+  "artifact": {
+    "path": "nfl_games_historical_with_predictions.csv",
+    "sha256": "2676a3174ef0f0cb42e76c7242a5c9d631ac049da8b5c40d90761bd319f85f99"
+  },
+  "ci_run": {
+    "GITHUB_RUN_ATTEMPT": "1",
+    "GITHUB_RUN_ID": "37292821440",
+    "GITHUB_WORKFLOW": "Nightly NFL Data Update"
+  },
+  "code_dirty": false,
+  "code_revision": "37ccdf28aa6fac28049d6ee15917784eb6550d1d",
+  "code_sha256": "a6c222a5591da6f7049b7d756d59e6d86cda29f337c463179ed44870e17388e7",
+  "config": {
+    "lgbm_available": true,
+    "libraries": {
+      "lightgbm": "4.7.0",
+      "numpy": "2.5.2",
+      "pandas": "2.3.3",
+      "scikit-learn": "1.9.0",
+      "xgboost": "3.4.1"
+    },
+    "spread_ev_min_edge": 0.02,
+    "spread_models": {
+      "lgbm": {
+        "cv": 5,
+        "ensemble": "auto",
+        "estimator": "<LGBMClassifier>",
+        "estimator__boosting_type": "gbdt",
+        "estimator__class_weight": null,
+        "estimator__colsample_bytree": 1.0,
+        "estimator__importance_type": "split",
+        "estimator__learning_rate": 0.1,
+        "estimator__max_depth": 6,
+        "estimator__min_child_samples": 20,
+        "estimator__min_child_weight": 0.001,
+        "estimator__min_split_gain": 0.0,
+        "estimator__n_estimators": 150,
+        "estimator__n_jobs": 1,
+        "estimator__num_leaves": 31,
+        "estimator__objective": null,
+        "estimator__random_state": 42,
+        "estimator__reg_alpha": 0.0,
+        "estimator__reg_lambda": 0.0,
+        "estimator__subsample": 1.0,
+        "estimator__subsample_for_bin": 200000,
+        "estimator__subsample_freq": 0,
+        "estimator__verbosity": -1,
+        "method": "isotonic",
+        "n_jobs": null
+      },
+      "xgb": {
+        "cv": 5,
+        "ensemble": "auto",
+        "estimator": "<XGBClassifier>",
+        "estimator__base_score": null,
+        "estimator__booster": null,
+        "estimator__callbacks": null,
+        "estimator__colsample_bylevel": null,
+        "estimator__colsample_bynode": null,
+        "estimator__colsample_bytree": null,
+        "estimator__device": null,
+        "estimator__early_stopping_rounds": null,
+        "estimator__enable_categorical": true,
+        "estimator__eval_metric": "logloss",
+        "estimator__feature_types": null,
+        "estimator__feature_weights": null,
+        "estimator__gamma": null,
+        "estimator__grow_policy": null,
+        "estimator__importance_type": null,
+        "estimator__interaction_constraints": null,
+        "estimator__learning_rate": 0.1,
+        "estimator__max_bin": null,
+        "estimator__max_cat_threshold": null,
+        "estimator__max_cat_to_onehot": null,
+        "estimator__max_delta_step": null,
+        "estimator__max_depth": 6,
+        "estimator__max_leaves": null,
+        "estimator__min_child_weight": null,
+        "estimator__missing": "nan",
+        "estimator__monotone_constraints": null,
+        "estimator__multi_strategy": null,
+        "estimator__n_estimators": 150,
+        "estimator__n_jobs": 1,
+        "estimator__num_parallel_tree": null,
+        "estimator__objective": "binary:logistic",
+        "estimator__random_state": 42,
+        "estimator__reg_alpha": null,
+        "estimator__reg_lambda": null,
+        "estimator__sampling_method": null,
+        "estimator__scale_pos_weight": null,
+        "estimator__subsample": null,
+        "estimator__tree_method": null,
+        "estimator__validate_parameters": null,
+        "estimator__verbosity": null,
+        "method": "isotonic",
+        "n_jobs": null
+      }
+    },
+    "spread_target": "spreadCovered",
+    "temporal_split": {
+      "test_frac": 0.2,
+      "val_frac": 0.2
+    }
+  },
+  "config_id": "6a5f60a60640b03e",
+  "data_cutoff": {
+    "gameday": "2026-10-04",
+    "games": 1756,
+    "season": 2026,
+    "week": 4
+  },
+  "feature_set_id": "78024f6318f364f8",
+  "features": [
+    "awayTeamBlowoutPct",
+    "awayTeamSpreadCoveredPct",
+    "awayTeamWinPct",
+    "homeTeamAvgPointDiff",
+    "homeTeamBlowoutPct",
+    "homeTeamSpreadCoveredPct",
+    "homeTeamWinPct",
+    "spread_line"
+  ],
+  "generated_at": "2026-10-05T09:54:41Z",
+  "platform": {
+    "python": "3.12.14"
+  },
+  "run_id": "20261005T095441Z-5b4fa9602be5",
+  "schedule": {
+    "path": "nfl_games_historical.csv",
+    "sha256": "1af20046b5025ceee25ca2447f503c1f07c43b546db7a9ea949ee42d9d086477"
+  },
+  "schema_version": 1,
+  "spread_threshold": 0.5438904087225915,
+  "training_cutoff": {
+    "gameday": "2023-12-17",
+    "games": 1052,
+    "season": 2023,
+    "week": 15
+  }
+}
