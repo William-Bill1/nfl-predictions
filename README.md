@@ -71,6 +71,7 @@ market-implied columns, on the Probabilities & Edges tab.
 | `4_Model_Performance.py` | model evaluation and calibration metrics |
 | `5_Spread_Tracker.py` | opt-in: season-to-date US+CA sportsbook spread-line comparison vs. nflverse (per-book ranking, best line per game, anomalies) — see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 | `6_Value_Finder.py` | opt-in: price-adjusted edges — one book's lines vs. the field, and the spread model's own picks vs. every tracked book's actual line |
+| `7_Ontario_Line_Timing.py` | read-only **Ontario Line Timing**: each team's Wednesday-noon vs Sunday-9-a.m. (Toronto) spread and price at Ontario sportsbooks, built in memory from the validated captures. It shows break-even rates, key numbers 3/7 and payoff-dominance outcomes; trade-offs aren't ranked. Manual FanDuel Ontario and US-reference views are separate and opt-in. "No observations yet" until the first capture — see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
 
 ### Models
 

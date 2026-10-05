@@ -7,6 +7,8 @@ sportsbooks show at two fixed times a week:
 - **Sunday 09:00** America/Toronto
 
 - **Phase 1** (`ontario_spreads.py`) collects and stores the quotes.
+- **Phase 3** (`pages/7_Ontario_Line_Timing.py`, see "Ontario Line Timing page")
+  shows those comparisons in the Streamlit app, read-only.
 - **Phase 2** (`scripts/ontario_spread_report.py`, see "Comparison report")
   is a read-only report comparing each side's Wednesday and Sunday-morning
   quotes.
@@ -488,6 +490,75 @@ book is declared**.
 - **No live data yet:** the first real captures are pending, so all
   validation so far uses Phase 1-generated fixtures.
 
+## Ontario Line Timing page (Phase 3: `pages/7_Ontario_Line_Timing.py`)
+
+A read-only Streamlit page, **Ontario Line Timing**, registered in
+`predictions.py`'s navigation. It makes no API calls and writes nothing.
+
+- **Data.** On each run it fingerprints every capture and manual file
+  (name + SHA-256). It then builds the Phase 2 comparison **in memory**
+  (`ontario_line_timing.build`), so it never depends on report files having
+  been generated. The cache is keyed on that fingerprint: an **added,
+  changed or deleted** file gives a fresh report, never a stale cached one.
+- **No data.** With no captures it says **"No observations yet"** and explains
+  the Wednesday 12:00 and Sunday 09:00 (America/Toronto) slots. It never shows
+  test fixtures, sample odds or regenerated history.
+- **Integrity.** If any stored file fails Phase 1 validation (bad JSON, a
+  checksum mismatch, the wrong schema), the page shows an **integrity error**
+  naming the problem and stops. Nothing is skipped, and nothing is replaced
+  with other data.
+- **Views.**
+  - **Ontario sportsbooks (automated feeds)** is the default.
+  - **FanDuel Ontario (manual entries)** is opt-in and labelled as typed by
+    hand.
+  - **FanDuel US (reference only)** is opt-in, labelled **"US reference
+    quotes; not verified as available in Ontario."**
+
+  The groups are never mixed. The sportsbook, game and team filters belong
+  to the view they were set in: switching views starts with them cleared, so
+  a selection never carries over into another view. A filter combination with
+  no matching rows shows a message, not an empty table.
+- **Current time.** Pending vs missed is decided on every run from the current
+  Toronto time, outside the cached report. A slot window that closes while the
+  page is open turns "pending" into "missed" on the next rerun without any new
+  capture.
+
+  The groups are never mixed.
+- **Filters.** Season, week, sportsbook, game and team. Filters apply after
+  the cached report is built. The default week is the most recent week with
+  a capture, never an empty future week or Week 18.
+- **Slot cards.** For the selected week, each slot shows one of:
+  - **Captured** (on time, or late with the delay);
+  - **Pending** (its window hasn't closed yet);
+  - **Missed** (the window closed with no usable capture);
+  - **Captured but no Ontario quotes**;
+  - **Not determined**, when the week can't be anchored.
+
+  A Wednesday-only week shows its Wednesday quotes with **"Sunday comparison
+  pending"** until the Sunday window closes, then **"Sunday slot missed"** if
+  nothing was captured.
+- **Table.** For each side:
+  - matchup, team, sportsbook and source;
+  - Wednesday and Sunday signed handicaps (`-3.5`, `+3.5`, `PK`) and American
+    prices (`-110`, `+105`), with break-even percentages;
+  - spread and break-even change;
+  - key numbers 3 and 7;
+  - the outcome;
+  - capture and provider-update times in America/Toronto, with freshness (age
+    at capture) and slot status;
+  - a status and readable reasons for anything not compared.
+- **Summary.** Compared sides, Sunday/Wednesday dominance, trade-offs and
+  not-compared counts for the selection. Side, game/sportsbook-pair and game
+  counts are given separately, and no sportsbook is ranked.
+- **"How to read this page"** explains the following:
+  - payoff dominance: both bets are settled for every integer final margin;
+  - the *equivalent* outcome;
+  - why trade-offs aren't ranked: that would need outcome probabilities the
+    page doesn't validate;
+  - Sunday 09:00 is not a closing line;
+  - the page doesn't establish a best betting time, a predictive edge or
+    increased ROI.
+
 ## Limitations
 
 - **Two snapshots a week.** These are Wednesday and Sunday-morning quotes,
@@ -508,6 +579,6 @@ book is declared**.
 - **Lock files.** A process killed mid-capture can leave a local lock file
   behind. The next run says so and names the file to delete.
 - **Unkeyed checksum:** see above.
-- **No betting conclusions.** Phase 1 collects data; Phase 2 only describes
-  how quotes moved between the two slots. Neither shows that Wednesday or
+- **No betting conclusions.** Phase 1 collects data; Phase 2 and the Phase 3
+  page only describe how quotes moved between the two slots. Neither shows that Wednesday or
   Sunday lines are better, and neither validates any betting-time strategy.

@@ -8,6 +8,30 @@ bottom.
 
 ## October 2026
 
+- **Ontario Line Timing page (Phase 3).** New read-only Streamlit page
+  `pages/7_Ontario_Line_Timing.py`, registered in `predictions.py`'s
+  navigation, with display logic in `ontario_line_timing.py`.
+  - **Data:** it builds the Wednesday-vs-Sunday comparison in memory from the
+    validated captures. The cache is keyed on a SHA-256 fingerprint of every
+    source file, so a new or changed capture is never hidden by a stale
+    cache. It makes no API calls.
+  - **Views:** Ontario automated feeds by default; manual FanDuel Ontario and
+    the US FanDuel reference are separate, opt-in views. The US view labels
+    them "US reference quotes; not verified as available in Ontario."
+  - **Filters:** season, week, sportsbook, game and team. The default is the
+    most recent captured week.
+  - **Table:** signed handicaps and prices, break-even percentages, key
+    numbers 3 and 7, payoff-dominance outcomes, and Toronto-time capture and
+    provider-update times with freshness.
+  - **Slots:** captured, pending, missed or empty. Wednesday-only weeks show
+    "Sunday comparison pending".
+  - **Empty or corrupt data:** with no captures it says "No observations
+    yet" and explains the schedule. A file that fails validation shows an
+    integrity error instead of partial or substituted data.
+
+  Trade-offs aren't ranked; Sunday isn't a closing line; no best time, edge
+  or ROI is claimed.
+
 - **Ontario spread comparison report (Phase 2).** New
   `scripts/ontario_spread_report.py` is a read-only report comparing each
   side's Wednesday-noon quote with its Sunday-morning quote, for the same NFL
