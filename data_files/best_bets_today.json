@@ -1,100 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-04T09:14:53.890662+00:00",
+    "generated_at": "2026-10-05T09:54:57.716448+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-10-05"
   },
-  "bets": [
-    {
-      "game_date": "2026-10-04",
-      "game_time": "13:00",
-      "game": "NE @ BUF",
-      "home_team": "BUF",
-      "away_team": "NE",
-      "bet_type": "Spread",
-      "pick": "NE +7",
-      "confidence": 0.5553611339153615,
-      "edge": 0.0204774129851289,
-      "tier": "Strong",
-      "odds": -115,
-      "line": 7.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-04",
-      "game_time": "13:00",
-      "game": "NYJ @ CHI",
-      "home_team": "CHI",
-      "away_team": "NYJ",
-      "bet_type": "Spread",
-      "pick": "NYJ +3.5",
-      "confidence": 0.5815549460719736,
-      "edge": 0.0623241768412042,
-      "tier": "Strong",
-      "odds": -108,
-      "line": 3.5,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-04",
-      "game_time": "13:00",
-      "game": "LA @ PHI",
-      "home_team": "PHI",
-      "away_team": "LA",
-      "bet_type": "Spread",
-      "pick": "PHI +3.5",
-      "confidence": 0.573452810836994,
-      "edge": 0.0542220416062246,
-      "tier": "Strong",
-      "odds": -108,
-      "line": 3.5,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-04",
-      "game_time": "16:05",
-      "game": "MIA @ MIN",
-      "home_team": "MIN",
-      "away_team": "MIA",
-      "bet_type": "Spread",
-      "pick": "MIA +10",
-      "confidence": 0.5606453123498238,
-      "edge": 0.0257615914195913,
-      "tier": "Strong",
-      "odds": -115,
-      "line": 10.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-04",
-      "game_time": "16:25",
-      "game": "LAC @ SEA",
-      "home_team": "SEA",
-      "away_team": "LAC",
-      "bet_type": "Spread",
-      "pick": "LAC +7",
-      "confidence": 0.6447337931345734,
-      "edge": 0.1325386711833538,
-      "tier": "Elite",
-      "odds": -105,
-      "line": 7.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-04",
-      "game_time": "16:25",
-      "game": "DEN @ SF",
-      "home_team": "SF",
-      "away_team": "DEN",
-      "bet_type": "Spread",
-      "pick": "DEN +3",
-      "confidence": 0.5704847569429135,
-      "edge": 0.025030211488368,
-      "tier": "Strong",
-      "odds": -120,
-      "line": 3.0,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
