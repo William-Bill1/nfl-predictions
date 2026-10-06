@@ -57,6 +57,7 @@ Step 2 — UI:
     pages/4_Model_Performance.py   [weeks with completed games only; defaults to the latest fully completed week]
     pages/5_Spread_Tracker.py      [opt-in; display-only, reads spread_tracker_report.json]
     pages/6_Value_Finder.py        [opt-in; display-only, book-vs-field + model-vs-book edges]
+    pages/7_Ontario_Line_Timing.py [read-only; Wed-vs-Sun Ontario spread comparison built in memory from validated captures via ontario_line_timing.py]
 ```
 
 ## Determinism & mid-season
@@ -202,6 +203,7 @@ score fetch is gone.
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); `market_odds_week{W}_{season}.csv` doubles as its own cache, filled in incrementally (cached games never re-fetched; uncovered games re-tried each run - free until props are posted)
 - `spread_tracker.py` — opt-in season-long US+CA sportsbook game-spread tracker (`ODDS_API_KEY`, bulk endpoint); upserts `spread_tracker_log.csv` against nflverse's `spread_line`
 - `ontario_spreads.py` — opt-in Ontario sportsbook spread captures (`capture`, `manual-quote`, `coverage`, `validate`); separate from `spread_tracker.py`, whose files it never touches
+- `ontario_line_timing.py` — display logic for `pages/7_Ontario_Line_Timing.py`: builds the Phase 2 report in memory (cached on a SHA-256 fingerprint of every capture/manual file), Toronto-time and signed labels, slot state (captured / pending / missed / empty) and default week; integrity errors stop the page
 - `scripts/ontario_spread_report.py` — read-only Wednesday-vs-Sunday comparison of Ontario spread captures (per side: spread change, break-even change, key numbers 3/7, dominance vs trade-off); writes deterministic JSON/CSV to the git-ignored `reports/ontario_spreads/`; never modifies captures
 - `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
 - `scripts/spread_value_finder.py` — reads `spread_tracker_log.csv`; for one book, ranks sides by fair-value edge (normal approx of margin of victory vs. the book's own devigged price) — point-divergence alone isn't the same as a favorable price
