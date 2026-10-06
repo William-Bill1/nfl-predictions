@@ -57,7 +57,7 @@ Step 2 — UI:
     pages/4_Model_Performance.py   [weeks with completed games only; defaults to the latest fully completed week]
     pages/5_Spread_Tracker.py      [opt-in; display-only, reads spread_tracker_report.json]
     pages/6_Value_Finder.py        [opt-in; display-only, book-vs-field + model-vs-book edges]
-    pages/7_Ontario_Line_Timing.py [read-only; Wed-vs-Sun Ontario spread comparison built in memory from validated captures via ontario_line_timing.py]
+    pages/7_Ontario_Line_Timing.py [Wed-vs-Sun Ontario spread comparison built in memory from validated captures via ontario_line_timing.py; only write: manual FanDuel Ontario quote form]
 ```
 
 ## Determinism & mid-season

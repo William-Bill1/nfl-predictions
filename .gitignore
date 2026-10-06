@@ -92,6 +92,7 @@ player_props/models/*_lgbm.txt
 
 # Ontario spread capture: per-slot lock files (local only)
 /data_files/ontario_spreads/captures/.*.lock
+/data_files/ontario_spreads/manual/.*.lock
 
 # Generated reports (ontario_spread_report.py and similar)
 /reports/
