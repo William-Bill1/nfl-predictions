@@ -8,6 +8,7 @@ regenerated data. Kept out of the page script so it can be tested directly.
 from __future__ import annotations
 
 import hashlib
+import json
 import importlib.util
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -172,7 +173,8 @@ def week_slots(report: dict, season: int, week: int, now: datetime) -> dict:
         return {}
     return {"wednesday": slot_state(w["intended_wednesday"], w["wednesday"], report, now),
             "sunday": slot_state(w["intended_sunday"], w["sunday"], report, now),
-            "intended_wednesday": w["intended_wednesday"], "intended_sunday": w["intended_sunday"]}
+            "intended_wednesday": w["intended_wednesday"], "intended_sunday": w["intended_sunday"],
+            "_now": now}
 
 
 # --------------------------------------------------------------------------
@@ -244,6 +246,12 @@ def display_status(row: dict, slots: dict) -> str:
             return f"{label} slot missed"
     if any(r.startswith("no_anchor_") for r in reasons):
         return "Not compared: week can't be determined"
+    for day in ("sunday", "wednesday"):
+        if f"no_{day}_manual_observation_in_intended_slot" in reasons:
+            slot_id = slots.get(f"intended_{day}")
+            if slot_id and slots.get("_now") and slots["_now"] < _slot_window(slot_id)[1]:
+                return f"{day.capitalize()} comparison pending"
+            return f"No manual {day.capitalize()} observation in the slot window"
     if row["status"] == "unmatched":
         return "Unmatched"
     if row["status"] == "missing_quote":
@@ -333,3 +341,124 @@ def summarize(df: pd.DataFrame) -> dict:
         "outcomes": {label: int((compared["Outcome"] == label).sum())
                      for label in OUTCOME_LABELS.values()},
     }
+
+
+# --------------------------------------------------------------------------
+# Manual FanDuel Ontario entry (form support)
+# --------------------------------------------------------------------------
+
+MINUS = "−"            # typographic minus for bettor-facing labels
+
+
+def load_manual_docs(manual_dir: Path) -> list[dict]:
+    """Every manual quote, validated with Phase 1's validator (read-only).
+    Raises IntegrityError for any unreadable or invalid file."""
+    docs = []
+    for path in sorted(Path(manual_dir).glob("*.json")) if Path(manual_dir).exists() else []:
+        try:
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            on.validate_manual(doc, str(path))
+        except (ValueError, KeyError, TypeError) as exc:
+            raise IntegrityError(str(exc)) from None
+        docs.append({**doc, "_file": path.name})
+    return docs
+
+
+def team_name(abbr: str) -> str:
+    return on.TEAM_FULL_NAME.get(abbr, abbr)
+
+
+def upcoming_games(schedule: pd.DataFrame, now: datetime, days: int = 14) -> list[dict]:
+    """Games not yet kicked off, with a usable kickoff within `days`."""
+    out = []
+    for g in schedule.itertuples(index=False):
+        if pd.notna(getattr(g, "home_score", None)) and pd.notna(getattr(g, "away_score", None)):
+            continue
+        kickoff, _ = on.ps.kickoff_utc(g.gameday, g.gametime)
+        if kickoff is None or not (now < kickoff <= now + timedelta(days=days)):
+            continue
+        out.append({"game_id": g.game_id, "season": int(g.season), "week": int(g.week),
+                    "away_team": g.away_team, "home_team": g.home_team,
+                    "kickoff_utc": on.iso(kickoff),
+                    "label": f"Week {int(g.week)}: {team_name(g.away_team)} @ "
+                             f"{team_name(g.home_team)} ({toronto(on.iso(kickoff))})"})
+    return sorted(out, key=lambda x: (x["kickoff_utc"], x["game_id"]))
+
+
+def bettor_line(team: str, handicap: float, price: int) -> str:
+    """'Arizona Cardinals +4.5 at −110' (bettor-facing, typographic minus)."""
+    h = signed_handicap(handicap).replace("-", MINUS)
+    p = signed_price(price).replace("-", MINUS)
+    return f"{team_name(team)} {h} at {p}"
+
+
+def manual_slot_status(observed_utc: datetime, kickoff_utc: str) -> dict:
+    """Where a manual observation falls relative to the slot rules.
+
+    intended_wednesday / intended_sunday: inside that slot's window AND it is
+      the slot of this game's own week - eligible for the comparison;
+    other_slot: inside a slot window, but another week's slot - not used;
+    outside: in no slot window - recorded, but never labelled as a slot
+      observation or compared."""
+    slot = on.resolve_slot(observed_utc)
+    sunday = rpt.week_sunday(kickoff_utc)
+    wed_id, sun_id = rpt._slot_ids(sunday)
+    if slot is None:
+        return {"state": "outside",
+                "label": "Outside the Wednesday 12:00-15:00 and Sunday 09:00-11:00 Toronto "
+                         "slot windows: it will be recorded, but not used in Wednesday-vs-"
+                         "Sunday comparisons."}
+    if slot["slot_id"] in (wed_id, sun_id):
+        day = "Wednesday" if slot["slot_id"] == wed_id else "Sunday"
+        return {"state": f"intended_{day.lower()}", "slot_id": slot["slot_id"],
+                "label": f"Inside this game's {day} slot window ({slot['slot_id']}): it can be "
+                         f"compared as the {day} observation."}
+    return {"state": "other_slot", "slot_id": slot["slot_id"],
+            "label": f"Inside the {slot['slot_id']} window, which isn't this game's "
+                     f"Wednesday or Sunday slot: it will be recorded, but not compared."}
+
+
+_MANUAL_NOTE_TEXT = (
+    ("manual_observation_outside_slot_windows", "Outside the slot windows (not compared)"),
+    ("superseded_by_earlier_manual_observation_in_slot",
+     "Superseded by an earlier observation in the same slot (not compared)"),
+    ("manual_observation_not_in_intended_slot", "Another week's slot (not compared)"),
+    ("manual_observation_not_compared", "Week can't be determined (not compared)"),
+)
+
+
+def manual_observation_rows(docs: list[dict], report: dict, season: int, week: int) -> pd.DataFrame:
+    """Recorded manual observations for one week, with whether each is used in
+    a comparison (read from the report, never assumed)."""
+    used = {(r.get("wed_run_id"), "Wednesday") for r in report["rows"]
+            if r["group"] == rpt.GROUP_MANUAL} | \
+           {(r.get("sun_run_id"), "Sunday") for r in report["rows"] if r["group"] == rpt.GROUP_MANUAL}
+    used_ids = {qid: day for qid, day in used if qid}
+    notes = {n["quote_id"]: n["reason"] for n in report.get("manual_notes", []) if "quote_id" in n}
+    out = []
+    for d in sorted(docs, key=lambda x: (x["observed_at"], x["quote_id"])):
+        if (d["season"], d["week"]) != (season, week):
+            continue
+        if d["quote_id"] in used_ids:
+            status = f"{used_ids[d['quote_id']]} slot observation (in the comparison)"
+        else:
+            reason = notes.get(d["quote_id"], "")
+            status = next((txt for key, txt in _MANUAL_NOTE_TEXT if reason.startswith(key)),
+                          "Recorded (not compared)")
+        out.append({
+            "Game": f"{d['away_team']} @ {d['home_team']}",
+            "Quote": bettor_line(d["team"], d["handicap"], d["price"]),
+            "Opponent price": signed_price(d["opponent_price"]),
+            "Observed (Toronto)": toronto(d["observed_at"]),
+            "Entered (Toronto)": toronto(d["entered_at"]),
+            "Source": "manual observation (FanDuel Ontario)",
+            "Status": status,
+            "Note": d["note"] or "",
+        })
+    return pd.DataFrame(out, columns=["Game", "Quote", "Opponent price", "Observed (Toronto)",
+                                      "Entered (Toronto)", "Source", "Status", "Note"])
+
+
+def weeks_with_manual(report: dict, docs: list[dict]) -> list[tuple[int, int]]:
+    """Weeks in the report plus weeks that only have manual observations."""
+    return sorted(set(weeks_available(report)) | {(d["season"], d["week"]) for d in docs})

@@ -58,7 +58,9 @@ def render(store, monkeypatch):
 
 
 def table(at):
-    return at.dataframe[0].value if at.dataframe else None
+    """The comparison table (always the page's last table; the manual view
+    shows its recorded-observations table first)."""
+    return at.dataframe[-1].value if at.dataframe else None
 
 
 def gb_row(df, book="BetMGM (CA - ON)"):

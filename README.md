@@ -71,7 +71,7 @@ market-implied columns, on the Probabilities & Edges tab.
 | `4_Model_Performance.py` | model evaluation and calibration metrics |
 | `5_Spread_Tracker.py` | opt-in: season-to-date US+CA sportsbook spread-line comparison vs. nflverse (per-book ranking, best line per game, anomalies) — see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 | `6_Value_Finder.py` | opt-in: price-adjusted edges — one book's lines vs. the field, and the spread model's own picks vs. every tracked book's actual line |
-| `7_Ontario_Line_Timing.py` | read-only **Ontario Line Timing**: each team's Wednesday-noon vs Sunday-9-a.m. (Toronto) spread and price at Ontario sportsbooks, built in memory from the validated captures. It shows break-even rates, key numbers 3/7 and payoff-dominance outcomes; trade-offs aren't ranked. Manual FanDuel Ontario and US-reference views are separate and opt-in. "No observations yet" until the first capture — see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
+| `7_Ontario_Line_Timing.py` | read-only **Ontario Line Timing**: each team's Wednesday-noon vs Sunday-9-a.m. (Toronto) spread and price at Ontario sportsbooks, built in memory from the validated captures. It shows break-even rates, key numbers 3/7 and payoff-dominance outcomes; trade-offs aren't ranked. Manual FanDuel Ontario and US-reference views are separate and opt-in. A **"Record a FanDuel Ontario quote"** form saves a manually observed FanDuel Ontario price (Toronto time, preview before saving, never a bet record). "No observations yet" until the first capture — see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
 
 ### Models
 
@@ -233,8 +233,8 @@ tier). Each capture is one new, immutable, checksummed file in
 never carried forward, and games already underway are excluded.
 
 The API's `fanduel` feed is FanDuel US and is kept only as a US reference.
-FanDuel Ontario quotes are entered by hand with
-`python ontario_spreads.py manual-quote`. Each quote is linked to the latest
+FanDuel Ontario quotes are entered by hand, with the form on the Ontario Line
+Timing page or `python ontario_spreads.py manual-quote`. Each quote is linked to the latest
 pregame model snapshot captured no later than the quote's own provider
 timestamp; no model probabilities are stored with them. `coverage` lists on-time, late and missed
 slots. This phase only collects data; it doesn't evaluate betting times or

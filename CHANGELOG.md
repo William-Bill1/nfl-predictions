@@ -8,6 +8,36 @@ bottom.
 
 ## October 2026
 
+- **FanDuel Ontario manual-quote form.** The Ontario Line Timing page has a
+  "Record a FanDuel Ontario quote (manual observation)" section.
+  - **Entry:** pick an upcoming game and team, then enter the bettor-facing
+    signed spread, American odds (and optionally the opponent's) and the
+    observation date and time in America/Toronto. DST-ambiguous and
+    nonexistent times are rejected.
+  - **Preview:** e.g. "Arizona Cardinals +4.5 at −110", labelled a manually
+    observed quote, not a placed bet. It shows whether the time falls in the
+    game's Wednesday or Sunday slot window, another week's slot or no slot.
+  - **Save:** happens only on an explicit Save, a button of the same form.
+    It writes exactly the previewed values: any change after Preview,
+    including the note, requires a new preview. It re-validates with the
+    current clock, so a game that kicks off between Preview and Save is
+    refused. Reruns, double clicks and identical resubmissions write at most
+    one file. Quote identity is game, team, observation time, handicap,
+    price and opponent price; the note and the submission don't count.
+  - **Locks:** they record their holder and report "in progress" or "looks
+    stale" with the file to delete. They're removed after a failed save and
+    are never deleted automatically or on someone else's behalf. Afterwards the page
+    switches to the manual view, with its filters cleared. The view's new
+    "Recorded manual observations" table shows each observation's times,
+    source and whether it's in the comparison.
+  - **Shared code:** `ontario_spreads.manual_quote` is now split into
+    `prepare_manual_quote` (validate only) and `save_manual_quote`, which
+    runs the duplicate check and the write under an exclusive lock. The CLI
+    and the form share them, and CLI behaviour is unchanged.
+  - **Also:** manual rows whose Sunday slot hasn't closed now read "Sunday
+    comparison pending". No API calls, captures, recommendations or bet
+    records.
+
 - **Ontario Line Timing page (Phase 3).** New read-only Streamlit page
   `pages/7_Ontario_Line_Timing.py`, registered in `predictions.py`'s
   navigation, with display logic in `ontario_line_timing.py`.

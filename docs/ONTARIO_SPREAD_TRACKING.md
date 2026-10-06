@@ -181,6 +181,9 @@ kept separate.
 
 ## Manual FanDuel Ontario quotes
 
+Record them on the **Ontario Line Timing** page ("Record a FanDuel Ontario
+quote", see below) or from the command line:
+
 ```bash
 python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
     --spread -3.5 --price -112 --observed-at 2026-10-07T12:05-04:00 \
@@ -200,6 +203,30 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
   revision, the schedule hash, and a checksum.
 - **Duplicates:** entering the same observation twice (same game, team, time,
   spread and prices) returns the existing file rather than creating a second.
+  **Quote identity** is game, team, observation time, handicap, price and
+  opponent price. The note, who entered it, when it was entered and the
+  quote ID don't count, so a changed note doesn't create a second
+  observation. The duplicate check and the write run under an exclusive lock
+  file (`manual/.manual_entry.lock`, git-ignored), so two near-simultaneous
+  submissions can't both be written.
+- **Locks.** The lock file records who holds it (purpose, process, host,
+  start time and a random token), and it's removed when the save finishes,
+  even if the save fails.
+  - **Busy:** a save that finds the lock held says the other save is **in
+    progress** (try again shortly) or, once the lock is over 10 minutes old,
+    that it **looks stale**, naming the file to delete.
+  - **Never automatic:** a lock is never deleted automatically.
+  - **Never someone else's:** a save removes the lock only if it still holds
+    that save's own token.
+
+  Capture slot locks work the same way.
+- **Shared code.** The CLI and the page use the same functions:
+  - `prepare_manual_quote` validates and builds the sealed document without
+    writing;
+  - `save_manual_quote` runs the duplicate check and the exclusive write;
+  - `manual_quote` does both.
+- **Not a bet.** A manual quote records a price that was seen. It creates no
+  recommendation and no bet record.
 - **Kept separate from automated quotes.** Manual quotes have their own
   directory, `kind` and `source`. A capture file is rejected by validation if
   any quote in it isn't an API feed with `source: "the_odds_api"`, so a manual
@@ -492,8 +519,10 @@ book is declared**.
 
 ## Ontario Line Timing page (Phase 3: `pages/7_Ontario_Line_Timing.py`)
 
-A read-only Streamlit page, **Ontario Line Timing**, registered in
-`predictions.py`'s navigation. It makes no API calls and writes nothing.
+A Streamlit page, **Ontario Line Timing**, registered in `predictions.py`'s
+navigation. It makes no API calls. Its only write is the manual FanDuel
+Ontario entry form below, which saves one manual quote through Phase 1's
+functions.
 
 - **Data.** On each run it fingerprints every capture and manual file
   (name + SHA-256). It then builds the Phase 2 comparison **in memory**
@@ -558,6 +587,63 @@ A read-only Streamlit page, **Ontario Line Timing**, registered in
   - Sunday 09:00 is not a closing line;
   - the page doesn't establish a best betting time, a predictive edge or
     increased ROI.
+
+### Recording a FanDuel Ontario quote on the page
+
+The page has a **"Record a FanDuel Ontario quote (manual observation)"**
+section. It's available even before any capture exists, and it's the page's
+only write.
+
+1. **Pick the game** from the games that haven't kicked off, within the next
+   14 days.
+2. **Fill in the form:**
+   - the team;
+   - its bettor-facing signed spread (`-3.5` lays 3.5, `+4.5` gets 4.5, `0` is
+     pick'em) and American odds;
+   - optionally, the opponent's odds and a note;
+   - the observation date and time **in America/Toronto**.
+
+   The local time is converted to UTC explicitly. The two DST times that
+   don't map to exactly one instant, the repeated autumn hour and the skipped
+   spring hour, are rejected.
+3. **Preview** validates with Phase 1's `prepare_manual_quote` at the
+   current time and writes nothing. It shows the quote as a bettor reads it (e.g. "Arizona Cardinals
+   +4.5 at −110"), labels it as a manually observed FanDuel Ontario quote and
+   not a placed bet, and says where the observation falls:
+   - inside the game's own **Wednesday** or **Sunday** slot window: it can be
+     compared;
+   - inside another week's slot window: recorded, but not compared;
+   - **outside** the slot windows: recorded, but never labelled as a slot
+     observation or compared.
+
+   Invalid odds or spreads, a missing value, a future observation and an
+   observation at or after kickoff are rejected with the reason. An identical
+   observation that's already recorded is flagged, and Save is disabled.
+4. **Save** writes only on that explicit click. Save is a button of the same
+   form, so it receives the values currently in the form.
+   - **Same values as previewed:** if any of them, including the note, differ
+     from what was previewed, nothing is saved and the form asks for a new
+     preview, so stale values are never written silently.
+   - **Re-validated at save time:** the quote is checked again against the
+     current clock. That includes the game not having kicked off yet: a game
+     that kicks off between Preview and Save is refused. A late entry of a
+     pregame quote is still possible with `ontario_spreads.py manual-quote`.
+   - **Writing:** the save uses `save_manual_quote`, with the duplicate check
+     and write under the lock.
+   - **Single write:** a one-time token per preview plus the locked duplicate
+     check mean reruns, double clicks and resubmitting the same quote write at
+     most one file.
+   - **Never overwritten:** existing observations and captures are untouched.
+   - **Afterwards** the page switches to the manual view for that week, and
+     clears that view's sportsbook, game and team filters so they can't hide
+     the new observation. A
+     "Recorded manual observations" table lists every observation for the
+     week: the quote, its observed and entered times in Toronto, its source,
+     and whether it is actually in the comparison, read from the report
+     rather than assumed.
+
+The page's cache is keyed on the files' content, so the new quote shows up
+immediately.
 
 ## Limitations
 

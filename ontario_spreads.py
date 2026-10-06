@@ -42,6 +42,7 @@ import argparse
 import json
 import math
 import os
+import platform
 import re
 import secrets
 import sys
@@ -765,28 +766,68 @@ def load_captures(directory: Path = CAPTURE_DIR) -> list[dict]:
 
 
 class SlotLock:
-    """Exclusive per-slot lock file so two local runs can't capture the same
-    slot at once. Not committed (see .gitignore)."""
+    """Exclusive lock file (e.g. per capture slot, or for manual-quote saves) so
+    two runs can't do the same write at once. Not committed (see .gitignore).
 
-    def __init__(self, directory: Path, slot_id: str, run_id: str):
-        self.path = directory / f".{slot_id}.lock"
+    The file records who holds it (purpose, id, process, host, start time and a
+    random token). A conflict is reported as "in progress" while the lock is
+    young and as "looks stale" (with the full path to delete) once it is older
+    than STALE_AFTER; it is never deleted automatically. On exit the file is
+    removed only if it still carries this holder's token, so a lock taken over
+    by someone else is never deleted.
+    """
+
+    STALE_AFTER = timedelta(minutes=10)
+
+    def __init__(self, directory: Path, slot_id: str, run_id: str, what: str = "capture"):
+        self.path = Path(directory) / f".{slot_id}.lock"
         self.run_id = run_id
+        self.what = what
+        self.token = secrets.token_hex(8)
+
+    def _holder(self) -> tuple[dict, timedelta | None]:
+        try:
+            raw = self.path.read_text(encoding="utf-8")
+            info = json.loads(raw) if raw.strip().startswith("{") else {"id": raw.strip()}
+        except (OSError, ValueError):
+            info = {}
+        try:
+            started = parse_utc(info["started_at"]) if "started_at" in info else \
+                datetime.fromtimestamp(self.path.stat().st_mtime, timezone.utc)
+            age = ps.utc_now() - started
+        except (OSError, ValueError, KeyError):
+            age = None
+        return info, age
 
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
             fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
-            raise CaptureError(f"another capture holds {self.path.name}; if no capture is "
-                               "running, delete that file and retry") from None
-        with os.fdopen(fd, "w") as f:
-            f.write(self.run_id)
+            info, age = self._holder()
+            who = ", ".join(f"{k} {info[k]}" for k in ("id", "pid", "host") if info.get(k))
+            if age is not None and age > self.STALE_AFTER:
+                raise CaptureError(
+                    f"another {self.what} holds {self.path.name} ({who or 'unknown holder'}), "
+                    f"but it was taken {int(age.total_seconds() // 60)} minutes ago and looks "
+                    f"stale. If no {self.what} is running, delete {self.path} and try again."
+                ) from None
+            raise CaptureError(
+                f"another {self.what} holds {self.path.name} ({who or 'unknown holder'}); "
+                f"it appears to be in progress - try again in a moment. If no {self.what} is "
+                f"running, delete {self.path} and retry.") from None
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump({"what": self.what, "id": self.run_id, "pid": os.getpid(),
+                       "host": platform.node(), "started_at": iso(ps.utc_now()),
+                       "token": self.token}, f)
         return self
 
     def __exit__(self, *exc):
         try:
-            self.path.unlink()
-        except OSError:
+            info = json.loads(self.path.read_text(encoding="utf-8"))
+            if info.get("token") == self.token:
+                self.path.unlink()
+        except (OSError, ValueError):
             pass
         return False
 
@@ -936,12 +977,38 @@ def _parse_observed(text: str) -> datetime:
     return dt.astimezone(timezone.utc).replace(microsecond=0)
 
 
-def manual_quote(*, game_id: str, team: str, handicap: float, price: int, observed_at: str,
-                 opponent_price: int | None = None, note: str | None = None,
-                 entered_by: str | None = None, now: datetime | None = None,
-                 schedule_path: Path = SCHEDULE_PATH, manual_dir: Path = MANUAL_DIR,
-                 repo_dir: Path = ROOT) -> tuple[Path, bool, dict]:
-    """Record one observed FanDuel Ontario spread quote, source "manual"."""
+def toronto_local_to_utc(day: date, at: time) -> datetime:
+    """An America/Toronto wall-clock date and time -> aware UTC datetime.
+
+    Rejects the two times that don't map to exactly one instant: the repeated
+    hour when DST ends (ambiguous) and the skipped hour when it starts
+    (nonexistent)."""
+    naive = datetime.combine(day, at.replace(second=0, microsecond=0))
+    first, second = naive.replace(tzinfo=TORONTO, fold=0), naive.replace(tzinfo=TORONTO, fold=1)
+    if first.utcoffset() != second.utcoffset():
+        roundtrip = first.astimezone(timezone.utc).astimezone(TORONTO).replace(tzinfo=None)
+        if roundtrip == naive:
+            raise ValidationError(f"{naive:%Y-%m-%d %H:%M} happens twice in Toronto (DST ends); "
+                                  "enter the time in UTC instead")
+        raise ValidationError(f"{naive:%Y-%m-%d %H:%M} doesn't exist in Toronto (DST starts)")
+    return first.astimezone(timezone.utc)
+
+
+_MANUAL_IDENTITY = ("game_id", "team", "observed_at", "handicap", "price", "opponent_price")
+
+
+def prepare_manual_quote(*, game_id: str, team: str, handicap: float, price: int,
+                         observed_at: str, opponent_price: int | None = None,
+                         note: str | None = None, entered_by: str | None = None,
+                         now: datetime | None = None, schedule_path: Path = SCHEDULE_PATH,
+                         repo_dir: Path = ROOT) -> dict:
+    """Validate one observed FanDuel Ontario quote and build its sealed,
+    validated document - without writing anything (used for previews).
+
+    Raises ValidationError for: a time without a timezone, an observation in
+    the future or at/after kickoff, an unknown game, a team not in the game,
+    a handicap that isn't a half-point value within 60, or invalid American
+    odds."""
     entered = (now or ps.utc_now()).replace(microsecond=0)
     observed = _parse_observed(observed_at)
     if observed > entered:
@@ -980,14 +1047,47 @@ def manual_quote(*, game_id: str, team: str, handicap: float, price: int, observ
         "note": note, "schedule": {"path": ps.SCHEDULE_NAME, "sha256": schedule_sha},
     }
     doc = _seal(doc)
-    # The same observation entered twice is refused rather than duplicated.
+    validate_manual(doc, "new manual quote")
+    return doc
+
+
+def find_manual_duplicate(doc: dict, manual_dir: Path = MANUAL_DIR) -> tuple[Path, dict] | None:
+    """An already-recorded quote for the same observation (same game, team,
+    time, spread and prices), if any."""
     for path in sorted(Path(manual_dir).glob("*.json")):
         old = json.loads(path.read_text(encoding="utf-8"))
-        if all(old[k] == doc[k] for k in ("game_id", "team", "observed_at", "handicap", "price",
-                                         "opponent_price")):
-            return path, False, old
-    path, created = write_artifact(doc, manual_dir, validate_manual)
+        if all(old.get(k) == doc[k] for k in _MANUAL_IDENTITY):
+            return path, old
+    return None
+
+
+def save_manual_quote(doc: dict, manual_dir: Path = MANUAL_DIR) -> tuple[Path, bool, dict]:
+    """Persist a prepared manual quote. The duplicate check and the write run
+    under an exclusive lock, so two near-simultaneous submissions of the same
+    observation can't both be written. Returns (path, created, document);
+    created=False means the observation was already recorded (that file is
+    returned unchanged)."""
+    manual_dir = Path(manual_dir)
+    with SlotLock(manual_dir, "manual_entry", doc["quote_id"], what="manual-quote save"):
+        existing = find_manual_duplicate(doc, manual_dir)
+        if existing is not None:
+            return existing[0], False, existing[1]
+        path, created = write_artifact(doc, manual_dir, validate_manual)
     return path, created, doc
+
+
+def manual_quote(*, game_id: str, team: str, handicap: float, price: int, observed_at: str,
+                 opponent_price: int | None = None, note: str | None = None,
+                 entered_by: str | None = None, now: datetime | None = None,
+                 schedule_path: Path = SCHEDULE_PATH, manual_dir: Path = MANUAL_DIR,
+                 repo_dir: Path = ROOT) -> tuple[Path, bool, dict]:
+    """Record one observed FanDuel Ontario spread quote, source "manual".
+    The same observation entered twice is refused rather than duplicated."""
+    doc = prepare_manual_quote(game_id=game_id, team=team, handicap=handicap, price=price,
+                               observed_at=observed_at, opponent_price=opponent_price,
+                               note=note, entered_by=entered_by, now=now,
+                               schedule_path=schedule_path, repo_dir=repo_dir)
+    return save_manual_quote(doc, manual_dir)
 
 
 # --------------------------------------------------------------------------
