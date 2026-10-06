@@ -411,22 +411,74 @@ class TestLocks:
                                        price=-110, observed_at="2026-10-07T16:30:00Z",
                                        now=WED_1300, schedule_path=entry.schedule)
 
-    @pytest.mark.parametrize("legacy", [False, True])
-    def test_stale_lock_reported_with_recovery_and_not_deleted(self, entry, monkeypatch, legacy):
+    def _message(self, entry, monkeypatch, **kw):
         monkeypatch.setattr(on.ps, "utc_now", lambda: WED_1300)
-        lock = self._lock(entry, age_minutes=25, legacy=legacy)
+        lock = kw.pop("lock", None) or self._lock(entry, **kw)
         with pytest.raises(on.CaptureError) as exc:
             on.save_manual_quote(self._doc(entry), entry.manual_dir)
-        msg = str(exc.value)
-        assert "looks stale" in msg and str(lock) in msg and "delete" in msg
-        assert lock.exists() and manual_files(entry) == []
+        assert lock.exists() and manual_files(entry) == []         # never deleted, nothing written
+        return str(exc.value), lock
 
-    def test_active_lock_reported_as_in_progress_and_kept(self, entry, monkeypatch):
+    def test_old_lock_with_recorded_owner(self, entry, monkeypatch):
+        msg, lock = self._message(entry, monkeypatch, age_minutes=25)
+        assert f"lock file {lock}" in msg
+        assert "recorded owner: process 4242 on host h" in msg and "taken 25 minutes ago" in msg
+        assert "older than expected" in msg
+        assert "age alone does not establish that its owner has stopped" in msg
+        assert (f"Delete {lock} only after confirming that process 4242 on host h is no longer "
+                "running") in msg
+        assert "stale" not in msg.lower()
+
+    def test_young_lock_reported_in_progress_with_same_deletion_rule(self, entry, monkeypatch):
+        msg, lock = self._message(entry, monkeypatch, age_minutes=0)
+        assert "It appears to be in progress; try again in a moment." in msg
+        assert "older than expected" not in msg
+        assert "only after confirming that process 4242 on host h is no longer running" in msg
+        assert on.json.loads(lock.read_text())["pid"] == 4242
+
+    def test_lock_from_another_host_says_check_there(self, entry, monkeypatch):
+        monkeypatch.setattr(on.platform, "node", lambda: "this-machine")
+        msg, _ = self._message(entry, monkeypatch, age_minutes=25)
+        assert "it was taken on host h, not this one, so check there" in msg
+
+    @pytest.mark.parametrize("content", [
+        "someone-else",                                            # legacy plain-text lock
+        "{not json",                                               # corrupt metadata
+        '{"what": "manual-quote save", "id": "x", "host": "h"}',  # no pid
+        '{"what": "manual-quote save", "id": "x", "pid": 99}',    # no host
+        "",                                                        # empty file
+    ])
+    def test_unknown_owner_requires_investigation(self, entry, monkeypatch, content):
+        entry.manual_dir.mkdir(parents=True, exist_ok=True)
+        lock = entry.manual_dir / ".manual_entry.lock"
+        lock.write_text(content)
+        msg, _ = self._message(entry, monkeypatch, lock=lock)
+        assert "owner not recorded in the lock file" in msg
+        assert "Its owner can't be determined from the lock file, so investigate before deleting" in msg
+        assert "only after confirming that process" not in msg
+
+    def test_unreadable_lock_requires_investigation(self, entry, monkeypatch):
+        # A lock path that can't be read as a file (here: a directory).
+        entry.manual_dir.mkdir(parents=True, exist_ok=True)
+        lock = entry.manual_dir / ".manual_entry.lock"
+        lock.mkdir()
+        msg, _ = self._message(entry, monkeypatch, lock=lock)
+        assert "owner not recorded in the lock file" in msg and "investigate before deleting" in msg
+
+    def test_age_from_file_time_for_legacy_lock(self, entry, monkeypatch):
+        msg, _ = self._message(entry, monkeypatch, age_minutes=25, legacy=True)
+        assert "taken 25 minutes ago" in msg and "older than expected" in msg
+        assert "investigate before deleting" in msg
+
+    def test_capture_lock_uses_same_rules(self, entry, monkeypatch):
         monkeypatch.setattr(on.ps, "utc_now", lambda: WED_1300)
-        lock = self._lock(entry, age_minutes=0)
-        with pytest.raises(on.CaptureError, match="in progress - try again"):
-            on.save_manual_quote(self._doc(entry), entry.manual_dir)
-        assert lock.exists() and on.json.loads(lock.read_text())["pid"] == 4242
+        entry.capture_dir.mkdir(parents=True)
+        (entry.capture_dir / ".2026-10-07_wednesday_noon.lock").write_text("other-run")
+        with pytest.raises(on.CaptureError) as exc:
+            with on.SlotLock(entry.capture_dir, "2026-10-07_wednesday_noon", "me"):
+                pass
+        assert "another capture holds lock file" in str(exc.value)
+        assert "investigate before deleting" in str(exc.value)
 
     def test_lock_removed_after_caught_failure(self, entry, monkeypatch):
         def boom(*a, **k):
@@ -449,7 +501,9 @@ class TestLocks:
         lock = self._lock(entry, age_minutes=25)
         at.button(key="fd_save").click()
         at = render(WED_1300, at)
-        assert "looks stale" in text(at, "error") and str(lock) in text(at, "error")
+        err = text(at, "error")
+        assert "older than expected" in err and "age alone does not establish" in err
+        assert f"Delete {lock} only after confirming that process 4242 on host h" in err
         assert manual_files(entry) == [] and lock.exists()
 
 

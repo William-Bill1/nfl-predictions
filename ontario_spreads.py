@@ -769,15 +769,18 @@ class SlotLock:
     """Exclusive lock file (e.g. per capture slot, or for manual-quote saves) so
     two runs can't do the same write at once. Not committed (see .gitignore).
 
-    The file records who holds it (purpose, id, process, host, start time and a
-    random token). A conflict is reported as "in progress" while the lock is
-    young and as "looks stale" (with the full path to delete) once it is older
-    than STALE_AFTER; it is never deleted automatically. On exit the file is
-    removed only if it still carries this holder's token, so a lock taken over
-    by someone else is never deleted.
+    The file records who holds it (purpose, id, process ID, host, start time
+    and a random token). A conflict names the recorded owner and the lock's
+    age. A lock up to EXPECTED_MAX_AGE old is reported as in progress; an older
+    one as "older than expected" - which does not establish that its owner has
+    stopped. Manual deletion is advised only after confirming the recorded
+    process on the recorded host is no longer running, or after investigating
+    when the owner can't be determined. The lock is never deleted
+    automatically. On exit the file is removed only if it still carries this
+    holder's token, so a lock taken over by someone else is never deleted.
     """
 
-    STALE_AFTER = timedelta(minutes=10)
+    EXPECTED_MAX_AGE = timedelta(minutes=10)
 
     def __init__(self, directory: Path, slot_id: str, run_id: str, what: str = "capture"):
         self.path = Path(directory) / f".{slot_id}.lock"
@@ -799,23 +802,50 @@ class SlotLock:
             age = None
         return info, age
 
+    def _conflict_message(self, info: dict, age: timedelta | None) -> str:
+        """Recovery instructions for a lock held by someone else. Never
+        suggests deleting it on the strength of its age alone."""
+        pid, host = info.get("pid"), info.get("host")
+        owner_known = bool(pid) and bool(host)
+        if age is None:
+            age_text = "its age could not be determined"
+        else:
+            minutes = int(age.total_seconds() // 60)
+            age_text = (f"taken {minutes} minute{'s' if minutes != 1 else ''} ago" if minutes
+                        else f"taken {int(age.total_seconds())} seconds ago")
+        owner = (f"recorded owner: process {pid} on host {host}"
+                 + (f", {self.what} {info['id']}" if info.get("id") else "")
+                 if owner_known else "owner not recorded in the lock file")
+        parts = [f"another {self.what} holds lock file {self.path} ({owner}; {age_text})."]
+        if age is not None and age > self.EXPECTED_MAX_AGE:
+            parts.append(f"The lock is older than expected (a {self.what} normally finishes in "
+                         "seconds), but age alone does not establish that its owner has stopped.")
+        else:
+            parts.append("It appears to be in progress; try again in a moment.")
+        if owner_known:
+            elsewhere = "" if host == platform.node() else \
+                f" (it was taken on host {host}, not this one, so check there)"
+            parts.append(f"Delete {self.path} only after confirming that process {pid} on host "
+                         f"{host} is no longer running{elsewhere}.")
+        else:
+            parts.append(f"Its owner can't be determined from the lock file, so investigate "
+                         f"before deleting it: check that no {self.what} is running on any "
+                         f"machine or process that uses {self.path.parent}, then delete "
+                         f"{self.path}.")
+        return " ".join(parts)
+
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
         try:
             fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
         except FileExistsError:
-            info, age = self._holder()
-            who = ", ".join(f"{k} {info[k]}" for k in ("id", "pid", "host") if info.get(k))
-            if age is not None and age > self.STALE_AFTER:
-                raise CaptureError(
-                    f"another {self.what} holds {self.path.name} ({who or 'unknown holder'}), "
-                    f"but it was taken {int(age.total_seconds() // 60)} minutes ago and looks "
-                    f"stale. If no {self.what} is running, delete {self.path} and try again."
-                ) from None
-            raise CaptureError(
-                f"another {self.what} holds {self.path.name} ({who or 'unknown holder'}); "
-                f"it appears to be in progress - try again in a moment. If no {self.what} is "
-                f"running, delete {self.path} and retry.") from None
+            raise CaptureError(self._conflict_message(*self._holder())) from None
+        except PermissionError:
+            # Windows reports an existing but unopenable lock path (e.g. a
+            # directory, or a file with restricted access) this way.
+            if os.path.lexists(self.path):
+                raise CaptureError(self._conflict_message(*self._holder())) from None
+            raise
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump({"what": self.what, "id": self.run_id, "pid": os.getpid(),
                        "host": platform.node(), "started_at": iso(ps.utc_now()),

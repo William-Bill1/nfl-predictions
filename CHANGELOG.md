@@ -24,9 +24,15 @@ bottom.
     refused. Reruns, double clicks and identical resubmissions write at most
     one file. Quote identity is game, team, observation time, handicap,
     price and opponent price; the note and the submission don't count.
-  - **Locks:** they record their holder and report "in progress" or "looks
-    stale" with the file to delete. They're removed after a failed save and
-    are never deleted automatically or on someone else's behalf. Afterwards the page
+  - **Locks:** they record their owner (process ID and host). A busy lock is
+    reported with its owner and age as "in progress" or "older than
+    expected", noting that age alone doesn't show the owner has stopped.
+    Manual deletion is advised only after confirming that recorded process
+    on that host is no longer running; with an unknown or unreadable owner,
+    the message says to investigate first. Locks are removed after a failed
+    save and are never deleted automatically or on someone else's behalf.
+    An existing but unopenable lock path is now reported as a busy lock
+    rather than a raw permission error. Afterwards the page
     switches to the manual view, with its filters cleared. The view's new
     "Recorded manual observations" table shows each observation's times,
     source and whether it's in the comparison.

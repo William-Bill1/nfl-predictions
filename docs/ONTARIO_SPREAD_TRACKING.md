@@ -209,12 +209,21 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
   observation. The duplicate check and the write run under an exclusive lock
   file (`manual/.manual_entry.lock`, git-ignored), so two near-simultaneous
   submissions can't both be written.
-- **Locks.** The lock file records who holds it (purpose, process, host,
+- **Locks.** The lock file records who holds it (purpose, process ID, host,
   start time and a random token), and it's removed when the save finishes,
   even if the save fails.
-  - **Busy:** a save that finds the lock held says the other save is **in
-    progress** (try again shortly) or, once the lock is over 10 minutes old,
-    that it **looks stale**, naming the file to delete.
+  - **Busy:** a save that finds the lock held names the lock file, its
+    **recorded owner** (process ID and host) and its age. It says the other
+    save appears to be **in progress** (try again shortly) or, past 10
+    minutes, that the lock is **older than expected**. Age alone does **not**
+    establish that the owner has stopped.
+  - **Deleting by hand:** only after confirming that the recorded process on
+    the recorded host is no longer running. If the lock came from another
+    machine, check there.
+  - **Owner unknown:** if the owner can't be determined (a lock from an older
+    version, corrupt or missing metadata, or an unreadable lock file),
+    investigate first. Check that no save or capture is running anywhere
+    that uses the directory before deleting.
   - **Never automatic:** a lock is never deleted automatically.
   - **Never someone else's:** a save removes the lock only if it still holds
     that save's own token.
