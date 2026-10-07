@@ -162,3 +162,166 @@ season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odd
 2026,5,2026_05_BUF_LA,Los Angeles Rams,Buffalo Bills,Blake Corum,rushing_yards,fanduel,31.5,-114,-114
 2026,5,2026_05_BUF_LA,Los Angeles Rams,Buffalo Bills,Kyren Williams,rushing_yards,fanduel,69.5,-114,-114
 2026,5,2026_05_BUF_LA,Los Angeles Rams,Buffalo Bills,Josh Allen,rushing_yards,fanduel,36.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Geno Smith,passing_yards,draftkings,206.5,-113,-111
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Deshaun Watson,passing_yards,draftkings,201.5,-112,-112
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Garrett Wilson,receiving_yards,draftkings,71.5,-110,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Denzel Boston,receiving_yards,draftkings,47.5,-112,-112
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,KC Concepcion,receiving_yards,draftkings,39.5,-110,-115
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Harold Fannin Jr.,receiving_yards,draftkings,36.5,-111,-113
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Garrett Wilson,receptions,draftkings,6.5,110,-141
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,KC Concepcion,receptions,draftkings,4.5,112,-143
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Harold Fannin Jr.,receptions,draftkings,4.5,123,-157
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Denzel Boston,receptions,draftkings,3.5,106,-135
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Braelon Allen,rushing_yards,draftkings,69.5,-110,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Quinshon Judkins,rushing_yards,draftkings,58.5,-110,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Deshaun Watson,rushing_yards,draftkings,25.5,-115,-109
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Geno Smith,rushing_yards,draftkings,10.5,-108,-116
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Isaiah Davis,rushing_yards,draftkings,9.5,-113,-111
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Geno Smith,passing_yards,fanduel,206.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Deshaun Watson,passing_yards,fanduel,203.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,KC Concepcion,receiving_yards,fanduel,37.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Harold Fannin Jr.,receiving_yards,fanduel,35.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Garrett Wilson,receiving_yards,fanduel,68.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Denzel Boston,receiving_yards,fanduel,47.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Harold Fannin Jr.,receptions,fanduel,4.5,118,-158
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Garrett Wilson,receptions,fanduel,6.5,-106,-125
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Denzel Boston,receptions,fanduel,3.5,108,-144
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,KC Concepcion,receptions,fanduel,4.5,124,-166
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Geno Smith,rushing_yards,fanduel,10.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Deshaun Watson,rushing_yards,fanduel,26.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Isaiah Davis,rushing_yards,fanduel,10.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Braelon Allen,rushing_yards,fanduel,69.5,-114,-114
+2026,5,2026_05_CLE_NYJ,New York Jets,Cleveland Browns,Quinshon Judkins,rushing_yards,fanduel,59.5,-114,-114
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,C.J. Stroud,passing_yards,draftkings,229.5,-112,-112
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Cam Ward,passing_yards,draftkings,191.5,-112,-112
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Nico Collins,receiving_yards,draftkings,77.5,-114,-110
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Carnell Tate,receiving_yards,draftkings,50.5,-111,-112
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Wan'Dale Robinson,receiving_yards,draftkings,34.5,-111,-113
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Nico Collins,receptions,draftkings,5.5,-108,-118
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Carnell Tate,receptions,draftkings,4.5,-116,-110
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Wan'Dale Robinson,receptions,draftkings,3.5,-140,109
+2026,5,2026_05_HOU_TEN,Tennessee Titans,Houston Texans,Tony Pollard,rushing_yards,draftkings,49.5,-109,-115
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Bo Nix,passing_yards,draftkings,220.5,-112,-112
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Justin Herbert,passing_yards,draftkings,200.5,-111,-113
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Jaylen Waddle,receiving_yards,draftkings,50.5,-110,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Courtland Sutton,receiving_yards,draftkings,35.5,-111,-113
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,receiving_yards,draftkings,27.5,-109,-115
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Troy Franklin,receiving_yards,draftkings,17.5,-110,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Marvin Mims Jr.,receiving_yards,draftkings,13.5,-107,-117
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Jaylen Waddle,receptions,draftkings,4.5,105,-133
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,receptions,draftkings,4.5,126,-161
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Courtland Sutton,receptions,draftkings,3.5,109,-139
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Troy Franklin,receptions,draftkings,1.5,-107,-120
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Marvin Mims Jr.,receptions,draftkings,1.5,101,-129
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,J.K. Dobbins,rushing_yards,draftkings,49.5,-114,-110
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Omarion Hampton,rushing_yards,draftkings,38.5,-114,-110
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Keaton Mitchell,rushing_yards,draftkings,29.5,-112,-112
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Justin Herbert,rushing_yards,draftkings,25.5,-113,-111
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,rushing_yards,draftkings,15.5,-108,-116
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Bo Nix,rushing_yards,draftkings,15.5,-107,-117
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Bo Nix,passing_yards,fanduel,223.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Justin Herbert,passing_yards,fanduel,199.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Jaylen Waddle,receiving_yards,fanduel,51.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Courtland Sutton,receiving_yards,fanduel,36.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Troy Franklin,receiving_yards,fanduel,17.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,receiving_yards,fanduel,26.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Marvin Mims Jr.,receiving_yards,fanduel,13.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Marvin Mims Jr.,receptions,fanduel,1.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Troy Franklin,receptions,fanduel,1.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,receptions,fanduel,3.5,-174,130
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Jaylen Waddle,receptions,fanduel,4.5,102,-136
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Courtland Sutton,receptions,fanduel,3.5,120,-160
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Keaton Mitchell,rushing_yards,fanduel,30.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,J.K. Dobbins,rushing_yards,fanduel,49.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Bo Nix,rushing_yards,fanduel,14.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Omarion Hampton,rushing_yards,fanduel,37.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,Justin Herbert,rushing_yards,fanduel,23.5,-114,-114
+2026,5,2026_05_DEN_LAC,Los Angeles Chargers,Denver Broncos,RJ Harvey,rushing_yards,fanduel,15.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jared Goff,passing_yards,draftkings,279.5,-112,-112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jacoby Brissett,passing_yards,draftkings,271.5,-111,-113
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Amon-Ra St. Brown,receiving_yards,draftkings,80.5,-110,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Trey McBride,receiving_yards,draftkings,78.5,-114,-110
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Michael Wilson,receiving_yards,draftkings,66.5,-114,-111
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Sam LaPorta,receiving_yards,draftkings,52.5,-112,-112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jameson Williams,receiving_yards,draftkings,49.5,-114,-110
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,receiving_yards,draftkings,36.5,-113,-111
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Marvin Harrison Jr.,receiving_yards,draftkings,35.5,-115,-109
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Kendrick Bourne,receiving_yards,draftkings,24.5,-109,-115
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Isaac TeSlaa,receiving_yards,draftkings,23.5,-109,-115
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,receiving_yards,draftkings,11.5,-115,-109
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Trey McBride,receptions,draftkings,7.5,-132,103
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Amon-Ra St. Brown,receptions,draftkings,6.5,-140,110
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Michael Wilson,receptions,draftkings,5.5,106,-136
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Sam LaPorta,receptions,draftkings,4.5,-152,119
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,receptions,draftkings,4.5,-143,112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jameson Williams,receptions,draftkings,3.5,-109,-117
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Marvin Harrison Jr.,receptions,draftkings,2.5,-150,117
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,receptions,draftkings,2.5,-113,-112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Kendrick Bourne,receptions,draftkings,2.5,116,-149
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Isaac TeSlaa,receptions,draftkings,2.5,137,-176
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,rushing_yards,draftkings,90.5,-110,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,rushing_yards,draftkings,47.5,-112,-112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jacoby Brissett,rushing_yards,draftkings,6.5,-120,-104
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jared Goff,rushing_yards,draftkings,0.5,-123,-102
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jared Goff,passing_yards,fanduel,280.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jacoby Brissett,passing_yards,fanduel,270.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,receiving_yards,fanduel,36.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Sam LaPorta,receiving_yards,fanduel,52.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Isaac TeSlaa,receiving_yards,fanduel,26.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Marvin Harrison Jr.,receiving_yards,fanduel,34.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Kendrick Bourne,receiving_yards,fanduel,23.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jameson Williams,receiving_yards,fanduel,51.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Michael Wilson,receiving_yards,fanduel,67.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Trey McBride,receiving_yards,fanduel,80.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,receiving_yards,fanduel,11.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Amon-Ra St. Brown,receiving_yards,fanduel,78.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Amon-Ra St. Brown,receptions,fanduel,6.5,-160,120
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Isaac TeSlaa,receptions,fanduel,2.5,118,-158
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Michael Wilson,receptions,fanduel,5.5,-102,-130
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Marvin Harrison Jr.,receptions,fanduel,2.5,-144,108
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,receptions,fanduel,4.5,-136,102
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Trey McBride,receptions,fanduel,7.5,-148,112
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,receptions,fanduel,2.5,-102,-130
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Sam LaPorta,receptions,fanduel,4.5,-172,128
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jameson Williams,receptions,fanduel,3.5,-108,-122
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Kendrick Bourne,receptions,fanduel,2.5,112,-148
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jared Goff,rushing_yards,fanduel,0.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jeremiyah Love,rushing_yards,fanduel,48.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jacoby Brissett,rushing_yards,fanduel,6.5,-114,-114
+2026,5,2026_05_DET_ARI,Arizona Cardinals,Detroit Lions,Jahmyr Gibbs,rushing_yards,fanduel,90.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Michael Penix Jr.,passing_yards,draftkings,216.5,-111,-113
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Tyler Huntley,passing_yards,draftkings,174.5,-113,-111
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Drake London,receiving_yards,draftkings,82.5,-110,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Zay Flowers,receiving_yards,draftkings,66.5,-110,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Mark Andrews,receiving_yards,draftkings,28.5,-113,-111
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,receiving_yards,draftkings,26.5,-115,-109
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Kyle Pitts,receiving_yards,draftkings,24.5,-113,-111
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Jahan Dotson,receiving_yards,draftkings,19.5,-112,-112
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Drake London,receptions,draftkings,5.5,-148,116
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Zay Flowers,receptions,draftkings,5.5,104,-132
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,receptions,draftkings,3.5,-128,100
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Mark Andrews,receptions,draftkings,3.5,-125,-102
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Kyle Pitts,receptions,draftkings,2.5,112,-143
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Jahan Dotson,receptions,draftkings,1.5,-154,120
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,rushing_yards,draftkings,89.5,-110,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Derrick Henry,rushing_yards,draftkings,87.5,-110,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Brian Robinson Jr.,rushing_yards,draftkings,35.5,-109,-115
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Justice Hill,rushing_yards,draftkings,11.5,-114,-110
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Tyler Huntley,passing_yards,fanduel,173.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Michael Penix Jr.,passing_yards,fanduel,221.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Kyle Pitts,receiving_yards,fanduel,24.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,receiving_yards,fanduel,26.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Jahan Dotson,receiving_yards,fanduel,19.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Zay Flowers,receiving_yards,fanduel,66.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Mark Andrews,receiving_yards,fanduel,28.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Drake London,receiving_yards,fanduel,82.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Mark Andrews,receptions,fanduel,3.5,-130,-102
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Kyle Pitts,receptions,fanduel,2.5,102,-136
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,receptions,fanduel,3.5,-136,102
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Jahan Dotson,receptions,fanduel,1.5,-162,122
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Drake London,receptions,fanduel,6.5,130,-174
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Zay Flowers,receptions,fanduel,5.5,100,-132
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Justice Hill,rushing_yards,fanduel,11.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Brian Robinson Jr.,rushing_yards,fanduel,35.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,rushing_yards,fanduel,88.5,-114,-114
+2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Derrick Henry,rushing_yards,fanduel,86.5,-114,-114
