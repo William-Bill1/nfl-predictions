@@ -350,6 +350,15 @@ def summarize(df: pd.DataFrame) -> dict:
 MINUS = "−"            # typographic minus for bettor-facing labels
 
 
+def load_capture_docs(capture_dir: Path) -> list[dict]:
+    """Every capture, validated with Phase 1's validator (read-only).
+    Raises IntegrityError for any unreadable or invalid file."""
+    try:
+        return on.load_captures(Path(capture_dir)) if Path(capture_dir).exists() else []
+    except (ValueError, KeyError, TypeError, OSError) as exc:
+        raise IntegrityError(str(exc)) from None
+
+
 def load_manual_docs(manual_dir: Path) -> list[dict]:
     """Every manual quote, validated with Phase 1's validator (read-only).
     Raises IntegrityError for any unreadable or invalid file."""
@@ -462,3 +471,51 @@ def manual_observation_rows(docs: list[dict], report: dict, season: int, week: i
 def weeks_with_manual(report: dict, docs: list[dict]) -> list[tuple[int, int]]:
     """Weeks in the report plus weeks that only have manual observations."""
     return sorted(set(weeks_available(report)) | {(d["season"], d["week"]) for d in docs})
+
+
+# Why the comparison leaves a stored capture out (report "capture_notes").
+CAPTURE_NOTE_LABELS = {
+    "ad_hoc_capture_not_compared": "Ad-hoc capture, not a scheduled slot: stored, never compared",
+    "not_usable_no_ontario_quote": "No Ontario sportsbook quoted any game",
+    "superseded_by_earlier_usable_capture": "Repeat capture of a slot that was already captured",
+}
+
+
+def capture_note_label(reason: str) -> str:
+    if reason in CAPTURE_NOTE_LABELS:
+        return CAPTURE_NOTE_LABELS[reason]
+    if reason.startswith("wednesday_not_"):
+        return "Wednesday capture not paired with this game week's Sunday slot"
+    return reason.replace("_", " ")
+
+
+def uncompared_capture_rows(report: dict, captures: list[dict]) -> pd.DataFrame:
+    """Stored captures the comparison doesn't use (ad-hoc, without Ontario
+    quotes, repeats, other weeks), with their actual capture time. Requested
+    feeds with at least one fresh ("quoted", not stale) quote are counted, with
+    Ontario feeds and the US reference feed counted separately (manual
+    FanDuel Ontario quotes are never part of a capture). They are evidence
+    only - never compared and never counted as a scheduled slot."""
+    by_run = {c["run_id"]: c for c in captures}
+
+    def quoting(feeds):
+        quoted = sum(1 for v in feeds if v["by_status"].get("quoted"))
+        return f"{quoted} of {len(feeds)}" if feeds else "not requested"
+
+    out = []
+    for n in report.get("capture_notes", []):
+        c = by_run.get(n["run_id"])
+        if c is None:
+            continue
+        requested = [v for v in c["coverage"].values() if v["requested"]]
+        ontario = [v for v in requested if v["role"].startswith("ontario")]
+        us_reference = [v for v in requested if v["role"] == "us_reference"]
+        out.append(dict(zip(UNCOMPARED_COLUMNS, (
+            toronto(c["captured_at"]), n["slot_id"], quoting(ontario), quoting(us_reference),
+            len(c["games"]), capture_note_label(n["reason"]), n["file"]))))
+    return pd.DataFrame(out, columns=UNCOMPARED_COLUMNS)
+
+
+UNCOMPARED_COLUMNS = ["Captured (Toronto)", "Slot", "Ontario feeds with fresh quotes",
+                      "US reference with fresh quotes (not Ontario)", "Games",
+                      "Why not compared", "Capture file"]

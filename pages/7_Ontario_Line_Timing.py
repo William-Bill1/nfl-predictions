@@ -39,6 +39,11 @@ def load_manual(fingerprint: tuple, manual_dir: str) -> list[dict]:
     return olt.load_manual_docs(Path(manual_dir))
 
 
+@st.cache_data(max_entries=8)
+def load_captures(fingerprint: tuple, capture_dir: str) -> list[dict]:
+    return olt.load_capture_docs(Path(capture_dir))
+
+
 @st.cache_data(max_entries=4)
 def load_schedule(path: str, mtime_ns: int, size: int):
     return on.load_schedule(Path(path))[0]
@@ -49,6 +54,7 @@ try:
     fingerprint = olt.source_fingerprint(capture_dir, manual_dir)
     report = load_report(fingerprint, str(capture_dir), str(manual_dir))
     manual_docs = load_manual(fingerprint, str(manual_dir))
+    capture_docs = load_captures(fingerprint, str(capture_dir))
 except olt.IntegrityError as exc:
     st.error(
         "**Integrity error: a stored Ontario spread artifact failed validation.** "
@@ -277,6 +283,29 @@ if report["status"] == "no_observations_yet":
     add_betting_oracle_footer()
     st.stop()
 
+# ---- captures kept as evidence but never compared -------------------------
+weeks = olt.weeks_with_manual(report, manual_docs)
+uncompared = olt.uncompared_capture_rows(report, capture_docs)
+if not uncompared.empty:
+    with st.expander(f"Captures stored but not compared ({len(uncompared)})",
+                     icon=":material/inventory_2:", expanded=not weeks):
+        st.caption("Only the scheduled **Wednesday 12:00** and **Sunday 09:00** captures are "
+                   "compared. These are kept as evidence with their actual capture time; an "
+                   "ad-hoc capture never fills, or stands in for, a scheduled slot.")
+        st.dataframe(uncompared, hide_index=True, key="olt_uncompared")
+
+if not weeks:
+    st.info(
+        "**No Wednesday/Sunday comparison yet.** No usable scheduled Wednesday 12:00 or "
+        "Sunday 09:00 capture (one with an Ontario quote) and no manual observation is "
+        "stored, so there is nothing to compare and no week to show; slot status "
+        "(pending/missed) appears once there is a week. Stored captures that aren't "
+        "compared are listed above.",
+        icon=":material/schedule:",
+    )
+    add_betting_oracle_footer()
+    st.stop()
+
 
 def _keep_valid(key: str, options: list) -> None:
     """Drop a remembered widget value that is no longer one of its options."""
@@ -305,8 +334,7 @@ elif view == MAN:
     )
 
 # ---- week selection ------------------------------------------------------
-weeks = olt.weeks_with_manual(report, manual_docs)
-default = olt.default_week(report) or (max(weeks) if weeks else None)
+default = olt.default_week(report) or max(weeks)
 seasons = sorted({s for s, _ in weeks}, reverse=True)
 _keep_valid("olt_season", seasons)
 st.session_state.setdefault("olt_season", default[0] if default else seasons[0])

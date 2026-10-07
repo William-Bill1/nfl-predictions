@@ -545,6 +545,24 @@ functions.
 - **No data.** With no captures it says **"No observations yet"** and explains
   the Wednesday 12:00 and Sunday 09:00 (America/Toronto) slots. It never shows
   test fixtures, sample odds or regenerated history.
+- **No comparable week yet.** Captures can exist without any week to show:
+  for example, only `ad_hoc` captures, or a scheduled capture in which no
+  Ontario book quoted. The page then says **"No Wednesday/Sunday comparison
+  yet"**, with no week selector, metrics or comparison table. Manual-only
+  observations still get their week.
+- **Captures stored but not compared.** Every stored capture the comparison
+  leaves out is listed in its own section. That covers `ad_hoc` captures,
+  captures with no Ontario quote, repeat captures of a slot and Wednesday
+  captures from another week. Each row shows:
+  - the **actual** capture time (America/Toronto);
+  - the slot ID;
+  - fresh-quote counts, given separately for requested Ontario feeds and the
+    US reference feed (manual FanDuel Ontario quotes are never part of a
+    capture);
+  - the number of games;
+  - the reason.
+
+  An `ad_hoc` capture never fills a scheduled slot and is never compared.
 - **Integrity.** If any stored file fails Phase 1 validation (bad JSON, a
   checksum mismatch, the wrong schema), the page shows an **integrity error**
   naming the problem and stops. Nothing is skipped, and nothing is replaced
@@ -678,6 +696,15 @@ immediately.
 - **Lock files.** A process killed mid-capture can leave a local lock file
   behind. The next run says so and names the file to delete.
 - **Unkeyed checksum:** see above.
+- **Slot status needs a week.** The page shows Pending/Missed only for weeks
+  in the report. Weeks come from usable scheduled captures or manual
+  observations.
+  - **October 7 noon:** with only the `ad_hoc` capture of 2026-10-07 stored,
+    the missed Wednesday 12:00 slot of that day isn't shown as missed.
+  - **October 11 morning:** the Sunday 09:00 slot can't be shown as pending.
+  - **Coverage too:** `python ontario_spreads.py coverage` likewise starts at
+    the first scheduled capture.
+  - **Not filled:** none of this fills the missed slot.
 - **No betting conclusions.** Phase 1 collects data; Phase 2 and the Phase 3
   page only describe how quotes moved between the two slots. Neither shows that Wednesday or
   Sunday lines are better, and neither validates any betting-time strategy.

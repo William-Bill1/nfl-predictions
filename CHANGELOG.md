@@ -8,6 +8,20 @@ bottom.
 
 ## October 2026
 
+- **Ontario Line Timing: no crash when no comparable week exists.**
+  - **The crash:** the first stored capture (2026-10-07) was `ad_hoc`,
+    because the scheduled Wednesday run arrived after its window. The report
+    then had no weeks, and the page raised `IndexError` while choosing a
+    default season.
+  - **Now:** it shows "No Wednesday/Sunday comparison yet", and a new
+    "Captures stored but not compared" section lists such captures. Each row
+    has the actual capture time, the reason, and fresh-quote counts given
+    separately for Ontario feeds and the US reference. Ad-hoc captures still
+    never fill a slot or enter the comparison.
+  - **Test fix:** a manual-entry test assumed `data_files/ontario_spreads/`
+    never exists; it now checks that the real files are unchanged.
+  - **Still open:** slot status needs a report week, so the missed October 7
+    noon slot isn't shown as missed and October 11 can't show as pending yet.
 - **Bet journal.** A new **Bet Journal** page records single-game spread
   wagers actually placed at Ontario sportsbooks, on their accepted terms. It
   records wagers and never places them. See `docs/BET_JOURNAL.md`.

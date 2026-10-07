@@ -266,6 +266,12 @@ class TestAfterSave:
         entry.capture(WED_SLOT, wed_events())
         log = ROOT / "data_files" / "betting_recommendations_log.csv"
         log_hash = hashlib.sha256(log.read_bytes()).hexdigest() if log.exists() else None
+        real = ROOT / "data_files" / "ontario_spreads"      # real captures may exist on main
+
+        def real_files():
+            return {p: hashlib.sha256(p.read_bytes()).hexdigest()
+                    for p in real.rglob("*") if p.is_file()} if real.exists() else {}
+        real_before = real_files()
         before = {p for p in tmp_path.rglob("*") if p.is_file()}
         at = fill(render(WED_1300))
         at = render(WED_1300, at)
@@ -274,7 +280,7 @@ class TestAfterSave:
         new = {p for p in tmp_path.rglob("*") if p.is_file()} - before
         assert [p.parent.name for p in new] == ["manual"]
         assert (hashlib.sha256(log.read_bytes()).hexdigest() if log.exists() else None) == log_hash
-        assert not (ROOT / "data_files" / "ontario_spreads").exists()
+        assert real_files() == real_before                   # nothing written to the real store
 
     def test_corrupt_manual_file_blocks_form_with_integrity_error(self, entry, render):
         entry.manual_dir.mkdir(parents=True)
