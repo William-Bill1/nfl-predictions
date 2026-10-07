@@ -328,19 +328,18 @@ class TestSlots:
     def test_coverage_marks_missed_and_late(self, monkeypatch, schedule_path, dirs):
         _capture(monkeypatch, FakeAPI(_wed_events("2026-10-07T17:30:00Z")), schedule_path, dirs,
                  WED_SLOT + timedelta(minutes=95))
-        cov = on.slot_coverage(datetime(2026, 10, 6, tzinfo=UTC), datetime(2026, 10, 12, tzinfo=UTC),
-                               dirs["capture_dir"])
-        assert [(c["slot_id"], c["status"]) for c in cov] == [
-            ("2026-10-07_wednesday_noon", "late"), ("2026-10-11_sunday_morning", "missed")]
+        cov = on.slot_coverage(datetime(2026, 10, 12, tzinfo=UTC), dirs["capture_dir"])
+        assert [(c["slot_id"], c["state"], c["detail"]) for c in cov][:2] == [
+            ("2026-10-07_wednesday_noon", "captured", "late"),
+            ("2026-10-11_sunday_morning", "missed", None)]
 
-    def test_coverage_starts_at_first_capture(self, monkeypatch, schedule_path, dirs):
-        assert on.slot_coverage(datetime(2026, 9, 1, tzinfo=UTC), WED_SLOT, dirs["capture_dir"]) == []
-        _capture(monkeypatch, FakeAPI(_wed_events()), schedule_path, dirs, WED_SLOT)
-        cov = on.slot_coverage(datetime(2026, 9, 1, tzinfo=UTC), datetime(2026, 10, 12, tzinfo=UTC),
-                               dirs["capture_dir"])
-        # Slots before the first capture weren't tracked, so they aren't "missed".
-        assert [c["slot_id"] for c in cov] == ["2026-10-07_wednesday_noon",
-                                               "2026-10-11_sunday_morning"]
+    def test_coverage_starts_at_tracking_start_not_first_capture(self, dirs):
+        # No captures at all: the tracked slots are still listed (and missed
+        # once their windows close); nothing before the tracking start.
+        cov = on.slot_coverage(datetime(2026, 10, 12, tzinfo=UTC), dirs["capture_dir"])
+        assert cov[0]["slot_id"] == f"{on.TRACKING_START}_wednesday_noon"
+        assert [(c["slot_id"], c["state"]) for c in cov][:2] == [
+            ("2026-10-07_wednesday_noon", "missed"), ("2026-10-11_sunday_morning", "missed")]
 
 
 # --------------------------------------------------------- kickoff rules --
@@ -862,21 +861,25 @@ class TestEmptyCaptureRetry:
         assert second.doc["slot"]["slot_id"] == first.doc["slot"]["slot_id"]
         # ...the empty capture is untouched, and the slot counts as captured.
         assert first.path.read_bytes() == empty_bytes
-        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=2),
-                               dirs["capture_dir"])
-        assert [(c["slot_id"], c["status"], c["run_id"]) for c in cov] == [
-            ("2026-10-07_wednesday_noon", "late", second.doc["run_id"])]
+        [wed] = [c for c in on.slot_coverage(WED_SLOT + timedelta(hours=2), dirs["capture_dir"])
+                 if c["name"] == "wednesday_noon"]
+        assert (wed["state"], wed["detail"], wed["run_id"], wed["attempts"]) == \
+            ("captured", "late", second.doc["run_id"], 2)
+        assert [u["kind"] for u in wed["unusable"]] == ["empty"]    # kept as evidence
         # A third run now finds the slot filled and makes no call.
         api3 = FakeAPI(_wed_events())
         assert _capture(monkeypatch, api3, schedule_path, dirs,
                         WED_SLOT + timedelta(hours=2)).status == "already_captured"
         assert api3.calls == []
 
-    def test_slot_with_only_empty_captures_reported_empty(self, monkeypatch, schedule_path, dirs):
+    def test_slot_with_only_empty_captures_does_not_count(self, monkeypatch, schedule_path, dirs):
         _capture(monkeypatch, FakeAPI([]), schedule_path, dirs, WED_SLOT)
-        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=2),
-                               dirs["capture_dir"])
-        assert [c["status"] for c in cov] == ["empty"]
+        [wed] = [c for c in on.slot_coverage(WED_SLOT + timedelta(hours=2), dirs["capture_dir"])
+                 if c["name"] == "wednesday_noon"]
+        # Window still open: awaiting capture, with the empty capture as evidence.
+        assert wed["state"] == "awaiting_capture" and wed["attempts"] == 1
+        assert [u["kind"] for u in wed["unusable"]] == ["empty"]
+        assert "1 capture with no quotes (not counted)" in wed["label"]
 
     def test_us_reference_quotes_alone_do_not_fill_the_slot(self, monkeypatch, schedule_path, dirs):
         # Only FanDuel US quoted: kept as evidence, but no Ontario book has a price.
@@ -888,9 +891,11 @@ class TestEmptyCaptureRetry:
         assert _quote(first.doc, "2026_05_TB_DAL", "fanduel")["status"] == "quoted"
         assert first.path.exists()
         evidence = first.path.read_bytes()
-        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=2),
-                               dirs["capture_dir"])
-        assert [c["status"] for c in cov] == ["empty"]
+        [wed] = [c for c in on.slot_coverage(WED_SLOT + timedelta(hours=2), dirs["capture_dir"])
+                 if c["name"] == "wednesday_noon"]
+        assert wed["state"] == "awaiting_capture"
+        assert [u["kind"] for u in wed["unusable"]] == ["us_only"]
+        assert "only US reference quotes" in wed["label"]
         # The slot is still open: a later run in the window calls the API and fills it.
         api = FakeAPI(_wed_events("2026-10-07T16:55:00Z"))
         second = _capture(monkeypatch, api, schedule_path, dirs, WED_SLOT + timedelta(hours=1))
@@ -903,9 +908,9 @@ class TestEmptyCaptureRetry:
         api = FakeAPI(_wed_events())
         late = _capture(monkeypatch, api, schedule_path, dirs, WED_SLOT + timedelta(hours=4))
         assert late.status == "not_due" and api.calls == []
-        cov = on.slot_coverage(WED_SLOT - timedelta(hours=1), WED_SLOT + timedelta(hours=5),
-                               dirs["capture_dir"])
-        assert [c["status"] for c in cov] == ["empty"]
+        [wed] = [c for c in on.slot_coverage(WED_SLOT + timedelta(hours=5), dirs["capture_dir"])
+                 if c["name"] == "wednesday_noon"]
+        assert wed["state"] == "missed" and [u["kind"] for u in wed["unusable"]] == ["us_only"]
 
     def test_validation_rejects_usable_set_by_a_us_reference_quote(self, monkeypatch, schedule_path, dirs):
         us_only = [_event("2026_05_TB_DAL", _quotes("2026-10-07T15:55:00Z", keys=("fanduel",)))]

@@ -132,47 +132,23 @@ def signed_change(x, unit: str = "") -> str:
 # Slots
 # --------------------------------------------------------------------------
 
-def _slot_window(slot_id: str) -> tuple[datetime, datetime]:
-    day, name = slot_id.split("_", 1)
-    rule = on.SLOTS_BY_NAME[name]
-    start = datetime.combine(datetime.strptime(day, "%Y-%m-%d").date(), rule.local_time,
-                             tzinfo=TORONTO)
-    return start.astimezone(timezone.utc), (start + rule.window).astimezone(timezone.utc)
-
-
-def slot_state(slot_id: str | None, ref: dict | None, report: dict, now: datetime) -> dict:
-    """State of one intended slot of a week:
-    captured | pending (window not over, no usable capture yet) |
-    empty (only captures without Ontario quotes) | missed | not_determined."""
+def slot_state(slot_id: str | None, captures: list[dict], now: datetime) -> dict:
+    """State of one intended slot of a week, from Phase 1's shared coverage
+    (on.slot_state): captured | pending | awaiting_capture | missed |
+    not_tracked, or not_determined when the week can't be anchored."""
     if slot_id is None:
         return {"state": "not_determined", "label": "Not determined (week anchor ambiguous)",
-                "delay_minutes": None}
-    if ref is not None:
-        delay = (on.parse_utc(ref["captured_at"]) - on.parse_utc(ref["intended_utc"])) \
-            .total_seconds() / 60
-        late = ref["slot_status"] == "late"
-        return {"state": "captured", "delay_minutes": round(delay, 1),
-                "label": (f"Captured {toronto(ref['captured_at'])}"
-                          + (f" (late, {delay:.0f} min after the slot)" if late else " (on time)"))}
-    start, end = _slot_window(slot_id)
-    if now < end:
-        return {"state": "pending", "delay_minutes": None,
-                "label": f"Pending: slot {toronto(on.iso(start))}, window closes {toronto(on.iso(end))}"}
-    unusable = [n for n in report.get("capture_notes", [])
-                if n["slot_id"] == slot_id and n["reason"] == "not_usable_no_ontario_quote"]
-    if unusable:
-        return {"state": "empty", "delay_minutes": None,
-                "label": "Captured, but no Ontario sportsbook quoted any game"}
-    return {"state": "missed", "delay_minutes": None,
-            "label": f"Missed: no capture in the window ending {toronto(on.iso(end))}"}
+                "delay_minutes": None, "unusable": []}
+    return on.slot_state(on.slot_from_id(slot_id), captures, now)
 
 
-def week_slots(report: dict, season: int, week: int, now: datetime) -> dict:
+def week_slots(report: dict, season: int, week: int, now: datetime,
+               captures: list[dict]) -> dict:
     w = next((x for x in report["weeks"] if (x["season"], x["week"]) == (season, week)), None)
     if w is None:
         return {}
-    return {"wednesday": slot_state(w["intended_wednesday"], w["wednesday"], report, now),
-            "sunday": slot_state(w["intended_sunday"], w["sunday"], report, now),
+    return {"wednesday": slot_state(w["intended_wednesday"], captures, now),
+            "sunday": slot_state(w["intended_sunday"], captures, now),
             "intended_wednesday": w["intended_wednesday"], "intended_sunday": w["intended_sunday"],
             "_now": now}
 
@@ -235,21 +211,25 @@ def display_status(row: dict, slots: dict) -> str:
     reasons = set(row["reasons"])
     for day in ("sunday", "wednesday"):
         if f"no_{day}_capture_for_week" in reasons:
-            state = slots.get(day, {}).get("state")
+            slot = slots.get(day, {})
+            state = slot.get("state")
             label = day.capitalize()
-            if state == "pending":
+            if state in ("pending", "awaiting_capture"):
                 return f"{label} comparison pending"
-            if state == "empty":
-                return f"{label} capture had no Ontario quotes"
             if state == "not_determined":
                 return "Week not anchored"
+            if state == "not_tracked":
+                return f"{label} slot not tracked"
+            if slot.get("unusable"):
+                return f"{label} capture had no Ontario quotes"
             return f"{label} slot missed"
     if any(r.startswith("no_anchor_") for r in reasons):
         return "Not compared: week can't be determined"
     for day in ("sunday", "wednesday"):
         if f"no_{day}_manual_observation_in_intended_slot" in reasons:
             slot_id = slots.get(f"intended_{day}")
-            if slot_id and slots.get("_now") and slots["_now"] < _slot_window(slot_id)[1]:
+            if slot_id and slots.get("_now") and \
+                    slots["_now"] <= on.parse_utc(on.slot_from_id(slot_id)["closes_utc"]):
                 return f"{day.capitalize()} comparison pending"
             return f"No manual {day.capitalize()} observation in the slot window"
     if row["status"] == "unmatched":
@@ -270,10 +250,11 @@ DISPLAY_COLUMNS = (
 
 
 def display_rows(report: dict, group: str, season: int, week: int, now: datetime,
-                 books: list[str] | None = None, game_id: str | None = None,
-                 team: str | None = None) -> pd.DataFrame:
-    """Filtered, display-ready rows for one group and week."""
-    slots = week_slots(report, season, week, now)
+                 captures: list[dict], books: list[str] | None = None,
+                 game_id: str | None = None, team: str | None = None) -> pd.DataFrame:
+    """Filtered, display-ready rows for one group and week. `captures` (the
+    stored capture documents) feed the shared slot coverage used in reasons."""
+    slots = week_slots(report, season, week, now, captures)
     out = []
     for r in report["rows"]:
         if (r["group"], r["season"], r["week"]) != (group, season, week):
@@ -519,3 +500,22 @@ def uncompared_capture_rows(report: dict, captures: list[dict]) -> pd.DataFrame:
 UNCOMPARED_COLUMNS = ["Captured (Toronto)", "Slot", "Ontario feeds with fresh quotes",
                       "US reference with fresh quotes (not Ontario)", "Games",
                       "Why not compared", "Capture file"]
+
+
+COVERAGE_STATE_LABELS = {"captured": "Captured", "pending": "Pending",
+                         "awaiting_capture": "Awaiting capture", "missed": "Missed",
+                         "not_tracked": "Not tracked"}
+COVERAGE_COLUMNS = ["Slot", "Scheduled (Toronto)", "Window closes (Toronto)", "Status",
+                    "Detail", "Capture", "Attempts"]
+
+
+def coverage_rows(captures: list[dict], now: datetime) -> pd.DataFrame:
+    """Expected scheduled slots since tracking started (newest first), from
+    Phase 1's shared on.expected_coverage - the same states and wording as
+    `python ontario_spreads.py coverage`. Computed from `now` on every call."""
+    out = []
+    for r in reversed(on.expected_coverage(captures, now)):
+        out.append(dict(zip(COVERAGE_COLUMNS, (
+            r["slot_id"], toronto(r["intended_utc"]), toronto(r["closes_utc"]),
+            COVERAGE_STATE_LABELS[r["state"]], r["label"], r["run_id"] or "", r["attempts"]))))
+    return pd.DataFrame(out, columns=COVERAGE_COLUMNS)

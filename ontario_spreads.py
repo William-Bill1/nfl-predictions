@@ -85,6 +85,10 @@ CREDIT_RESERVE = int(os.getenv("ODDS_API_MIN_REMAINING", "20"))
 STALE_AFTER = timedelta(minutes=60)          # market last_update older than this -> "stale"
 KICKOFF_MATCH_TOLERANCE = timedelta(minutes=60)
 ON_TIME_TOLERANCE = timedelta(minutes=30)
+# First calendar day (America/Toronto) whose scheduled slots are tracked for
+# coverage. Fixed, never inferred from captures: the scheduled workflow went
+# live for the 2026-10-07 Wednesday slot. Earlier slots are "not tracked".
+TRACKING_START = date(2026, 10, 7)
 
 
 # --------------------------------------------------------------------------
@@ -242,6 +246,18 @@ def slot_intended(rule: SlotRule, now_utc: datetime) -> datetime:
     return intended.astimezone(timezone.utc)
 
 
+def slot_window(rule: SlotRule, intended_utc: datetime) -> tuple[datetime, datetime]:
+    """(opens, closes) of a slot, both inclusive: a run at `opens` through
+    `closes` (= intended + window) belongs to the slot (see in_slot_window)."""
+    return intended_utc, intended_utc + rule.window
+
+
+def in_slot_window(rule: SlotRule, intended_utc: datetime, at_utc: datetime) -> bool:
+    """Phase 1's eligibility rule, used by capture and coverage alike."""
+    opens, closes = slot_window(rule, intended_utc)
+    return opens <= at_utc <= closes
+
+
 def resolve_slot(now_utc: datetime, requested: str = "auto") -> dict | None:
     """Which slot a run at `now_utc` belongs to, or None if no slot is due.
 
@@ -256,7 +272,7 @@ def resolve_slot(now_utc: datetime, requested: str = "auto") -> dict | None:
     for rule in rules:
         intended = slot_intended(rule, now_utc)
         delay = now_utc - intended
-        if timedelta(0) <= delay <= rule.window:
+        if in_slot_window(rule, intended, now_utc):
             local = intended.astimezone(TORONTO)
             return {"name": rule.name, "slot_id": f"{local:%Y-%m-%d}_{rule.name}",
                     "timezone": "America/Toronto", "intended_utc": iso(intended),
@@ -724,6 +740,47 @@ def validate_capture(doc, where="capture") -> None:
                       and parse_utc(link["captured_at"]) <= as_of, gw,
                       f"{q['book_key']} model snapshot postdates the quote")
     _need(doc["usable"] == has_ontario_quote(doc["games"]), where, "usable flag")
+    _check_slot(doc["slot"], captured, f"{where}: slot")
+
+
+# How long after the slot decision a capture's timestamp may be taken: only
+# the credit check (one request, REQUEST_TIMEOUT) runs in between.
+SLOT_CAPTURE_SLACK = timedelta(minutes=5)
+_AD_HOC_ID_RE = re.compile(r"^\d{4}-\d{2}-\d{2}_ad_hoc$")
+
+
+def _check_slot(slot, captured: datetime, where: str) -> None:
+    """The slot block must be exactly what resolve_slot produces, so a capture
+    can only ever stand for the calendar slot it was taken in."""
+    _need(isinstance(slot, dict) and set(slot) == {"name", "slot_id", "timezone", "intended_utc",
+                                                   "intended_local", "delay_minutes", "status"},
+          where, "fields differ from schema")
+    _need(slot["timezone"] == "America/Toronto", where, "timezone")
+    if slot["name"] == AD_HOC:
+        _need(isinstance(slot["slot_id"], str) and bool(_AD_HOC_ID_RE.match(slot["slot_id"]))
+              and slot["intended_utc"] is None and slot["intended_local"] is None
+              and slot["delay_minutes"] is None and slot["status"] == AD_HOC,
+              where, "inconsistent ad-hoc slot")
+        return
+    _need(slot["name"] in SLOTS_BY_NAME, where, f"unknown slot {slot['name']!r}")
+    try:
+        expected = slot_from_id(slot["slot_id"])
+    except (TypeError, ValueError, KeyError):
+        raise ValidationError(f"{where}: slot_id {slot['slot_id']!r} isn't a calendar slot") \
+            from None
+    rule = SLOTS_BY_NAME[slot["name"]]
+    intended = parse_utc(expected["intended_utc"])
+    _need(expected["name"] == slot["name"] and slot["intended_utc"] == expected["intended_utc"]
+          and slot["intended_local"] == intended.astimezone(TORONTO).isoformat(),
+          where, "slot_id, name and intended time disagree")
+    delay = slot["delay_minutes"]
+    _need(isinstance(delay, (int, float)) and not isinstance(delay, bool)
+          and 0 <= delay <= rule.window.total_seconds() / 60, where, "delay outside the window")
+    _need(slot["status"] == ("on_time" if delay <= ON_TIME_TOLERANCE.total_seconds() / 60
+                             else "late"), where, "on_time/late status disagrees with delay")
+    decided = intended + timedelta(minutes=delay)
+    _need(decided - timedelta(minutes=0.1) <= captured <= decided + SLOT_CAPTURE_SLACK,
+          where, "captured_at doesn't match the slot's delay")
 
 
 def _accept_existing(path: Path, text: str, validate) -> dict:
@@ -977,39 +1034,125 @@ def capture(*, now: datetime | None = None, slot: str = "auto", api_key: str | N
                                      f"({resolved['status']}) as {path.name}", path, doc)
 
 
-def slot_coverage(start_utc: datetime, end_utc: datetime,
-                  capture_dir: Path = CAPTURE_DIR) -> list[dict]:
-    """Each scheduled slot in the range: captured (on_time/late) or missed.
+def slot_for(name: str, day: date) -> dict:
+    """The scheduled slot `name` on Toronto calendar day `day`, with its
+    window in UTC (DST handled by zoneinfo)."""
+    rule = SLOTS_BY_NAME[name]
+    if day.weekday() != rule.weekday:
+        raise ValueError(f"{day} is not a {name} day")
+    intended = datetime.combine(day, rule.local_time, tzinfo=TORONTO).astimezone(timezone.utc)
+    opens, closes = slot_window(rule, intended)
+    return {"name": name, "slot_id": f"{day:%Y-%m-%d}_{name}", "intended_utc": iso(intended),
+            "opens_utc": iso(opens), "closes_utc": iso(closes)}
 
-    Slots before the first scheduled capture are left out: tracking hadn't
-    started, so they weren't missed. With no scheduled captures yet, the list
-    is empty.
-    """
-    by_slot = {}
-    for doc in load_captures(capture_dir):
-        by_slot.setdefault(doc["slot"]["slot_id"], []).append(doc)
-    scheduled = [d["slot"]["intended_utc"] for docs in by_slot.values() for d in docs
-                 if d["slot"]["intended_utc"]]
-    if not scheduled:
-        return []
-    start_utc = max(start_utc, parse_utc(min(scheduled)))
-    out = []
-    for s in expected_slots(start_utc, end_utc):
-        docs = sorted(by_slot.get(s["slot_id"], []), key=lambda d: d["captured_at"])
-        usable = [d for d in docs if d["usable"]]
-        if usable:
-            d = usable[0]
-            out.append({**s, "status": d["slot"]["status"], "run_id": d["run_id"],
-                        "captured_at": d["captured_at"], "delay_minutes": d["slot"]["delay_minutes"]})
-        elif docs:
-            # Only empty captures: the slot has no quotes.
-            out.append({**s, "status": "empty", "run_id": docs[-1]["run_id"],
-                        "captured_at": docs[-1]["captured_at"],
-                        "delay_minutes": docs[-1]["slot"]["delay_minutes"]})
-        else:
-            out.append({**s, "status": "missed", "run_id": None, "captured_at": None,
-                        "delay_minutes": None})
-    return out
+
+def slot_from_id(slot_id: str) -> dict:
+    """'2026-10-07_wednesday_noon' -> slot_for(...)."""
+    day, name = slot_id.split("_", 1)
+    return slot_for(name, date.fromisoformat(day))
+
+
+def tracked_slots(now_utc: datetime, start: date = TRACKING_START) -> list[dict]:
+    """Every scheduled slot from `start` (Toronto date) through the display
+    horizon: the first Sunday slot whose window hasn't closed at `now`.
+    Earlier slots are always kept; nothing before `start` is listed."""
+    out, day = [], start
+    while True:
+        for rule in SLOTS:
+            if day.weekday() == rule.weekday:
+                out.append(slot_for(rule.name, day))
+        if day.weekday() == SLOTS_BY_NAME["sunday_morning"].weekday and out and \
+                parse_utc(out[-1]["closes_utc"]) >= now_utc:
+            return out
+        day += timedelta(days=1)
+
+
+def _unusable_kind(doc: dict) -> str:
+    """Why a capture can't fill its slot: only US-reference quotes, or none."""
+    us = any(q["status"] in ("quoted", "stale") and q["role"] == "us_reference"
+             for g in doc["games"] for q in g["quotes"])
+    return "us_only" if us else "empty"
+
+
+def _toronto_text(ts: str) -> str:
+    dt = parse_utc(ts).astimezone(TORONTO)
+    return f"{dt:%a %b} {dt.day}, {dt:%H:%M %Z}"
+
+
+def slot_state(slot: dict, captures: list[dict], now_utc: datetime,
+               start: date = TRACKING_START) -> dict:
+    """Coverage state of one scheduled slot.
+
+    captured         - a usable scheduled capture fills it (the earliest by
+                       captured_at; detail on_time/late as recorded);
+    pending          - window not open yet;
+    awaiting_capture - window open (inclusive), no usable capture yet;
+    missed           - window closed without a usable capture;
+    not_tracked      - the slot is before the tracking start.
+    Ad-hoc captures (another slot_id) and manual quotes never count. Empty and
+    US-only captures of the slot are listed in `unusable` but don't fill it.
+    The state depends on `now`, so it's computed on every call, never cached."""
+    docs = sorted((d for d in captures if d["slot"]["slot_id"] == slot["slot_id"]
+                   and d["slot"]["name"] == slot["name"]),
+                  key=lambda d: (d["captured_at"], d["run_id"]))
+    usable = [d for d in docs if d["usable"]]
+    row = {**slot, "state": None, "detail": None, "run_id": None, "captured_at": None,
+           "delay_minutes": None, "attempts": len(docs),
+           "unusable": [{"run_id": d["run_id"], "captured_at": d["captured_at"],
+                         "kind": _unusable_kind(d)} for d in docs if not d["usable"]]}
+    opens, closes = parse_utc(slot["opens_utc"]), parse_utc(slot["closes_utc"])
+    if date.fromisoformat(slot["slot_id"][:10]) < start:
+        row["state"] = "not_tracked"
+    elif usable:
+        d = usable[0]
+        row.update(state="captured", detail=d["slot"]["status"], run_id=d["run_id"],
+                   captured_at=d["captured_at"], delay_minutes=d["slot"]["delay_minutes"])
+    elif now_utc < opens:
+        row["state"] = "pending"
+    elif now_utc <= closes:
+        row["state"] = "awaiting_capture"
+    else:
+        row["state"] = "missed"
+    row["label"] = coverage_label(row)
+    return row
+
+
+def coverage_label(row: dict) -> str:
+    """The one human-readable wording, shared by the CLI and the page."""
+    state, close = row["state"], _toronto_text(row["closes_utc"])
+    if state == "captured":
+        when = _toronto_text(row["captured_at"])
+        return (f"Captured {when} (late, {row['delay_minutes']:.0f} min after the slot)"
+                if row["detail"] == "late" else f"Captured {when} (on time)")
+    if state == "not_tracked":
+        return f"Not tracked (before {TRACKING_START:%b} {TRACKING_START.day}, {TRACKING_START.year})"
+    kinds = [u["kind"] for u in row["unusable"]]
+    evidence = ""
+    if kinds:
+        n = len(kinds)
+        what = ("only US reference quotes" if set(kinds) == {"us_only"} else
+                "no quotes" if set(kinds) == {"empty"} else "no Ontario quote")
+        evidence = f"; {n} capture{'s' if n != 1 else ''} with {what} (not counted)"
+    if state == "pending":
+        return (f"Pending: slot {_toronto_text(row['intended_utc'])}, window closes {close}"
+                + evidence)
+    if state == "awaiting_capture":
+        return f"Awaiting capture: window open until {close}" + evidence
+    return f"Missed: no capture in the window ending {close}" + evidence
+
+
+def expected_coverage(captures: list[dict], now_utc: datetime,
+                      start: date = TRACKING_START) -> list[dict]:
+    """Coverage of every tracked slot (see tracked_slots), oldest first."""
+    return [slot_state(s, captures, now_utc, start) for s in tracked_slots(now_utc, start)]
+
+
+def slot_coverage(now_utc: datetime | None = None, capture_dir: Path | None = None,
+                  start: date = TRACKING_START) -> list[dict]:
+    """expected_coverage over the stored captures (validated; a corrupt file
+    raises). The directory is resolved at call time (default CAPTURE_DIR)."""
+    directory = CAPTURE_DIR if capture_dir is None else capture_dir
+    return expected_coverage(load_captures(directory), now_utc or ps.utc_now(), start)
 
 
 # --------------------------------------------------------------------------
@@ -1202,8 +1345,12 @@ def main(argv=None) -> int:
     m.add_argument("--note", default=None)
     m.add_argument("--entered-by", default=None)
 
-    cov = sub.add_parser("coverage", help="scheduled slots: captured on time, late, or missed")
-    cov.add_argument("--days", type=int, default=28)
+    cov = sub.add_parser("coverage", help="expected scheduled slots since tracking started: "
+                                          "captured (on time/late), pending, awaiting capture "
+                                          "or missed")
+    cov.add_argument("--days", type=int, default=None,
+                     help="only slots whose window closed in the last N days, or later "
+                          "(default: all since tracking started)")
 
     sub.add_parser("validate", help="validate every stored artifact")
     args = ap.parse_args(argv)
@@ -1243,12 +1390,15 @@ def main(argv=None) -> int:
                   f"observed {doc['observed_at']} -> {path.name}")
             return EXIT_OK
         if args.cmd == "coverage":
-            end = ps.utc_now()
-            rows = slot_coverage(end - timedelta(days=args.days), end)
-            if not rows:
-                print("no scheduled captures yet - coverage starts at the first one")
-            for s in rows:
-                print(f"{s['slot_id']:32} {s['status']:9} {s['run_id'] or ''}")
+            now = ps.utc_now()
+            rows = slot_coverage(now)
+            if args.days is not None:
+                rows = [r for r in rows if parse_utc(r["closes_utc"]) >=
+                        now - timedelta(days=args.days)]
+            print(f"scheduled slots since {TRACKING_START} (America/Toronto); "
+                  f"now {iso(now)}")
+            for r in rows:
+                print(f"{r['slot_id']:32} {r['state']:16} {r['run_id'] or '-':30} {r['label']}")
             return EXIT_OK
         if args.cmd == "validate":
             n = len(load_captures())

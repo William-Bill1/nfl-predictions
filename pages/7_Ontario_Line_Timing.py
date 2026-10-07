@@ -270,6 +270,22 @@ with st.expander("Record a FanDuel Ontario quote (manual observation)",
                 st.form_submit_button("Discard preview", key="fd_discard", on_click=_on_discard,
                                       disabled=not pending)
 
+# ---- expected scheduled slots (shared Phase 1 coverage) -------------------
+# Time-dependent, so computed here on every rerun from the cached capture
+# documents and the current clock - never inside a cached function.
+coverage = olt.coverage_rows(capture_docs, now)
+with st.container(border=True):
+    st.markdown("**Scheduled slots** (Wednesday 12:00 and Sunday 09:00, America/Toronto)")
+    st.caption(f"Tracked since {on.TRACKING_START:%a %b} {on.TRACKING_START.day}, "
+               f"{on.TRACKING_START.year}; newest first, through the next Sunday slot. A slot "
+               "is filled only by a usable scheduled capture (one with an Ontario quote); "
+               "ad-hoc captures, captures without an Ontario quote and manual entries never "
+               "fill it. Rows are configured capture opportunities, not proof that games or "
+               "markets existed; **Missed** means no usable scheduled capture was stored, "
+               "which alone doesn't show a failed run (e.g. outside the season or with no "
+               "games in scope). Same states as `python ontario_spreads.py coverage`.")
+    st.dataframe(coverage, hide_index=True, key="olt_coverage")
+
 if report["status"] == "no_observations_yet":
     st.info(
         "**No observations yet.** Ontario spread captures run on a schedule: "
@@ -298,9 +314,9 @@ if not weeks:
     st.info(
         "**No Wednesday/Sunday comparison yet.** No usable scheduled Wednesday 12:00 or "
         "Sunday 09:00 capture (one with an Ontario quote) and no manual observation is "
-        "stored, so there is nothing to compare and no week to show; slot status "
-        "(pending/missed) appears once there is a week. Stored captures that aren't "
-        "compared are listed above.",
+        "stored, so there is nothing to compare and no week to show. Scheduled-slot "
+        "status is shown above; stored captures that aren't compared are listed "
+        "above too.",
         icon=":material/schedule:",
     )
     add_betting_oracle_footer()
@@ -346,7 +362,7 @@ with st.container(horizontal=True):
         "olt_week", default[1] if default and default[0] == season else season_weeks[0])
     week = st.selectbox("Week", season_weeks, key="olt_week")
 
-slots = olt.week_slots(report, season, week, now)
+slots = olt.week_slots(report, season, week, now, capture_docs)
 with st.container(horizontal=True):
     for day in ("wednesday", "sunday"):
         s = slots.get(day, {})
@@ -363,7 +379,7 @@ if view == MAN:
         st.dataframe(recorded, hide_index=True, key="olt_manual_recorded")
 
 # ---- filters -------------------------------------------------------------
-week_rows = olt.display_rows(report, view, season, week, now)
+week_rows = olt.display_rows(report, view, season, week, now, capture_docs)
 if week_rows.empty:
     st.info("No comparison rows from this source for the selected week.", icon=":material/info:")
     add_betting_oracle_footer()
@@ -384,7 +400,8 @@ book_keys = sorted(week_rows.loc[week_rows["Sportsbook"].isin(picked_books), "_b
     if picked_books else None
 game_id = None if game_label == "All games" else \
     games_in_week.loc[games_in_week["Matchup"] == game_label, "_game_id"].iloc[0]
-rows = olt.display_rows(report, view, season, week, now, books=book_keys, game_id=game_id,
+rows = olt.display_rows(report, view, season, week, now, capture_docs, books=book_keys,
+                        game_id=game_id,
                         team=None if team_filter == "All teams" else team_filter)
 
 if rows.empty:

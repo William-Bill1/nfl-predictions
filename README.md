@@ -238,7 +238,7 @@ The API's `fanduel` feed is FanDuel US and is kept only as a US reference.
 FanDuel Ontario quotes are entered by hand, with the form on the Ontario Line
 Timing page or `python ontario_spreads.py manual-quote`. Each quote is linked to the latest
 pregame model snapshot captured no later than the quote's own provider
-timestamp; no model probabilities are stored with them. `coverage` lists on-time, late and missed
+timestamp; no model probabilities are stored with them. `coverage` lists every scheduled slot since tracking started (2026-10-07): captured on time or late, pending, awaiting capture or missed
 slots. This phase only collects data; it doesn't evaluate betting times or
 show an edge. See [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md).
 
