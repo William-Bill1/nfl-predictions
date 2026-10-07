@@ -52,6 +52,36 @@ python pregame_snapshots.py select --which latest --before 2026-10-04T12:00:00Z
 `select` only reads. It validates every snapshot file first and refuses to
 write its output inside the snapshot directory.
 
+### Reading the `select` CSV: keep identifiers and hashes as text
+
+The CSV's provenance columns hold git SHAs and hex digests:
+
+- `code_revision` (in CI, the `GITHUB_SHA` of the run);
+- `config_id` and `feature_set_id`;
+- `artifact_sha256`.
+
+Some such values look like scientific notation, e.g. `85e6046866697474…`.
+pandas 2.3.3's C CSV parser then tries to read them as huge floats and can
+**crash the process with a segmentation fault**
+([pandas-dev/pandas#62617](https://github.com/pandas-dev/pandas/issues/62617),
+[#62740](https://github.com/pandas-dev/pandas/issues/62740)). On 2026-10-07
+this happened in CI for a commit whose SHA had that shape.
+
+- **In this repository**, read the file with
+  `pregame_snapshots.read_selection_csv(path)`. It reads exactly the columns
+  in `SELECTION_TEXT_COLUMNS` as text:
+  - `run_id`, `game_id` and `snapshot_file`;
+  - `code_revision`, `config_id`, `feature_set_id` and `artifact_sha256`.
+
+  Every other column (for example `spread_line` and `prob_underdog_covers`)
+  is parsed as usual, so the numbers stay numeric.
+- **Anywhere else** (notebooks, other tools), read those columns as text too,
+  e.g. `pd.read_csv(path, dtype={c: str for c in SELECTION_TEXT_COLUMNS})`.
+  Don't let a CSV reader infer their type. Avoid a blanket `dtype=str`,
+  which would also turn the probabilities into text.
+
+The values themselves are never changed; only how they're read.
+
 ## Run manifest: `data_files/pipeline_run_manifest.json`
 
 Written by `nfl-gather-data.py` as the last step of a successful run. It's kept

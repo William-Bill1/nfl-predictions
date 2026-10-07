@@ -74,8 +74,14 @@ PROBS = [0.51, 0.58, 0.47, 0.50, 0.53, np.nan, 0.55, 0.60]
 SIGNALS = [0, 1, 0, 1, 1, 0, 0, 1]
 
 
+FIXTURE_SHA = "fixture-sha"
+
+
 @pytest.fixture
-def data_dir(tmp_path):
+def data_dir(tmp_path, monkeypatch):
+    # Pin the revision: in CI, GITHUB_SHA is the commit under test, and some
+    # SHAs (e.g. "85e60468...") crash pandas' CSV parser when read as numbers.
+    monkeypatch.setenv("GITHUB_SHA", FIXTURE_SHA)
     d = tmp_path / "data_files"
     _write_inputs(d, ROWS, PROBS, SIGNALS)
     _manifest(d)
@@ -322,7 +328,8 @@ class TestSelection:
             ps.main(["select", "--snapshot-dir", str(snap_dir), "--output", str(snap_dir / "x.csv")])
         out = data_dir / "picks.csv"
         assert ps.main(["select", "--snapshot-dir", str(snap_dir), "--output", str(out)]) == 0
-        assert len(pd.read_csv(out)) == 5
+        picks = ps.read_selection_csv(out)
+        assert len(picks) == 5 and set(picks["code_revision"]) == {FIXTURE_SHA}
 
 
 # ---------------------------------------------------- pipeline integration --
@@ -648,3 +655,89 @@ class TestWorkflowFailureReporting:
         run = by_name["Summary"]["run"]
         assert "completed successfully" not in run
         assert "steps.pregame_capture.outcome" in run
+
+
+# ------------------------------------------- select CSV: text-safe reading --
+
+# Revision/hash strings that pandas 2.3.3's C parser reads as scientific
+# notation and can segfault on (pandas-dev/pandas#62617, #62740), including the
+# commit SHA that crashed CI on 2026-10-07. Fixed values: independent of the
+# commit under test.
+DANGEROUS = [
+    "81e3104049863b72",
+    "12e3456789012345",
+    "1e999999999999",
+    "85e6046866697474fdc3e98f317d510f27dd4072",
+    "81e3104049863b72" + "0" * 48,                  # 64 characters, like a SHA-256
+]
+_READ_CHILD = r"""
+import json, sys
+sys.path.insert(0, sys.argv[1])
+import pregame_snapshots as ps
+df = ps.read_selection_csv(sys.argv[2])
+print(json.dumps({"values": {c: [None if v != v else v for v in df[c].tolist()]
+                             for c in df.columns if df[c].dtype == object},
+                  "dtypes": {c: str(t) for c, t in df.dtypes.items()}}))
+"""
+
+
+def _read_in_child(path):
+    """read_selection_csv in its own process (bounded), so a parser crash
+    can't take the test runner down. Returns (exit code, parsed output)."""
+    import subprocess
+    import sys
+    r = subprocess.run([sys.executable, "-c", _READ_CHILD, str(ROOT), str(path)],
+                       capture_output=True, text=True, timeout=120)
+    return r.returncode, (json.loads(r.stdout) if r.returncode == 0 else r.stderr[-500:])
+
+
+class TestSelectionCsvText:
+    @pytest.mark.parametrize("value", DANGEROUS)
+    def test_hash_columns_round_trip_exactly(self, tmp_path, value):
+        # Every text column gets the dangerous value; numeric columns stay numeric.
+        row = {c: value for c in ps.SELECTION_TEXT_COLUMNS}
+        row.update(season=2026, week=5, spread_line=-3.5, prob_underdog_covers=0.5625,
+                   bet_signal=1)
+        path = tmp_path / "picks.csv"
+        pd.DataFrame([row]).to_csv(path, index=False)               # writing never parses
+        code, out = _read_in_child(path)
+        assert code == 0, out                                        # no crash
+        for c in ps.SELECTION_TEXT_COLUMNS:
+            assert out["values"][c] == [value], c                    # exact text
+        assert out["dtypes"]["spread_line"] == "float64"
+        assert out["dtypes"]["prob_underdog_covers"] == "float64"
+        assert out["dtypes"]["season"] == out["dtypes"]["bet_signal"] == "int64"
+
+    def test_select_output_round_trips_a_dangerous_commit_sha(self, data_dir, monkeypatch):
+        sha = "85e6046866697474fdc3e98f317d510f27dd4072"
+        _manifest(data_dir, monkeypatch=monkeypatch, sha=sha)
+        ps.capture(data_dir, now=T0)
+        out = data_dir / "picks.csv"
+        assert ps.main(["select", "--snapshot-dir", str(data_dir / "pregame_snapshots"),
+                        "--output", str(out)]) == 0
+        code, got = _read_in_child(out)
+        assert code == 0, got
+        assert set(got["values"]["code_revision"]) == {sha}
+        assert got["dtypes"]["prob_underdog_covers"] == "float64"
+        assert got["dtypes"]["spread_line"] == "float64"
+        snaps = ps.load_snapshots(data_dir / "pregame_snapshots")   # provenance unchanged
+        assert set(snaps["code_revision"]) == {sha}
+
+    def test_every_hash_like_select_column_is_read_as_text(self, data_dir, monkeypatch):
+        # Guard for future columns: any select column holding long hex
+        # strings must be listed in SELECTION_TEXT_COLUMNS.
+        import re
+        _manifest(data_dir, monkeypatch=monkeypatch, sha="0123456789abcdef" * 2 + "01234567")
+        ps.capture(data_dir, now=T0)
+        picks = ps.select_captures(data_dir / "pregame_snapshots")
+        hexy = {c for c in picks.columns
+                if picks[c].map(lambda v: isinstance(v, str)
+                                and re.fullmatch(r"[0-9a-f]{12,}", v) is not None).any()}
+        assert hexy and hexy <= set(ps.SELECTION_TEXT_COLUMNS), hexy - set(ps.SELECTION_TEXT_COLUMNS)
+
+    def test_unrelated_readers_unchanged(self):
+        # The fix is scoped to the select CSV; the schedule reader keeps
+        # pandas' normal inference (no blanket dtype=str).
+        df = ps.parse_tsv(b"season\tweek\tspread_line\n2026\t5\t-3.5\n")
+        assert dict(df.dtypes.astype(str)) == {"season": "int64", "week": "int64",
+                                               "spread_line": "float64"}
