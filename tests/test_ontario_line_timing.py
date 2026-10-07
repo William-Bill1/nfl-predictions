@@ -402,3 +402,88 @@ def test_display_rows_keeps_columns_when_nothing_matches(store):
     df = olt.display_rows(report, ONT, 2026, 5, MONDAY, books=["no_such_book"])
     assert df.empty and list(df.columns) == list(olt.DISPLAY_COLUMNS)
     assert olt.summarize(df)["sides"] == 0
+
+
+# ------------------------------------------------- ad-hoc captures only --
+
+class TestAdHocCaptures:
+    # Regression (2026-10-07): the first stored capture was an ad-hoc one (the
+    # scheduled Wednesday run came too late), so the report had no weeks and
+    # the page raised IndexError choosing a default season.
+    AFTER_WINDOW = WED_SLOT + timedelta(hours=3, minutes=7)      # Wed 15:07 Toronto
+
+    def test_ad_hoc_only_renders_without_weeks(self, store, render):
+        # Quotes updated just before the capture (fresh), as on 2026-10-07.
+        store.capture(self.AFTER_WINDOW, wed_events(updated="2026-10-07T19:05:00Z"),
+                      slot="ad_hoc")
+        at = render(THURSDAY)
+        assert "No Wednesday/Sunday comparison yet" in " ".join(i.value for i in at.info)
+        assert not [s for s in at.selectbox if s.key in ("olt_season", "olt_week")]
+        assert not at.metric                                        # no week, no comparison
+        [df] = [d.value for d in at.dataframe]
+        assert len(df) == 1
+        row = df.iloc[0]
+        assert row["Slot"] == "2026-10-07_ad_hoc"
+        assert row["Captured (Toronto)"] == "Wed Oct 7, 15:07 EDT"  # actual time, not the slot
+        assert row["Why not compared"].startswith("Ad-hoc capture, not a scheduled slot")
+        # Ontario feeds and the US reference feed are counted separately: the
+        # fixture quotes BetMGM, Betano and PROLINE (3 of 6) plus FanDuel US.
+        assert row["Ontario feeds with fresh quotes"] == f"3 of {len(on.ONTARIO_BOOKS)}"
+        assert row["US reference with fresh quotes (not Ontario)"] == "1 of 1"
+
+    def test_ad_hoc_listed_but_kept_out_of_comparison(self, store, render):
+        store.capture(WED_SLOT, wed_events())
+        store.capture(self.AFTER_WINDOW, wed_events(), slot="ad_hoc")
+        at = render(THURSDAY)
+        uncompared = at.dataframe[0].value
+        assert list(uncompared["Slot"]) == ["2026-10-07_ad_hoc"]
+        captions = " ".join(c.value for c in at.caption)
+        assert "Captured Wed Oct 7, 12:00 EDT (on time)" in captions   # from the scheduled run
+        rows = table(at)
+        assert "15:07" not in " ".join(rows.astype(str).values.ravel())
+
+    def test_missed_wednesday_is_not_filled_by_ad_hoc(self, store, render):
+        # Scheduled Sunday capture exists; the only Wednesday-day capture is ad hoc.
+        store.capture(self.AFTER_WINDOW, wed_events(), slot="ad_hoc")
+        store.capture(SUN_SLOT, sun_events())
+        at = render(MONDAY)
+        captions = " ".join(c.value for c in at.caption)
+        assert "Missed: no capture in the window ending Wed Oct 7, 15:00 EDT" in captions
+        assert list(at.dataframe[0].value["Slot"]) == ["2026-10-07_ad_hoc"]
+
+    def test_unusable_scheduled_capture_only(self, store, render):
+        # A scheduled capture with no Ontario quote gives no week either; the
+        # page must not claim no scheduled capture exists.
+        store.capture(WED_SLOT, [])
+        at = render(THURSDAY)
+        info = " ".join(i.value for i in at.info)
+        assert "No usable scheduled Wednesday 12:00" in info
+        [df] = [d.value for d in at.dataframe]
+        row = df.iloc[0]
+        assert row["Slot"] == "2026-10-07_wednesday_noon"
+        assert row["Why not compared"] == "No Ontario sportsbook quoted any game"
+        assert row["Ontario feeds with fresh quotes"] == f"0 of {len(on.ONTARIO_BOOKS)}"
+
+    def test_manual_only_observations_still_show_their_week(self, store, render):
+        store.manual("2026-10-07T16:30:00Z", WED_SLOT + timedelta(hours=1), team="CHI",
+                     handicap=3.5)
+        at = render(THURSDAY)
+        assert {s.key for s in at.selectbox} >= {"olt_season", "olt_week"}
+        assert "No Wednesday/Sunday comparison yet" not in " ".join(i.value for i in at.info)
+        assert "Pending: slot Sun Oct 11, 09:00 EDT" in " ".join(c.value for c in at.caption)
+        assert not [d for d in at.dataframe if "Why not compared" in d.value.columns]
+
+    def test_corrupt_capture_beside_ad_hoc_is_an_integrity_error(self, store, render):
+        store.capture(self.AFTER_WINDOW, wed_events(), slot="ad_hoc")
+        (store.capture_dir / "20261007T200000Z-aaaaaaaaaaaa.json").write_text(
+            "{broken", encoding="utf-8")
+        at = render(THURSDAY)
+        assert any("Integrity error" in e.value for e in at.error)
+        assert not at.info and not at.dataframe                     # no empty-state fallback
+
+    def test_uncompared_rows_use_capture_documents_only(self, store):
+        # Notes for a capture that isn't loaded are skipped, not invented.
+        report = {"capture_notes": [{"file": "x.json", "run_id": "missing", "slot_id": "s",
+                                     "reason": "ad_hoc_capture_not_compared"}]}
+        df = olt.uncompared_capture_rows(report, [])
+        assert df.empty and list(df.columns) == olt.UNCOMPARED_COLUMNS
