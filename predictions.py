@@ -4335,6 +4335,7 @@ if _has_runtime:
                 st.Page("pages/5_Spread_Tracker.py",     title="Spread Tracker",    icon="📉"),
                 st.Page("pages/6_Value_Finder.py",       title="Value Finder",      icon="🔎"),
                 st.Page("pages/7_Ontario_Line_Timing.py", title="Ontario Line Timing", icon="🕒"),
+                st.Page("pages/8_Bet_Journal.py",        title="Bet Journal",       icon="🧾"),
             ],
         }
     )

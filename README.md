@@ -72,6 +72,7 @@ market-implied columns, on the Probabilities & Edges tab.
 | `5_Spread_Tracker.py` | opt-in: season-to-date US+CA sportsbook spread-line comparison vs. nflverse (per-book ranking, best line per game, anomalies) — see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 | `6_Value_Finder.py` | opt-in: price-adjusted edges — one book's lines vs. the field, and the spread model's own picks vs. every tracked book's actual line |
 | `7_Ontario_Line_Timing.py` | read-only **Ontario Line Timing**: each team's Wednesday-noon vs Sunday-9-a.m. (Toronto) spread and price at Ontario sportsbooks, built in memory from the validated captures. It shows break-even rates, key numbers 3/7 and payoff-dominance outcomes; trade-offs aren't ranked. Manual FanDuel Ontario and US-reference views are separate and opt-in. A **"Record a FanDuel Ontario quote"** form saves a manually observed FanDuel Ontario price (Toronto time, preview before saving, never a bet record). "No observations yet" until the first capture — see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
+| `8_Bet_Journal.py` | **Bet Journal**: single-game spread wagers you actually placed at Ontario sportsbooks, on their accepted terms (signed spread, American odds, CAD stake, Toronto placement time). Preview before saving; append-only corrections and voids; an explicit **Grade settled wagers** button; W-L-P, net profit and ROI in CAD; an audit history. It records wagers, never places them, and is separate from the model's recommendations — see [`docs/BET_JOURNAL.md`](docs/BET_JOURNAL.md) |
 
 ### Models
 
@@ -145,7 +146,8 @@ Best-feature subsets per target are cached in `data_files/best_features_*.txt`.
 | **The Odds API (Ontario spreads)** | immutable Wednesday-noon and Sunday-morning (Toronto) captures of Ontario sportsbook spreads and prices, plus manual FanDuel Ontario quotes | `ontario_spreads.py`; opt-in (same `ODDS_API_KEY`), 1 credit per capture; see [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md) |
 | **The Odds API (spreads)** | season-long US+CA sportsbook game-spread lines vs. nflverse's line, a price-adjusted per-book value finder, and a model-vs-book line shopper | `spread_tracker.py` + `scripts/spread_tracker_report.py` + `scripts/spread_value_finder.py` + `scripts/model_line_shop.py` + `pages/5_Spread_Tracker.py`; opt-in (same `ODDS_API_KEY`); see [`docs/MARKET_SPREAD_TRACKER_PLAN.md`](docs/MARKET_SPREAD_TRACKER_PLAN.md) |
 
-All artifacts live in `data_files/` and are committed. The big one,
+All artifacts live in `data_files/` and are committed (except the git-ignored
+`bet_journal/`). The big one,
 `nfl_play_by_play_historical.csv.gz` (~116 MB, **tab-separated**), is tracked
 with **Git LFS** — run `git lfs pull` if it comes down as a pointer. The app
 degrades gracefully if it's missing.
@@ -239,6 +241,28 @@ pregame model snapshot captured no later than the quote's own provider
 timestamp; no model probabilities are stored with them. `coverage` lists on-time, late and missed
 slots. This phase only collects data; it doesn't evaluate betting times or
 show an edge. See [`docs/ONTARIO_SPREAD_TRACKING.md`](docs/ONTARIO_SPREAD_TRACKING.md).
+
+### Bet journal
+
+The Bet Journal page records single-game spread wagers you have actually
+placed at Ontario sportsbooks, on the accepted terms. They're stored as
+append-only, checksummed records in `data_files/bet_journal/` (`bet_journal.py`):
+wagers, amendments, voids and grades.
+
+- **Local only:** the directory is **git-ignored** (personal data), so back it
+  up yourself.
+- **Grading** reuses `betting_log.spread_result` at the recorded odds and CAD
+  stake, and runs only when you click the button.
+  - **Evidence:** only games with conservative evidence of completion are
+    graded (consistent scores, not 0–0, game day before today).
+  - **Invalidation:** a grade the schedule no longer supports is invalidated
+    and shown as unverified.
+- **Backups:** `python bet_journal.py validate` checks the journal, e.g. after
+  restoring a backup.
+- **Separate:** the journal never touches `betting_recommendations_log.csv`,
+  the Ontario captures or the pregame snapshots.
+
+See [`docs/BET_JOURNAL.md`](docs/BET_JOURNAL.md).
 
 ### Spread pricing and settlement
 

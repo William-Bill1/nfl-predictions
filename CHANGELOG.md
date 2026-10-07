@@ -8,6 +8,87 @@ bottom.
 
 ## October 2026
 
+- **Bet journal.** A new **Bet Journal** page records single-game spread
+  wagers actually placed at Ontario sportsbooks, on their accepted terms. It
+  records wagers and never places them. See `docs/BET_JOURNAL.md`.
+  - **Entry:** the sportsbook, game and team, the signed spread, accepted
+    American odds, a positive CAD stake, and the placement time in
+    America/Toronto, plus an optional reference and note.
+    - **Placement time:** it must not be in the future and must be strictly
+      before kickoff. Late entry of an earlier pregame wager is allowed.
+      DST-ambiguous and nonexistent times are rejected.
+  - **Preview, then Save:** Preview writes nothing. Save writes exactly the
+    previewed terms, and any change in between requires a new preview.
+  - **Records** (`bet_journal.py`) are append-only, checksummed JSON records
+    in `data_files/bet_journal/`, which is git-ignored because it's personal
+    data.
+    - **Kinds:** wager, amendment, void, grade and invalidation.
+    - **Corrections:** amendments and voids need a reason. The originals stay
+      in history and drop out of the totals.
+    - **Explicit links:** history is linked explicitly, never ordered by
+      timestamp or file name.
+      - **Terms chain:** `wager → amendment → … [→ void]`, through
+        `previous`.
+      - **Settlement chain:** grades and invalidations, through
+        `supersedes`.
+      - **Terminal transitions:** settlements not timestamped strictly before
+        a void, or recorded after their terms were superseded, are rejected.
+      - **Saves:** must name the current tip, checked under the lock, so a
+        correction based on an outdated Preview is refused.
+  - **Duplicates:** reruns, double clicks and concurrent saves, including
+    from separate processes, can't add a duplicate. A genuine second wager on
+    identical terms needs explicit confirmation, and so do amended terms that
+    match another current wager. The confirmed set is re-checked under the
+    journal lock.
+  - **Grading:** it runs only from the **Grade settled wagers** button and
+    reuses the reviewed spread rule, now exposed as
+    `betting_log.spread_result`.
+    - **Evidence:** nflverse has no final-status flag, so a game is graded
+      only on conservative evidence of completion:
+      - one schedule row;
+      - whole, non-negative scores that aren't 0–0;
+      - `result` = home − away, `total` = home + away, `overtime` 0 or 1;
+      - a game day before today in Toronto.
+
+      Live partial scores, placeholders, inconsistent fields and
+      duplicated rows stay pending.
+    - **Profit:** scaled to the CAD stake at the accepted odds. Wins earn net
+      winnings, losses lose the stake and pushes earn $0.
+    - **Changes:** a score correction or amended terms writes a superseding
+      grade. Evidence that no longer supports a grade writes an
+      **invalidation**: the wager shows as *unverified* and leaves profit and
+      ROI, and restored evidence grades it again. Earlier grades stay in
+      history, and grading again with unchanged data writes nothing.
+    - **Provenance:** each grade records its evidence, the SHA-256 of the
+      exact schedule bytes parsed, and the exact terms record graded.
+  - **Totals:** W-L-P, net profit, pending stake, and ROI over graded
+    current wagers. Pushes are included; pending, unverified and voided
+    wagers are excluded.
+  - **Integrity:** a damaged or ambiguous history shows an integrity error
+    instead of totals, and saving and grading refuse. That includes
+    malformed records, forks, cycles, dangling links, duplicate voids,
+    out-of-order timestamps, invalid confirmations of non-duplicate wagers,
+    settlements after voids or superseding amendments, and grades that don't
+    follow from their terms and evidence.
+  - **CLI:** `python bet_journal.py validate [--dir PATH]` checks a journal,
+    e.g. after restoring a backup. The guide has backup and restore steps.
+  - **Page details:**
+    - **Tabs:** the selected tab stays selected across reruns.
+    - **Dollar amounts:** they're escaped, so two amounts in one message
+      don't render as LaTeX math.
+    - **Selection labels:** the wager and game selectors show labels that
+      don't change when a wager is amended. A stale selection is refused
+      with "choose … again" rather than acted on.
+- **Shared lock fix (Windows/Linux).** `SlotLock` is shared by Ontario captures, manual
+  quotes and the bet journal. It could leave its own lock file behind when
+  deleting it coincided with another process reading it to report the
+  owner, and then every later save was reported as busy. Creating a lock
+  while a deletion was pending also raised a raw `PermissionError`. Both
+  transient cases now retry for a bounded time (at most 5 s). Contention is
+  reported only for a readable lock record; unrelated permission errors are
+  not described as another writer. A lock is still never deleted on another
+  holder's behalf.
+
 - **FanDuel Ontario manual-quote form.** The Ontario Line Timing page has a
   "Record a FanDuel Ontario quote (manual observation)" section.
   - **Entry:** pick an upcoming game and team, then enter the bettor-facing
@@ -31,8 +112,8 @@ bottom.
     on that host is no longer running; with an unknown or unreadable owner,
     the message says to investigate first. Locks are removed after a failed
     save and are never deleted automatically or on someone else's behalf.
-    An existing but unopenable lock path is now reported as a busy lock
-    rather than a raw permission error. Afterwards the page
+    A valid existing lock is reported as contention; unrelated permission
+    errors are not mislabeled as a busy lock. Afterwards the page
     switches to the manual view, with its filters cleared. The view's new
     "Recorded manual observations" table shows each observation's times,
     source and whether it's in the comparison.

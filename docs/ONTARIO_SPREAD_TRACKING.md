@@ -227,8 +227,12 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
   - **Never automatic:** a lock is never deleted automatically.
   - **Never someone else's:** a save removes the lock only if it still holds
     that save's own token.
+  - **Windows:** removing its own lock is retried for up to 5 seconds while
+    another process is briefly reading it, so a finished save doesn't leave
+    its lock behind. Creating a lock is retried the same way while a previous
+    holder's deletion is still pending.
 
-  Capture slot locks work the same way.
+  Capture slot locks (and the bet journal's lock) work the same way.
 - **Shared code.** The CLI and the page use the same functions:
   - `prepare_manual_quote` validates and builds the sealed document without
     writing;

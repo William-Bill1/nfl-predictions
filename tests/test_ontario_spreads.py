@@ -605,6 +605,31 @@ class TestManualQuotes:
         assert second[1] is False and second[0] == first[0]
         assert len(list((tmp_path / "manual").glob("*.json"))) == 1
 
+    def test_concurrent_duplicate_entries_write_once(self, tmp_path, schedule_path):
+        barrier = threading.Barrier(6)
+        outcomes, failures = [], []
+
+        def enter():
+            try:
+                barrier.wait()
+                outcomes.append(self._enter(tmp_path, schedule_path))
+            except on.CaptureError as exc:
+                outcomes.append(exc)
+            except Exception as exc:
+                failures.append(exc)
+
+        threads = [threading.Thread(target=enter) for _ in range(6)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=20)
+        assert not failures and all(not thread.is_alive() for thread in threads), failures
+        saved = [result for result in outcomes if isinstance(result, tuple)]
+        assert sum(created for _, created, _ in saved) == 1
+        assert len(list((tmp_path / "manual").glob("*.json"))) == 1
+        path, created, _ = self._enter(tmp_path, schedule_path)
+        assert not created and path.exists()
+
     @pytest.mark.parametrize("kw,match", [
         ({"observed_at": "2026-10-07T16:30:00Z"}, "future"),
         ({"observed_at": "2026-10-07T12:05:00"}, "timezone"),

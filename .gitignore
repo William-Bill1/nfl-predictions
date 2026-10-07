@@ -94,5 +94,8 @@ player_props/models/*_lgbm.txt
 /data_files/ontario_spreads/captures/.*.lock
 /data_files/ontario_spreads/manual/.*.lock
 
+# Bet journal: personal wager records, kept local (see docs/BET_JOURNAL.md)
+/data_files/bet_journal/
+
 # Generated reports (ontario_spread_report.py and similar)
 /reports/
