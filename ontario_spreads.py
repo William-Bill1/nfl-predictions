@@ -49,6 +49,7 @@ import sys
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
+from time import monotonic, sleep
 from zoneinfo import ZoneInfo
 
 import pandas as pd
@@ -781,6 +782,7 @@ class SlotLock:
     """
 
     EXPECTED_MAX_AGE = timedelta(minutes=10)
+    UNLINK_RETRY = timedelta(seconds=5)       # Windows: deletion briefly pending/blocked
 
     def __init__(self, directory: Path, slot_id: str, run_id: str, what: str = "capture"):
         self.path = Path(directory) / f".{slot_id}.lock"
@@ -836,16 +838,48 @@ class SlotLock:
 
     def __enter__(self):
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        try:
-            fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
-            raise CaptureError(self._conflict_message(*self._holder())) from None
-        except PermissionError:
-            # Windows reports an existing but unopenable lock path (e.g. a
-            # directory, or a file with restricted access) this way.
-            if os.path.lexists(self.path):
+        deadline = monotonic() + self.UNLINK_RETRY.total_seconds()
+        while True:
+            try:
+                fd = os.open(self.path, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError:
+                if self.path.is_dir():
+                    raise CaptureError(f"lock path {self.path} is a directory, not a lock file; "
+                                       "owner not recorded in the lock file; investigate before "
+                                       "deleting it") from None
                 raise CaptureError(self._conflict_message(*self._holder())) from None
-            raise
+            except PermissionError as exc:
+                if os.path.lexists(self.path):
+                    if self.path.is_dir():
+                        raise CaptureError(f"lock path {self.path} is a directory, not a lock file; "
+                                           "owner not recorded in the lock file; investigate before "
+                                           "deleting it") from None
+                    try:
+                        raw = self.path.read_text(encoding="utf-8")
+                    except FileNotFoundError:
+                        raw = None
+                    except OSError:
+                        if monotonic() >= deadline:
+                            raise exc
+                        sleep(0.005)
+                        continue
+                    if raw is not None:
+                        try:
+                            structured = raw.lstrip().startswith("{")
+                            info = json.loads(raw) if structured else {"id": raw.strip()}
+                        except ValueError:
+                            info = {}
+                        if isinstance(info, dict) and info.get("id") and (
+                                not structured or info.get("what")):
+                            raise CaptureError(self._conflict_message(*self._holder())) from None
+                        if monotonic() >= deadline:
+                            raise exc
+                    elif monotonic() >= deadline:
+                        raise exc
+                if monotonic() >= deadline:
+                    raise exc
+                sleep(0.005)
         with os.fdopen(fd, "w", encoding="utf-8") as f:
             json.dump({"what": self.what, "id": self.run_id, "pid": os.getpid(),
                        "host": platform.node(), "started_at": iso(ps.utc_now()),
@@ -853,13 +887,22 @@ class SlotLock:
         return self
 
     def __exit__(self, *exc):
-        try:
-            info = json.loads(self.path.read_text(encoding="utf-8"))
-            if info.get("token") == self.token:
-                self.path.unlink()
-        except (OSError, ValueError):
-            pass
-        return False
+        # On Windows the unlink fails with a sharing violation while another
+        # process is reading this lock to report its owner. That is brief, so
+        # retry for a bounded time rather than leave our own lock behind.
+        deadline = monotonic() + self.UNLINK_RETRY.total_seconds()
+        while True:
+            try:
+                info = json.loads(self.path.read_text(encoding="utf-8"))
+                if info.get("token") == self.token:
+                    self.path.unlink()
+                return False
+            except PermissionError:
+                if monotonic() > deadline:
+                    return False
+                sleep(0.005)
+            except (OSError, ValueError):
+                return False
 
 
 # --------------------------------------------------------------------------

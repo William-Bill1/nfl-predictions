@@ -58,6 +58,7 @@ Step 2 — UI:
     pages/5_Spread_Tracker.py      [opt-in; display-only, reads spread_tracker_report.json]
     pages/6_Value_Finder.py        [opt-in; display-only, book-vs-field + model-vs-book edges]
     pages/7_Ontario_Line_Timing.py [Wed-vs-Sun Ontario spread comparison built in memory from validated captures via ontario_line_timing.py; only write: manual FanDuel Ontario quote form]
+    pages/8_Bet_Journal.py         [actual placed Ontario spread wagers via bet_journal.py; writes only data_files/bet_journal/ (git-ignored); grades on an explicit click]
 ```
 
 ## Determinism & mid-season
@@ -197,7 +198,8 @@ score fetch is gone.
 - `nfl-gather-data.py` — feature engineering + 3-way temporal split + train + predict (all rows)
 - `create-nfl-historical.py` — schedule + game fetch via nfl_data_py
 - `season_utils.py` — `upcoming_or_current_season()` (schedules) / `latest_pbp_season()` (PBP); one source of truth for the season year
-- `betting_log.py` — headless owner of `betting_recommendations_log.csv` (`append_recommendations`, `grade_pending`); `predictions.py` delegates to it
+- `betting_log.py` — headless owner of `betting_recommendations_log.csv` (`append_recommendations`, `grade_pending`); `predictions.py` delegates to it. `spread_result` (win/loss/push for a team at its signed handicap) is shared with `bet_journal.py`
+- `bet_journal.py` — actual-bet journal behind `pages/8_Bet_Journal.py`. It keeps append-only, checksummed records (wager / amendment / void / grade / invalidation) in the git-ignored `data_files/bet_journal/`. Two chains of explicit links order the history: a terms chain through `previous` and a settlement chain through `supersedes`. Writes happen under an exclusive lock, must name the current tip, and run duplicate and second-wager checks (for new wagers and amendments). Grading is explicit and audited: it needs conservative completion evidence from the schedule (consistent integer scores, not 0–0, game day before today), settles in Decimal CAD via `betting_log.spread_result`, and invalidates grades the evidence no longer supports. Current state and totals exclude voided, superseded and unverified settlements. A damaged or ambiguous history (forks, cycles, dangling links, duplicate voids, out-of-order timestamps, inconsistent grades) raises an integrity error that stops the page. `python bet_journal.py validate` checks a journal directory. It never reads or writes the recommendations log, captures or snapshots
 - `player_props/train_models.py` — prop model training (temporal hold-out)
 - `player_props/predict.py` — prop predictions + frozen weekly snapshot; `model_reliable` flag; opt-in `PROP_ROSTER_FILTER`
 - `player_props/market_odds.py` — opt-in DK/FanDuel prop-odds fetch (`ODDS_API_KEY`); `market_odds_week{W}_{season}.csv` doubles as its own cache, filled in incrementally (cached games never re-fetched; uncovered games re-tried each run - free until props are posted)
@@ -226,6 +228,7 @@ All data in `data_files/` (committed to git):
 - `betting_recommendations_log.csv` — spread recs + graded outcomes; owned by `betting_log.py` (nightly / weekly), no longer the running app
 - `pipeline_run_manifest.json` — provenance of the latest successful pipeline run (written by `nfl-gather-data.py`)
 - `ontario_spreads/captures/<run_id>.json` — immutable Ontario spread captures, one per scheduled slot (quotes by bookmaker with jurisdiction, provider timestamps, coverage, model-snapshot link; no model probabilities); `ontario_spreads/manual/<quote_id>.json` — manual FanDuel Ontario quotes (source `manual`)
+- `bet_journal/<record_id>.json` — **not committed** (git-ignored, personal data): actual placed wagers and their amendments, voids, grades and invalidations, append-only (`bet_journal.py`; see `docs/BET_JOURNAL.md`)
 - `pregame_snapshots/<run_id>.json` — immutable pregame spread predictions, one file per nightly run (`pregame_snapshots.py`; see `docs/PREGAME_SNAPSHOTS.md`)
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed

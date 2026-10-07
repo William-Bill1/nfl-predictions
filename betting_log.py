@@ -274,6 +274,15 @@ def _append_audit(audit_path: str, corrections: list[dict]):
     return restore
 
 
+def spread_result(team: str, home: str, away: str, handicap: float,
+                  home_score: float, away_score: float) -> str:
+    """Win, loss or push for a spread bet on `team` at its own signed handicap
+    (e.g. -3.5 lays 3.5), given the final score. Shared with bet_journal.py."""
+    margin = float(home_score) - float(away_score)
+    covered = (margin if team == home else -margin) + float(handicap)
+    return "push" if abs(covered) < 1e-9 else "win" if covered > 0 else "loss"
+
+
 def _settle(row, g) -> tuple[str | None, float | None, str]:
     """Settle one spread row from final scores and the bet as recorded.
 
@@ -297,9 +306,7 @@ def _settle(row, g) -> tuple[str | None, float | None, str]:
     odds = -110.0 if pd.isna(odds) else float(odds)
     if not math.isfinite(odds) or abs(odds) < 100 or not math.isfinite(float(handicap)):
         return None, None, ""
-    margin = float(g["home_score"]) - float(g["away_score"])
-    covered = (margin if team == home else -margin) + float(handicap)
-    result = "push" if abs(covered) < 1e-9 else "win" if covered > 0 else "loss"
+    result = spread_result(team, home, away, handicap, g["home_score"], g["away_score"])
     profit = 0.0 if result == "push" else LOSS_PROFIT
     if result == "win":
         profit = round(100 * (100 / -odds if odds < 0 else odds / 100), 2)
