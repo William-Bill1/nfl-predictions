@@ -34,8 +34,11 @@ on:
         required: false
         default: auto
 
-# One capture at a time, never cancelled midway: the second run of a slot sees
-# the first one's committed capture and skips without calling the API.
+# One capture at a time, never cancelled midway. A run that waited in the queue
+# moves to the latest main first ("Use the latest main"), so the second run of
+# a slot sees the first one's committed capture and skips without calling the
+# API; if that refresh fails, the run fails without capturing. (GitHub keeps at most one run pending here; an older pending run is
+# cancelled when a newer one arrives.)
 concurrency:
   group: ontario-spread-capture
   cancel-in-progress: false
@@ -48,6 +51,28 @@ jobs:
         uses: actions/checkout@v4
         with:
           lfs: false
+
+      # A run checks out the commit main pointed at when it was triggered. If
+      # it then waited behind another run of this workflow, that commit lacks
+      # the other run's capture. Fast-forward to the latest main so the
+      # already-captured check sees it. Fails closed: if main can't be fetched
+      # and fast-forwarded, this step fails, so the capture step (and with it
+      # any Odds API request) is skipped rather than run from a stale commit.
+      # The upload and persistence-report steps still run.
+      - name: Use the latest main
+        id: refresh
+        if: github.ref == 'refs/heads/main'
+        run: |
+          refresh() { git fetch --quiet --no-tags "$@" origin main && git merge --ff-only --quiet FETCH_HEAD; }
+          # A shallow checkout may lack the common history; deepen once if needed.
+          if { refresh --depth=50 || refresh --unshallow; } &&
+             [ "$(git rev-parse HEAD)" = "$(git rev-parse FETCH_HEAD)" ]; then
+            echo "Using main at $(git rev-parse --short HEAD) (triggered at ${GITHUB_SHA::7})"
+          else
+            echo "::error::could not move to the latest main; not capturing from a possibly stale commit (no Odds API request made)"
+            echo "- latest main: **refresh failed**, capture skipped (no API request)" >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Set up Python 3.12
         uses: actions/setup-python@v5
@@ -111,6 +136,7 @@ jobs:
         if: always()
         env:
           STATUS: ${{ steps.capture.outputs.status }}
+          REFRESH: ${{ steps.refresh.outcome }}
           COMMIT: ${{ steps.commit.outcome }}
           UPLOAD: ${{ steps.upload.outcome }}
           ARTIFACT: ontario-spread-capture-${{ github.run_id }}-${{ github.run_attempt }}
@@ -119,7 +145,7 @@ jobs:
           unpushed=$(git log --oneline '@{u}..HEAD' -- data_files/ontario_spreads/captures 2>/dev/null || true)
           {
             echo "### Capture persistence"
-            echo "- capture status: ${STATUS:-none}; commit step: ${COMMIT:-n/a}; artifact upload: ${UPLOAD:-n/a}"
+            echo "- latest main: ${REFRESH:-n/a}; capture status: ${STATUS:-none}; commit step: ${COMMIT:-n/a}; artifact upload: ${UPLOAD:-n/a}"
           } >> "$GITHUB_STEP_SUMMARY"
           if [ -z "$pending" ] && [ -z "$unpushed" ]; then
             echo "- no unpersisted capture files" >> "$GITHUB_STEP_SUMMARY"
@@ -136,7 +162,7 @@ jobs:
           exit 1
 
       - name: Slot coverage (last 28 days)
-        if: always()
+        if: always() && steps.refresh.outcome != 'failure'
         run: |
           echo "### Slot coverage (last 28 days)" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"

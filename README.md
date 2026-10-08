@@ -226,6 +226,11 @@ records predictions; it doesn't show an edge.
 
 ### Ontario spread captures
 
+GitHub's cron runs late in this fork. An optional Windows Task Scheduler
+dispatcher (`scripts/ontario_dispatch.py`, installed separately) can trigger
+capture runs on time, with GitHub cron as the backup. See
+[`docs/ONTARIO_DISPATCH_WINDOWS.md`](docs/ONTARIO_DISPATCH_WINDOWS.md).
+
 `python ontario_spreads.py capture` records the spreads and prices that
 Ontario sportsbook feeds show at Wednesday 12:00 and Sunday 09:00 Toronto time.
 The feeds are `betano_ca_on`, `betmgm_ca_on`, `betrivers_ca_on`, `pointsbetca`,

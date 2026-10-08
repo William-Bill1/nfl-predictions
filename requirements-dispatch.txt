@@ -1,0 +1,14 @@
+# Minimal dependencies for the Windows Ontario dispatcher (scripts/ontario_dispatch.py),
+# for a python.org Python 3.12, 3.13 or 3.14 venv. Versions come from requirements.txt
+# (used as constraints) so the dispatcher validates captures with the same libraries.
+#
+#   python -m venv venv-dispatch
+#   .\venv-dispatch\Scripts\python.exe -m pip install -r requirements-dispatch.txt
+#
+# tzdata is required on Windows: zoneinfo has no IANA timezone database there.
+-c requirements.txt
+pandas
+numpy
+requests
+python-dotenv
+tzdata
