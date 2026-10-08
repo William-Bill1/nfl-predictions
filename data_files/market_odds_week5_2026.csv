@@ -325,3 +325,128 @@ season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odd
 2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Brian Robinson Jr.,rushing_yards,fanduel,35.5,-114,-114
 2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Bijan Robinson,rushing_yards,fanduel,88.5,-114,-114
 2026,5,2026_05_BAL_ATL,Atlanta Falcons,Baltimore Ravens,Derrick Henry,rushing_yards,fanduel,86.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Joe Burrow,passing_yards,draftkings,234.5,-113,-111
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Willis,passing_yards,draftkings,192.5,-112,-112
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Washington,receiving_yards,draftkings,41.5,-111,-113
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Greg Dulcich,receiving_yards,draftkings,27.5,-114,-110
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,receiving_yards,draftkings,10.5,-115,-109
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Washington,receptions,draftkings,4.5,-114,-111
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Greg Dulcich,receptions,draftkings,2.5,-171,134
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,receptions,draftkings,1.5,-177,138
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Chase Brown,rushing_yards,draftkings,66.5,-110,-115
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,rushing_yards,draftkings,45.5,-112,-112
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Willis,rushing_yards,draftkings,33.5,-108,-116
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Jaylen Wright,rushing_yards,draftkings,22.5,-107,-117
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Samaje Perine,rushing_yards,draftkings,14.5,-107,-117
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Joe Burrow,rushing_yards,draftkings,8.5,-114,-110
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Joe Burrow,passing_yards,fanduel,235.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Willis,passing_yards,fanduel,192.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Washington,receiving_yards,fanduel,41.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,receiving_yards,fanduel,10.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Greg Dulcich,receiving_yards,fanduel,27.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,receptions,fanduel,1.5,-180,134
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Washington,receptions,fanduel,4.5,-120,-110
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Greg Dulcich,receptions,fanduel,2.5,-172,128
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Chase Brown,rushing_yards,fanduel,67.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Ollie Gordon II,rushing_yards,fanduel,45.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Jaylen Wright,rushing_yards,fanduel,21.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Malik Willis,rushing_yards,fanduel,32.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Samaje Perine,rushing_yards,fanduel,14.5,-114,-114
+2026,5,2026_05_CIN_MIA,Miami Dolphins,Cincinnati Bengals,Joe Burrow,rushing_yards,fanduel,8.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Aaron Rodgers,passing_yards,draftkings,223.5,-113,-111
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Daniel Jones,passing_yards,draftkings,213.5,-112,-112
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Josh Downs,receiving_yards,draftkings,58.5,-111,-113
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,DK Metcalf,receiving_yards,draftkings,48.5,-113,-111
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Tyler Warren,receiving_yards,draftkings,48.5,-109,-115
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Roman Wilson,receiving_yards,draftkings,33.5,-111,-113
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Pat Freiermuth,receiving_yards,draftkings,28.5,-114,-110
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Keenan Allen,receiving_yards,draftkings,26.5,-115,-109
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Darnell Washington,receiving_yards,draftkings,22.5,-108,-116
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,receiving_yards,draftkings,15.5,-116,-108
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Tyler Warren,receptions,draftkings,5.5,107,-137
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Josh Downs,receptions,draftkings,5.5,118,-151
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,DK Metcalf,receptions,draftkings,3.5,-154,120
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Pat Freiermuth,receptions,draftkings,3.5,-103,-124
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Keenan Allen,receptions,draftkings,2.5,-170,133
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Roman Wilson,receptions,draftkings,2.5,-164,129
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,receptions,draftkings,2.5,-106,-120
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Darnell Washington,receptions,draftkings,2.5,120,-154
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,rushing_yards,draftkings,85.5,-112,-112
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Daniel Jones,rushing_yards,draftkings,10.5,-104,-120
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Aaron Rodgers,passing_yards,fanduel,222.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Daniel Jones,passing_yards,fanduel,213.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Josh Downs,receiving_yards,fanduel,58.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Darnell Washington,receiving_yards,fanduel,22.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Tyler Warren,receiving_yards,fanduel,50.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,receiving_yards,fanduel,15.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Pat Freiermuth,receiving_yards,fanduel,27.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Keenan Allen,receiving_yards,fanduel,27.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,DK Metcalf,receiving_yards,fanduel,51.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,DK Metcalf,receptions,fanduel,3.5,-180,134
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Darnell Washington,receptions,fanduel,2.5,124,-166
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Keenan Allen,receptions,fanduel,2.5,-192,142
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,receptions,fanduel,2.5,-110,-120
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Tyler Warren,receptions,fanduel,5.5,108,-144
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Pat Freiermuth,receptions,fanduel,3.5,116,-154
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Josh Downs,receptions,fanduel,4.5,-148,112
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Daniel Jones,rushing_yards,fanduel,10.5,-114,-114
+2026,5,2026_05_IND_PIT,Pittsburgh Steelers,Indianapolis Colts,Jonathan Taylor,rushing_yards,fanduel,88.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Tyler Shough,passing_yards,draftkings,239.5,-112,-112
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Kyler Murray,passing_yards,draftkings,214.5,-113,-111
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Chris Olave,receiving_yards,draftkings,81.5,-110,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Juwan Johnson,receiving_yards,draftkings,43.5,-110,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Devaughn Vele,receiving_yards,draftkings,36.5,-113,-111
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,receiving_yards,draftkings,18.5,-109,-115
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Chris Olave,receptions,draftkings,6.5,-125,-102
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Juwan Johnson,receptions,draftkings,4.5,107,-136
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Devaughn Vele,receptions,draftkings,3.5,-130,102
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,receptions,draftkings,3.5,126,-162
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,rushing_yards,draftkings,71.5,-110,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Kyler Murray,rushing_yards,draftkings,16.5,-116,-109
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Tyler Shough,passing_yards,fanduel,237.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Kyler Murray,passing_yards,fanduel,212.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Devaughn Vele,receiving_yards,fanduel,36.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,receiving_yards,fanduel,18.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Juwan Johnson,receiving_yards,fanduel,42.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Chris Olave,receiving_yards,fanduel,81.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Chris Olave,receptions,fanduel,6.5,-122,-106
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,receptions,fanduel,2.5,-174,130
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Juwan Johnson,receptions,fanduel,4.5,106,-140
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Devaughn Vele,receptions,fanduel,3.5,-130,-102
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Tyler Shough,rushing_yards,fanduel,9.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Aaron Jones,rushing_yards,fanduel,72.5,-114,-114
+2026,5,2026_05_MIN_NO,New Orleans Saints,Minnesota Vikings,Kyler Murray,rushing_yards,fanduel,15.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jayden Daniels,passing_yards,draftkings,198.5,-113,-111
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jameis Winston,passing_yards,draftkings,197.5,-112,-112
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malik Nabers,receiving_yards,draftkings,54.5,-112,-112
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Isaiah Likely,receiving_yards,draftkings,40.5,-114,-110
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malachi Fields,receiving_yards,draftkings,26.5,-114,-110
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Darnell Mooney,receiving_yards,draftkings,17.5,-115,-109
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,receiving_yards,draftkings,12.5,-118,-106
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malik Nabers,receptions,draftkings,5.5,118,-151
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Isaiah Likely,receptions,draftkings,4.5,-102,-125
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malachi Fields,receptions,draftkings,2.5,129,-165
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,receptions,draftkings,2.5,131,-168
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Darnell Mooney,receptions,draftkings,1.5,-114,-112
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jacory Croskey-Merritt,rushing_yards,draftkings,56.5,-113,-111
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,rushing_yards,draftkings,56.5,-110,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jayden Daniels,rushing_yards,draftkings,30.5,-112,-112
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Najee Harris,rushing_yards,draftkings,29.5,-109,-115
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jameis Winston,rushing_yards,draftkings,2.5,-108,-116
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jayden Daniels,passing_yards,fanduel,198.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jameis Winston,passing_yards,fanduel,201.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Darnell Mooney,receiving_yards,fanduel,18.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,receiving_yards,fanduel,12.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malik Nabers,receiving_yards,fanduel,54.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malachi Fields,receiving_yards,fanduel,27.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Isaiah Likely,receiving_yards,fanduel,40.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Isaiah Likely,receptions,fanduel,4.5,106,-140
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,receptions,fanduel,1.5,-205,152
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malachi Fields,receptions,fanduel,2.5,118,-158
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Darnell Mooney,receptions,fanduel,1.5,-132,100
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Malik Nabers,receptions,fanduel,5.5,120,-160
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jayden Daniels,rushing_yards,fanduel,30.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Najee Harris,rushing_yards,fanduel,28.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jameis Winston,rushing_yards,fanduel,2.5,-102,-128
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Cam Skattebo,rushing_yards,fanduel,56.5,-114,-114
+2026,5,2026_05_NYG_WAS,Washington Commanders,New York Giants,Jacory Croskey-Merritt,rushing_yards,fanduel,55.5,-114,-114

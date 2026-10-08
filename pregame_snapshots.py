@@ -163,6 +163,21 @@ def read_bytes_once(path: Path | str) -> tuple[bytes, str]:
     return data, sha256_bytes(data)
 
 
+# Columns of the `select --output` CSV holding revisions, hashes or
+# identifiers. Read them as text: pandas 2.3.3's C parser can segfault on a
+# hex string shaped like scientific notation, e.g. the git SHA
+# "85e6046866697474..." (pandas-dev/pandas#62617, #62740), and could otherwise
+# turn such values into numbers. Numeric columns keep their types.
+SELECTION_TEXT_COLUMNS = ("run_id", "game_id", "snapshot_file", "code_revision", "config_id",
+                          "feature_set_id", "artifact_sha256")
+
+
+def read_selection_csv(path) -> pd.DataFrame:
+    """Read a `select --output` CSV with its identifier and hash columns as
+    text (see SELECTION_TEXT_COLUMNS); everything else is parsed as usual."""
+    return pd.read_csv(path, dtype={c: str for c in SELECTION_TEXT_COLUMNS})
+
+
 def parse_tsv(data: bytes) -> pd.DataFrame:
     return pd.read_csv(io.BytesIO(data), sep="\t")
 

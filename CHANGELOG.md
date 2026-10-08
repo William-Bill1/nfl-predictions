@@ -41,6 +41,23 @@ bottom.
     evidence that games or markets existed. **Missed** means no usable
     scheduled capture was stored; it doesn't by itself show a failed run (for
     example outside the season, or with no games in scope).
+- **Pre-game snapshot `select` CSV: identifiers and hashes read as text.**
+  - **The crash:** pandas 2.3.3's C CSV parser segfaults on hex strings shaped
+    like scientific notation (pandas-dev/pandas#62617, #62740). The `select`
+    CSV's `code_revision` is the git SHA, which is `GITHUB_SHA` in CI, so a
+    commit SHA like `85e6046866697474…` crashed the test run that read the
+    CSV back.
+  - **The fix:** `pregame_snapshots.read_selection_csv` reads exactly the
+    columns in `SELECTION_TEXT_COLUMNS` as text: `run_id`, `game_id`,
+    `snapshot_file`, `code_revision`, `config_id`, `feature_set_id` and
+    `artifact_sha256`. Numeric columns keep their types, and no provenance
+    value changes.
+  - **Tests:** they pin `GITHUB_SHA`, so they no longer depend on the commit
+    being tested. Regression tests read the reported dangerous strings in a
+    bounded child process and check they come back as the exact text.
+  - **Scope:** no other committed or generated CSV has hash columns, so
+    other readers are unchanged. External readers of `picks.csv` should keep
+    these columns as text (see `docs/PREGAME_SNAPSHOTS.md`).
 
 - **Ontario Line Timing: no crash when no comparable week exists.**
   - **The crash:** the first stored capture (2026-10-07) was `ad_hoc`,
