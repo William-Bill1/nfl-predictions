@@ -8,6 +8,78 @@ bottom.
 
 ## October 2026
 
+- **Windows dispatcher for Ontario spread captures** (installed separately;
+  nothing is registered by default).
+  - **Why:** GitHub's cron ran 4.7–5 h late on 2026-10-07 and missed the
+    Wednesday slot.
+  - **What it does:** `scripts/ontario_dispatch.py`, run by Windows Task
+    Scheduler, dispatches the **existing** Ontario Spread Capture workflow on
+    `main` with `slot=wednesday_noon` or `slot=sunday_morning`:
+    - at Wed 12:05 and Sun 09:05 Toronto, retrying at 12:30 / 09:30;
+    - with a status report at 13:00 / 10:00;
+    - with recovery at startup, on resume from sleep, on leaving Modern
+      Standby and when a network connects.
+  - **Guards:**
+    - **Where and when:** it dispatches only inside the slot window, and
+      not in its last 15 minutes.
+    - **Rechecked just before sending:** the clock is read again after the
+      GitHub checks and immediately before the request is recorded and sent.
+      If the window closed or the cutoff passed during the checks, nothing is
+      sent.
+    - **Only if needed:** only without a validated usable capture on main,
+      read at one pinned commit, and without a queued or running run.
+    - **Limits:** at most 2 runs per slot (from GitHub) and at most 3
+      requests per slot from the computer.
+  - **Dispatch requests are never retried automatically.**
+    - A timeout or 5xx is reported as uncertain.
+    - A `workflow_dispatch` run created afterwards is followed only as a
+      *candidate*. GitHub returns no run ID, so it may be another dispatch's
+      run.
+    - Dispatch is not exactly-once.
+  - **Outside a window:** a missed slot is logged once, never captured ad
+    hoc.
+  - **Outcomes:** dispatch accepted, run queued, run failed and capture
+    persisted are distinct; only the last is success.
+  - **Auth and logs:**
+    - The token comes from Windows Credential Manager.
+    - `ODDS_API_KEY` is kept out of the dispatcher process.
+    - Logs are redacted and kept outside AppData, because Store Python
+      redirects AppData writes.
+  - **Local state:**
+    - The ledger is written atomically. A corrupt ledger is moved aside and
+      reported.
+    - **A lock left by a killed run** is taken over only if three things
+      hold:
+      - its owner record is complete;
+      - it was taken on this computer;
+      - it predates the last start, or its process no longer exists.
+    - **Takeover is guarded:** it happens under a separate recovery lock,
+      after re-checking the lock's token.
+    - **Never removed automatically:** locks with an unknown or corrupt
+      owner, or from another host. They are reported with what to check
+      before deleting them.
+  - **Scripts:** `scripts/windows/` has idempotent install (with
+    `-PlanOnly`), status, uninstall and token scripts.
+    - The installer checks the real interpreter with `ontario_dispatch.py
+      runtime` (python.org CPython 3.12–3.14, `requirements-dispatch.txt`).
+    - It verifies "Log on as a batch job" from the effective policy.
+  - **Backup:** GitHub cron stays configured.
+  - **Docs:** `docs/ONTARIO_DISPATCH_WINDOWS.md` covers setup, the
+    unattended test, the task settings, recovery behaviour, the power,
+    network and battery limitations, and what is not yet verified.
+
+- **Ontario capture: no second paid capture of a slot from a queued run.**
+  - **Before:** a run that waited behind another one checked out the older
+    commit it was triggered on, so it didn't see the first run's capture. It
+    could spend a credit capturing the slot again.
+  - **Fix:**
+    - The workflow now fast-forwards to the latest `main` before capturing.
+      If it can't fetch or fast-forward, the run fails before the capture
+      step, so no Odds API request is made from a stale commit. Upload and
+      the persistence report still run.
+    - `capture()` checks the slot again while holding the slot lock, before
+      the credit check.
+
 - **Ontario expected-slot coverage.** Coverage now describes the expected
   Wednesday 12:00 and Sunday 09:00 (Toronto) slots, independently of what was
   captured or which weeks the comparison has.

@@ -4,6 +4,7 @@ Every network call is mocked; every artifact goes to a temporary directory.
 """
 
 import json
+import os
 import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -446,6 +447,26 @@ class TestImmutability:
         assert r.status == "already_captured" and api.calls == []
         assert len(list(dirs["capture_dir"].glob("*.json"))) == 1
 
+    def test_slot_captured_while_taking_the_lock_makes_no_call(self, monkeypatch, schedule_path,
+                                                               dirs):
+        # Another run writes the slot's capture after this run's first check
+        # but before it holds the lock. The recheck under the lock must stop it
+        # before the credit check or the odds request spends anything.
+        elsewhere = {**dirs, "capture_dir": dirs["capture_dir"].parent / "elsewhere"}
+        first = _capture(monkeypatch, FakeAPI(_wed_events()), schedule_path, elsewhere, WED_SLOT)
+        real_enter = on.SlotLock.__enter__
+
+        def enter(lock):
+            dirs["capture_dir"].mkdir(parents=True, exist_ok=True)
+            (dirs["capture_dir"] / first.path.name).write_bytes(first.path.read_bytes())
+            return real_enter(lock)
+        monkeypatch.setattr(on.SlotLock, "__enter__", enter)
+        api = FakeAPI(_wed_events())
+        r = _capture(monkeypatch, api, schedule_path, dirs, WED_SLOT + timedelta(minutes=5))
+        assert r.status == "already_captured" and api.calls == []
+        assert [p.name for p in dirs["capture_dir"].glob("*.json")] == [first.path.name]
+        assert not list(dirs["capture_dir"].glob(".*.lock"))         # lock released
+
     def test_concurrent_capture_of_a_slot_is_refused(self, monkeypatch, schedule_path, dirs):
         dirs["capture_dir"].mkdir(parents=True)
         (dirs["capture_dir"] / ".2026-10-07_wednesday_noon.lock").write_text("other-run")
@@ -773,6 +794,37 @@ class TestWorkflow:
     def test_runs_are_serialized(self, workflow):
         assert workflow["concurrency"]["cancel-in-progress"] is False
 
+    def test_queued_run_moves_to_latest_main_before_capturing(self, workflow):
+        # A run that waited behind another one must see that run's capture.
+        steps = workflow["jobs"]["capture"]["steps"]
+        checkout = next(i for i, s in enumerate(steps) if "actions/checkout" in s.get("uses", ""))
+        refresh = next(i for i, s in enumerate(steps) if s.get("name") == "Use the latest main")
+        capture = next(i for i, s in enumerate(steps) if s.get("id") == "capture")
+        assert checkout < refresh < capture
+        step = steps[refresh]
+        assert step["if"] == "github.ref == 'refs/heads/main'"
+        assert "git fetch" in step["run"] and "origin main" in step["run"]
+        assert "git merge --ff-only" in step["run"]                  # never rewrites history
+        assert "env" not in step                                      # no secrets
+
+    def test_refresh_failure_skips_capture_but_keeps_reporting(self, workflow):
+        # Fail closed: the refresh step can fail the job, and the capture step
+        # runs only after success, while upload and the persistence report
+        # still run (GitHub's default `if: success()` vs `always()`).
+        steps = workflow["jobs"]["capture"]["steps"]
+        refresh = next(s for s in steps if s.get("id") == "refresh")
+        assert "exit 1" in refresh["run"] and "continue-on-error" not in refresh
+        assert "::warning::" not in refresh["run"]
+        ran = _steps_after_failure(steps, "refresh")
+        assert "capture" not in ran
+        assert {"upload", "Report persistence"} <= set(ran)
+        # The commit step's always() is gated on a capture status, which a
+        # skipped capture step never sets.
+        commit = next(s for s in steps if s.get("id") == "commit")
+        assert "steps.capture.outputs.status == 'captured'" in commit["if"]
+        report = next(s for s in steps if s.get("name") == "Report persistence")
+        assert report["env"]["REFRESH"] == "${{ steps.refresh.outcome }}"
+
     def test_capture_failure_is_not_swallowed(self, workflow):
         steps = workflow["jobs"]["capture"]["steps"]
         cap = next(s for s in steps if s.get("id") == "capture")
@@ -992,3 +1044,165 @@ def test_workflow_reports_persistence_after_any_failure(workflow):
     assert report["env"]["UPLOAD"] == "${{ steps.upload.outcome }}"
     assert report["env"]["COMMIT"] == "${{ steps.commit.outcome }}"
     assert "ODDS_API_KEY" not in json.dumps(report)
+
+
+# ------------------------------------- workflow: queued runs and refresh --
+
+def _steps_after_failure(steps, failed_id):
+    """Ids (or names) of the steps GitHub runs after step `failed_id` fails:
+    only those whose `if` contains always() (the default is success())."""
+    i = next(n for n, s in enumerate(steps) if s.get("id") == failed_id)
+    return [s.get("id") or s.get("name") for s in steps[i + 1:] if "always()" in s.get("if", "")]
+
+
+def _bash():
+    import shutil
+    import subprocess
+    if os.name != "nt":
+        return shutil.which("bash")
+    # Git for Windows' bash (not WSL's bash.exe in System32).
+    try:
+        exec_path = Path(subprocess.run(["git", "--exec-path"], capture_output=True, text=True,
+                                        check=True).stdout.strip())
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    for base in exec_path.parents:
+        for cand in (base / "bin" / "bash.exe", base / "usr" / "bin" / "bash.exe"):
+            if cand.exists():
+                return str(cand)
+    return None
+
+
+def _git(cwd, *args):
+    import subprocess
+    return subprocess.run(["git", "-c", "user.name=test", "-c", "user.email=test@example.invalid",
+                           "-c", "core.autocrlf=false", "-c", "init.defaultBranch=main", *args],
+                          cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+
+
+class FakeRemote:
+    """A local bare 'origin' with one commit on main, and helpers to clone it
+    the way actions/checkout does (shallow, at the triggering commit)."""
+
+    def __init__(self, tmp):
+        self.tmp, self.bare = tmp, tmp / "origin.git"
+        _git(tmp, "init", "--bare", "-b", "main", str(self.bare))
+        self.url = self.bare.as_uri()
+        seed = self.clone("seed", shallow=False)
+        (seed / "README").write_text("seed\n")
+        _git(seed, "add", "README")
+        _git(seed, "commit", "-m", "seed")
+        _git(seed, "push", "origin", "main")
+
+    def clone(self, name, shallow=True):
+        dest = self.tmp / name
+        _git(self.tmp, "clone", "--quiet", *(["--depth=1"] if shallow else []),
+             "--branch", "main", self.url, str(dest)) if shallow else \
+            _git(self.tmp, "clone", "--quiet", self.url, str(dest))
+        _git(dest, "config", "core.autocrlf", "false")
+        return dest
+
+    def head(self):
+        return _git(self.tmp, "--git-dir", str(self.bare), "rev-parse", "main")
+
+
+def _run_refresh(workflow, clone, tmp):
+    """Run the workflow's "Use the latest main" step as GitHub would
+    (bash --noprofile --norc -eo pipefail), in a checkout."""
+    import subprocess
+    bash = _bash()
+    if not bash:
+        pytest.skip("bash not available")
+    step = next(s for s in workflow["jobs"]["capture"]["steps"] if s.get("id") == "refresh")
+    script, summary = tmp / f"refresh-{clone.name}.sh", tmp / f"summary-{clone.name}.md"
+    script.write_bytes(step["run"].replace("\r\n", "\n").encode())
+    env = {**os.environ, "GITHUB_SHA": _git(clone, "rev-parse", "HEAD"),
+           "GITHUB_STEP_SUMMARY": str(summary), "GIT_TERMINAL_PROMPT": "0"}
+    r = subprocess.run([bash, "--noprofile", "--norc", "-eo", "pipefail", str(script)],
+                       cwd=clone, env=env, capture_output=True, text=True, timeout=120)
+    return r, summary.read_text() if summary.exists() else ""
+
+
+def _captures(clone):
+    return clone / "data_files" / "ontario_spreads" / "captures"
+
+
+def _push_capture(monkeypatch, remote, schedule_path, dirs, when):
+    """The first run: capture the slot, commit and push it (as the commit step)."""
+    first = remote.clone("first", shallow=False)
+    r = _capture(monkeypatch, FakeAPI(_wed_events()), schedule_path,
+                 {**dirs, "capture_dir": _captures(first)}, when)
+    assert r.status == "captured"
+    _git(first, "add", "data_files/ontario_spreads/captures")
+    _git(first, "commit", "-m", "Ontario spread capture")
+    _git(first, "push", "origin", "main")
+    return r
+
+
+class TestQueuedRuns:
+    def test_second_queued_run_sees_the_first_capture_and_spends_nothing(
+            self, workflow, monkeypatch, tmp_path, schedule_path, dirs):
+        remote = FakeRemote(tmp_path)
+        # Both runs were triggered before either captured: each checkout is
+        # the same (shallow) commit.
+        queued, control = remote.clone("queued"), remote.clone("control")
+        first = _push_capture(monkeypatch, remote, schedule_path, dirs, WED_SLOT)
+        assert not _captures(queued).exists()                        # stale checkout
+
+        # Control: without the refresh, the queued run would pay again.
+        api = FakeAPI(_wed_events())
+        assert _capture(monkeypatch, api, schedule_path,
+                        {**dirs, "capture_dir": _captures(control)},
+                        WED_SLOT + timedelta(minutes=5)).status == "captured"
+        assert api.calls                                              # a paid request
+
+        r, _ = _run_refresh(workflow, queued, tmp_path)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert _git(queued, "rev-parse", "HEAD") == remote.head()
+        assert (_captures(queued) / first.path.name).exists()
+        api = FakeAPI(_wed_events())
+        result = _capture(monkeypatch, api, schedule_path,
+                          {**dirs, "capture_dir": _captures(queued)},
+                          WED_SLOT + timedelta(minutes=5))
+        assert result.status == "already_captured" and api.calls == []
+
+    def test_refresh_deepens_a_shallow_checkout_when_needed(
+            self, workflow, monkeypatch, tmp_path, schedule_path, dirs):
+        remote = FakeRemote(tmp_path)
+        queued = remote.clone("queued")
+        pusher = remote.clone("pusher", shallow=False)
+        for n in range(55):                                           # more than --depth=50
+            (pusher / "README").write_text(f"{n}\n")
+            _git(pusher, "commit", "-qam", f"c{n}")
+        _git(pusher, "push", "origin", "main")
+        r, _ = _run_refresh(workflow, queued, tmp_path)
+        assert r.returncode == 0, r.stdout + r.stderr
+        assert _git(queued, "rev-parse", "HEAD") == remote.head()
+
+    @pytest.mark.parametrize("break_it", ["unreachable", "rewritten"])
+    def test_refresh_failure_makes_no_capture_request(
+            self, workflow, monkeypatch, tmp_path, schedule_path, dirs, break_it):
+        remote = FakeRemote(tmp_path)
+        queued = remote.clone("queued")
+        stale = _git(queued, "rev-parse", "HEAD")
+        if break_it == "unreachable":                                 # fetch fails
+            _git(queued, "remote", "set-url", "origin", (tmp_path / "missing.git").as_uri())
+        else:                                                         # main force-pushed
+            pusher = remote.clone("pusher", shallow=False)
+            (pusher / "README").write_text("rewritten\n")
+            _git(pusher, "commit", "-q", "--amend", "-am", "rewritten")
+            _git(pusher, "push", "-q", "--force", "origin", "main")
+        r, summary = _run_refresh(workflow, queued, tmp_path)
+        assert r.returncode != 0
+        assert "::error::" in r.stdout and "refresh failed" in summary
+        assert _git(queued, "rev-parse", "HEAD") == stale             # not moved anywhere
+
+        # Run the remaining steps as GitHub would after a failed step: the
+        # capture step is skipped, so no Odds API request is made.
+        api = FakeAPI(_wed_events())
+        steps = workflow["jobs"]["capture"]["steps"]
+        for step_id in _steps_after_failure(steps, "refresh"):
+            if step_id == "capture":                                  # pragma: no cover
+                _capture(monkeypatch, api, schedule_path,
+                         {**dirs, "capture_dir": _captures(queued)}, WED_SLOT)
+        assert api.calls == [] and not _captures(queued).exists()

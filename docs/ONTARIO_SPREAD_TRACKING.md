@@ -262,13 +262,28 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
   evidence); a later run never fills it. Completed
   captures are never changed. Two local runs for the same slot at once are
   blocked by an exclusive lock file (`.<slot_id>.lock`, git-ignored); the
-  second run fails without calling the API. In Actions, a `concurrency` group
-  serializes the runs.
+  second run fails without calling the API. The slot check is repeated while
+  holding the lock, before the credit check, so a capture written between the
+  first check and the lock is seen and no credit is spent. In Actions, a
+  `concurrency` group serializes the runs, and each run first moves to the
+  latest `main` ("Use the latest main"). A run that waited behind another
+  therefore sees that run's committed capture instead of the older commit it
+  was triggered on. If that refresh can't fetch or fast-forward `main`, the
+  run fails before the capture step and makes no Odds API request. Artifact
+  upload and the persistence report still run.
 - **Validation on read:** `python ontario_spreads.py validate` checks every
   stored capture and manual quote. A slot check reads every capture, so an
   invalid file makes the next capture fail visibly rather than be skipped.
 
 ## Scheduling (`.github/workflows/ontario-spread-capture.yml`)
+
+> **On-time dispatch from Windows (optional, installed separately).** GitHub's
+> cron has run hours late in this fork. Once installed, a Windows Task
+> Scheduler dispatcher triggers this same workflow at Wed 12:05 / Sun 09:05
+> Toronto, retries at 12:30 / 09:30 and reports at 13:00 / 10:00. It
+> dispatches only inside the slot window and only when the slot isn't already
+> captured. The cron below remains the backup. See
+> [`ONTARIO_DISPATCH_WINDOWS.md`](ONTARIO_DISPATCH_WINDOWS.md).
 
 GitHub's cron runs in UTC, so each slot has two cron entries, one for each
 offset:

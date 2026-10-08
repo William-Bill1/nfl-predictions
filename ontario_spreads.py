@@ -974,6 +974,19 @@ class CaptureResult:
     doc: dict | None = None
 
 
+def _already_captured(resolved: dict, capture_dir: Path) -> CaptureResult | None:
+    """already_captured if capture_dir holds a usable capture for this
+    scheduled slot (ad-hoc captures never fill a slot)."""
+    if resolved["name"] == AD_HOC:
+        return None
+    for doc in load_captures(capture_dir):
+        if doc["slot"]["slot_id"] == resolved["slot_id"] and doc["usable"]:
+            return CaptureResult("already_captured",
+                                 f"slot {resolved['slot_id']} already captured by run "
+                                 f"{doc['run_id']}; no API call made")
+    return None
+
+
 def capture(*, now: datetime | None = None, slot: str = "auto", api_key: str | None = None,
             capture_dir: Path = CAPTURE_DIR, schedule_path: Path = SCHEDULE_PATH,
             snapshot_dir: Path = MODEL_SNAPSHOT_DIR, reserve: int = CREDIT_RESERVE,
@@ -986,12 +999,9 @@ def capture(*, now: datetime | None = None, slot: str = "auto", api_key: str | N
     if resolved is None:
         return CaptureResult("not_due", f"no capture slot is due at {iso(now)} "
                                         f"({now.astimezone(TORONTO):%a %H:%M} Toronto)")
-    if resolved["name"] != AD_HOC:
-        for doc in load_captures(capture_dir):
-            if doc["slot"]["slot_id"] == resolved["slot_id"] and doc["usable"]:
-                return CaptureResult("already_captured",
-                                     f"slot {resolved['slot_id']} already captured by run "
-                                     f"{doc['run_id']}; no API call made")
+    done = _already_captured(resolved, capture_dir)
+    if done:
+        return done
     if not api_key:
         return CaptureResult("no_key", "ODDS_API_KEY not set - no API calls made")
 
@@ -1004,6 +1014,11 @@ def capture(*, now: datetime | None = None, slot: str = "auto", api_key: str | N
     books = requested_books()
     cost = request_cost(n_books=len(books))
     with SlotLock(capture_dir, resolved["slot_id"], run_id):
+        # Again under the lock, before any credit is spent: a concurrent run
+        # may have written the slot's capture since the check above.
+        done = _already_captured(resolved, capture_dir)
+        if done:
+            return done
         credit = check_budget(api_key, cost, reserve)
         credit["reserve"] = reserve
         captured_at = ps.utc_now() if now is None else now
