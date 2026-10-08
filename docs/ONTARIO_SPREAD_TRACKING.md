@@ -258,7 +258,8 @@ python ontario_spreads.py manual-quote --game 2026_05_TB_DAL --team DAL \
   with an Ontario quote) is skipped without an API call. A failed request
   writes nothing, and an empty or Ontario-less capture doesn't fill the slot,
   so a later run inside the window can still capture it. After the window,
-  the slot stays `empty` (or `missed`); a later run never fills it. Completed
+  the slot is `missed` (its empty or US-only captures stay listed as
+  evidence); a later run never fills it. Completed
   captures are never changed. Two local runs for the same slot at once are
   blocked by an exclusive lock file (`.<slot_id>.lock`, git-ignored); the
   second run fails without calling the API. In Actions, a `concurrency` group
@@ -289,12 +290,10 @@ slot already captured. Neither makes a paid call.
   Wednesday or Sunday-morning slot; the slot shows as `missed`. Each quote
   also carries the provider's own `last_update`, and old quotes are labelled
   `stale`.
-- **Missed slots.** From the first scheduled capture onward, a slot with no
-  capture is reported as `missed` by `python ontario_spreads.py coverage`
-  (also printed in each workflow run's summary). Earlier slots weren't
-  tracked, so they aren't listed. Until the first capture, `coverage` says
-  there are no captures yet, so a failure before then is visible only as a
-  failed run.
+- **Missed slots.** Every scheduled slot since the tracking start is
+  reported by `python ontario_spreads.py coverage`, whether or not anything
+  was captured (see below). The coverage is also printed in each workflow
+  run's summary (`--days 28`).
 - **Sunday and early games.** Games underway at capture time, including the
   09:30 ET London games when a run is delayed, are excluded.
 - **Manual runs.** `workflow_dispatch` takes a `slot` input. `ad_hoc` captures
@@ -353,6 +352,85 @@ plus 1 for each manual `workflow_dispatch` run. The duplicate DST cron entries
 cost nothing. The Wednesday Ontario capture and the Wednesday US+CA tracker
 are separate requests: they ask for different scopes, and folding them
 together would change the existing tracker, which this phase leaves alone.
+
+## Expected-slot coverage (`python ontario_spreads.py coverage`)
+
+Coverage lists the **expected** scheduled slots, independently of what was
+captured or which weeks the comparison report has. One calculation,
+`ontario_spreads.expected_coverage`, is shared by the CLI and the Ontario
+Line Timing page, so they always agree.
+
+- **Tracking start.** `TRACKING_START = 2026-10-07` (America/Toronto), the
+  first scheduled Wednesday slot. It is a fixed constant, never inferred from
+  the first capture. Earlier slots are never listed and never reported as
+  missed (a single earlier slot is `not tracked`).
+- **Slots.** Every Wednesday 12:00 and Sunday 09:00 Toronto slot from the
+  tracking start through the **next Sunday slot whose window hasn't closed**.
+  That is a bounded horizon: the current week's slots are shown as pending,
+  and all earlier slots are kept. Slot times are built in Toronto wall-clock
+  time, so the UTC instants follow DST.
+- **Windows.** Phase 1's own rule (`in_slot_window`, also used by `capture`;
+  capture eligibility is unchanged):
+  from the slot time to the slot time plus the window (3 h Wednesday, 2 h
+  Sunday), **both ends inclusive**.
+- **States.**
+
+  | State | When |
+  |---|---|
+  | `pending` | before the window opens |
+  | `awaiting_capture` | the window is open and no usable capture exists yet |
+  | `missed` | the window closed without a usable capture |
+  | `captured` | a usable scheduled capture exists; the earliest by `captured_at` (ties broken by `run_id`, as in the comparison report) fills the slot, keeping its `on_time`/`late` status and delay |
+
+- **What the states mean.** Each row is a configured **capture
+  opportunity**: the Wednesday 12:00 or Sunday 09:00 slot. It is not proof
+  that NFL games or sportsbook markets existed then.
+  - **Missed:** no usable scheduled capture was stored for that opportunity.
+    It is **not** by itself a failed collection. A slot can be missed
+    because:
+    - the workflow was intentionally inactive (it runs September to
+      February);
+    - no pregame games were in scope (a `no_games` run writes nothing);
+    - no Ontario book quoted;
+    - the scheduled run arrived after the window;
+    - a run actually failed.
+
+    The workflow's run history and step summary say which.
+- **Capture validation.** A capture's `slot` block must be exactly what
+  `resolve_slot` produced for that calendar slot:
+  - the name and calendar day agree with the slot ID;
+  - the intended time is that slot's time;
+  - the delay is inside the window;
+  - `on_time`/`late` matches the delay;
+  - `captured_at` matches slot time plus delay, allowing 5 minutes for the
+    credit check.
+
+  An inconsistent slot block is an integrity error, so a capture can never
+  stand for another slot.
+- **What fills a slot.** Only a **usable scheduled capture** of that slot
+  (one with an Ontario quote).
+  - **Evidence only:** empty and US-only captures are listed as evidence ("1
+    capture with only US reference quotes (not counted)") but never fill it.
+  - **Never counted:** `ad_hoc` captures have their own slot ID, so they never
+    count. Manual FanDuel Ontario quotes aren't automated coverage and are
+    never read.
+- **Current time.** States depend on the clock, so they are computed on every
+  call from the stored captures and the current time, never cached with the
+  artifacts.
+- **Integrity.** Captures are validated when read. A corrupt file makes
+  `coverage` fail visibly (`::error::…`, non-zero exit) and makes the page
+  show an integrity error.
+- **Output.** The command prints one line per slot: slot ID, state, filling
+  run ID, and the same label the page shows, e.g.:
+
+  ```
+  2026-10-07_wednesday_noon   missed    -   Missed: no capture in the window ending Wed Oct 7, 15:00 EDT
+  2026-10-11_sunday_morning   pending   -   Pending: slot Sun Oct 11, 09:00 EDT, window closes Sun Oct 11, 11:00 EDT
+  ```
+
+  `--days N` keeps only slots whose window closed in the last N days, or
+  later. It filters whole rows after coverage is calculated, so a shown slot
+  always reflects all of its captures.
 
 ## Comparison report (Phase 2: `scripts/ontario_spread_report.py`)
 
@@ -545,11 +623,18 @@ functions.
 - **No data.** With no captures it says **"No observations yet"** and explains
   the Wednesday 12:00 and Sunday 09:00 (America/Toronto) slots. It never shows
   test fixtures, sample odds or regenerated history.
+- **Scheduled slots.** A table of the expected slots since tracking started
+  (newest first), with their window, status and filling capture. It comes
+  from the shared expected-slot coverage, so it uses the same states and
+  wording as the CLI. It is always shown, even with no files, no report week
+  and no comparison. Its status is recomputed on every rerun from the current
+  time.
 - **No comparable week yet.** Captures can exist without any week to show:
   for example, only `ad_hoc` captures, or a scheduled capture in which no
   Ontario book quoted. The page then says **"No Wednesday/Sunday comparison
-  yet"**, with no week selector, metrics or comparison table. Manual-only
-  observations still get their week.
+  yet"**, with no week selector, metrics or comparison table; the scheduled
+  slots table still shows each slot's status. Manual-only observations still
+  get their week.
 - **Captures stored but not compared.** Every stored capture the comparison
   leaves out is listed in its own section. That covers `ad_hoc` captures,
   captures with no Ontario quote, repeat captures of a slot and Wednesday
@@ -578,20 +663,21 @@ functions.
   to the view they were set in: switching views starts with them cleared, so
   a selection never carries over into another view. A filter combination with
   no matching rows shows a message, not an empty table.
-- **Current time.** Pending vs missed is decided on every run from the current
-  Toronto time, outside the cached report. A slot window that closes while the
-  page is open turns "pending" into "missed" on the next rerun without any new
-  capture.
-
-  The groups are never mixed.
+- **Current time.** Pending, awaiting capture and missed are decided on every
+  run from the current time, outside the cached artifacts. A slot window that
+  opens or closes while the page is open changes the status on the next
+  rerun, without any new capture.
 - **Filters.** Season, week, sportsbook, game and team. Filters apply after
   the cached report is built. The default week is the most recent week with
   a capture, never an empty future week or Week 18.
-- **Slot cards.** For the selected week, each slot shows one of:
+- **Slot cards.** For the selected week, each slot shows its shared
+  coverage state:
   - **Captured** (on time, or late with the delay);
-  - **Pending** (its window hasn't closed yet);
-  - **Missed** (the window closed with no usable capture);
-  - **Captured but no Ontario quotes**;
+  - **Pending** (window not open yet);
+  - **Awaiting capture** (window open);
+  - **Missed** (window closed with no usable capture), noting any empty or
+    US-only captures as evidence;
+  - **Not tracked** (before the tracking start);
   - **Not determined**, when the week can't be anchored.
 
   A Wednesday-only week shows its Wednesday quotes with **"Sunday comparison
@@ -696,15 +782,24 @@ immediately.
 - **Lock files.** A process killed mid-capture can leave a local lock file
   behind. The next run says so and names the file to delete.
 - **Unkeyed checksum:** see above.
-- **Slot status needs a week.** The page shows Pending/Missed only for weeks
-  in the report. Weeks come from usable scheduled captures or manual
-  observations.
-  - **October 7 noon:** with only the `ad_hoc` capture of 2026-10-07 stored,
-    the missed Wednesday 12:00 slot of that day isn't shown as missed.
-  - **October 11 morning:** the Sunday 09:00 slot can't be shown as pending.
-  - **Coverage too:** `python ontario_spreads.py coverage` likewise starts at
-    the first scheduled capture.
-  - **Not filled:** none of this fills the missed slot.
+- **Missed slots stay missed.** Coverage reports the 2026-10-07 Wednesday
+  12:00 slot as missed. The `ad_hoc` capture taken that afternoon is evidence,
+  not a substitute, and nothing recovers the slot.
+- **No season calendar.** Coverage lists every Wednesday and Sunday from the
+  tracking start through the next Sunday.
+  - **Not known to it:** the NFL season, the workflow's active months
+    (September to February), byes and weeks with no games in scope.
+  - **Effect:** after the season, or for a slot with nothing to collect, the
+    opportunity still shows as `missed`. That describes the configured
+    opportunity, not a failed collection or a missing market.
+  - **Not hidden:** recognising such slots would need a season or workflow
+    calendar, which is out of scope here.
+- **Local view.** The CLI and page read the local checkout, so they show
+  captures committed by the workflow only after a `git pull`. The workflow's
+  own summary is always current.
+- **Scheduler delays** in this fork (GitHub cron runs hours late) can still
+  make scheduled slots be missed. Coverage now reports that; it doesn't
+  prevent it.
 - **No betting conclusions.** Phase 1 collects data; Phase 2 and the Phase 3
   page only describe how quotes moved between the two slots. Neither shows that Wednesday or
   Sunday lines are better, and neither validates any betting-time strategy.

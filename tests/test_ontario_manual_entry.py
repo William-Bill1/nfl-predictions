@@ -13,7 +13,7 @@ import pytest
 
 import ontario_line_timing as olt
 import ontario_spreads as on
-from test_ontario_line_timing import render, store, table  # noqa: F401 (fixtures)
+from test_ontario_line_timing import frame_with, render, store, table  # noqa: F401
 from test_ontario_spread_report import sun_events, wed_events
 from test_ontario_spreads import SUN_SLOT, WED_SLOT
 from test_team_features import ROOT
@@ -219,7 +219,7 @@ class TestForm:
         at.button(key="fd_save").click()
         at = render(thursday, at)
         assert at.segmented_control[0].value == MAN
-        recorded = at.dataframe[0].value
+        recorded = frame_with(at, "Observed (Toronto)")
         assert recorded["Quote"].tolist() == ["Chicago Bears +3.5 at −110"]
         assert recorded["Observed (Toronto)"].tolist() == ["Thu Oct 8, 11:00 EDT"]
         assert recorded["Source"].tolist() == ["manual observation (FanDuel Ontario)"]
@@ -238,7 +238,7 @@ class TestAfterSave:
         at = render(WED_1300, at)                          # no cache clear between runs
         assert at.segmented_control[0].value == MAN
         assert (at.selectbox(key="olt_season").value, at.selectbox(key="olt_week").value) == (2026, 5)
-        recorded = at.dataframe[0].value
+        recorded = frame_with(at, "Observed (Toronto)")
         assert recorded["Status"].tolist() == ["Wednesday slot observation (in the comparison)"]
         rows = table(at)
         chi = rows[rows["Team"] == "CHI"].iloc[0]
@@ -529,7 +529,7 @@ def test_other_week_observation_visible_but_never_substitutes(entry, render):
     at = render(datetime(2026, 10, 12, 18, 0, tzinfo=UTC))
     at.segmented_control[0].set_value(MAN)
     at = render(datetime(2026, 10, 12, 18, 0, tzinfo=UTC), at)
-    recorded = at.dataframe[0].value.set_index("Observed (Toronto)")["Status"]
+    recorded = frame_with(at, "Observed (Toronto)").set_index("Observed (Toronto)")["Status"]
     assert recorded["Wed Sep 30, 12:30 EDT"] == "Another week's slot (not compared)"
     assert recorded["Sun Oct 11, 09:20 EDT"] == "Sunday slot observation (in the comparison)"
     chi = table(at)[table(at)["Team"] == "CHI"].iloc[0]

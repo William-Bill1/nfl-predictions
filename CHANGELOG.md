@@ -8,6 +8,39 @@ bottom.
 
 ## October 2026
 
+- **Ontario expected-slot coverage.** Coverage now describes the expected
+  Wednesday 12:00 and Sunday 09:00 (Toronto) slots, independently of what was
+  captured or which weeks the comparison has.
+  - **Tracking start:** a fixed `TRACKING_START` of 2026-10-07, no longer
+    inferred from the first capture. Nothing earlier is listed.
+  - **States:** pending, awaiting capture, missed or captured (on time or
+    late). They use Phase 1's own inclusive window rule, now shared with
+    `capture`.
+  - **Display range:** from the tracking start through the next Sunday slot,
+    with history kept. Windows follow DST.
+  - **What counts:** only usable scheduled captures fill a slot. Empty and
+    US-only captures are listed as evidence, and `ad_hoc` captures and
+    manual quotes never count.
+  - **One calculation** (`ontario_spreads.expected_coverage`) serves both
+    `python ontario_spreads.py coverage` and a new, always-visible
+    "Scheduled slots" table on the Ontario Line Timing page. The page's week
+    slot cards and row reasons use it too, replacing its own window logic.
+    States are recomputed from the clock on every rerun.
+  - **Today's data:** 2026-10-07 Wednesday shows as **missed** and
+    2026-10-11 Sunday as **pending**.
+  - **CLI:** `--days` now defaults to the full tracked history; the workflow
+    still passes `--days 28`.
+  - **Comparison unchanged:** comparison rows and metrics still use only
+    eligible observations.
+  - **Capture validation:** a capture's slot block must now match its
+    calendar slot exactly (slot ID, intended time, delay inside the window,
+    on-time/late, `captured_at`). An inconsistent block is an integrity error,
+    so no capture can fill another slot. Capture eligibility itself is
+    unchanged.
+  - **What "missed" means:** rows are configured capture opportunities, not
+    evidence that games or markets existed. **Missed** means no usable
+    scheduled capture was stored; it doesn't by itself show a failed run (for
+    example outside the season, or with no games in scope).
 - **Pre-game snapshot `select` CSV: identifiers and hashes read as text.**
   - **The crash:** pandas 2.3.3's C CSV parser segfaults on hex strings shaped
     like scientific notation (pandas-dev/pandas#62617, #62740). The `select`
