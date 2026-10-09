@@ -8,7 +8,9 @@ freeze each run's predictions for the **eligible upcoming games** (defined
 below), including games with no bet signal, no line, or a pick'em line.
 
 Snapshots record predictions only. They are not evidence that the model has a
-betting edge; see `docs/ROLLING_SPREAD_BACKTEST.md` for how it scores.
+betting edge; see `docs/ROLLING_SPREAD_BACKTEST.md` for how it scores. To score
+the frozen predictions themselves against results, use
+[`scripts/frozen_spread_report.py`](FROZEN_SPREAD_REPORT.md).
 
 Code: [`pregame_snapshots.py`](../pregame_snapshots.py). Tests:
 `tests/test_pregame_snapshots.py`.

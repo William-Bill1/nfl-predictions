@@ -8,6 +8,56 @@ bottom.
 
 ## October 2026
 
+- **Frozen-pregame spread performance report** (`scripts/frozen_spread_report.py`,
+  read-only CLI). It evaluates the spread model only on predictions frozen
+  before kickoff in `data_files/pregame_snapshots/`, never on regenerated
+  ones.
+  - **Selection:** one snapshot per game, reusing
+    `pregame_snapshots.select_captures` (latest eligible by default,
+    `--which earliest` as an alternative).
+    - The capture is chosen before its prediction is inspected: no fallback to
+      an earlier probability or signal, and no backfill.
+    - Each game records its run ID, capture time, code revision and frozen
+      terms.
+    - A capture not before the *current* scheduled kickoff is
+      `timing_unverified` and excluded.
+  - **Outcomes:** the frozen underdog at its frozen handicap, settled with
+    `betting_log.spread_result` once `bet_journal.completion_evidence` finds
+    conservative evidence. Pending, pushes and invalid results are reported
+    separately.
+  - **Coverage:** every selected game has a status.
+    - Completed games without a selected snapshot are listed separately.
+      They're computed from the schedule over the scope, independently of the
+      selections, and split into: no snapshot history, before the first
+      snapshot, after it (a gap), and kickoff unavailable.
+    - Scope is `--season`, or by default the latest schedule season. Selected
+      games outside it are counted.
+  - **`--as-of`:** an outcome cutoff over the current files, not a historical
+    reconstruction. The report says so.
+  - **Metrics:** Brier score and log loss vs a 50% baseline on the same
+    non-push games, with clipping documented. Calibration bins, grouping by
+    season/week and code revision, and signal-only results as a subset.
+  - **Market comparison:** only automated Ontario sportsbook feeds in
+    archived, validated captures taken before kickoff.
+    - The US FanDuel reference feed and manual quotes are excluded before any
+      line, probability or price is read.
+    - The quote must match the exact frozen handicap, with both prices
+      devigged. Otherwise "unavailable", with the reason.
+    - The spread tracker's re-fetchable cache isn't used.
+  - **Simulated returns:** signal-only, 100 units per bet, at the
+    lowest-paying matched archived Ontario-feed price. Assumed −110 is a separate,
+    labelled scenario. The ROI denominator and push treatment are stated, and
+    actual wagers are never read.
+  - **Output:** deterministic JSON and per-game CSV in the git-ignored
+    `reports/frozen_spread/`.
+    - Output paths overlapping `data_files/` (including through symlinks,
+      `..` and letter case) are refused.
+    - Corrupt snapshots, captures or schedules fail the run.
+    - `read_games_csv` keeps identifier and hash columns as text.
+  - **Docs and tests:** `docs/FROZEN_SPREAD_REPORT.md` and
+    `tests/test_frozen_spread_report.py` (synthetic snapshots, temporary
+    schedules and captures, network blocked).
+
 - **`player_props/backtest.py` diagnostics are safe under Windows redirected
   output.**
   - **Before:** with stdout redirected on Windows (e.g. the app started with
