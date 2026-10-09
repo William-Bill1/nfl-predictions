@@ -43,3 +43,4 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-10-08 09:50:51,2026,6,2026_06_CAR_PHI,2026-10-18 00:00:00,PHI,CAR,spread,CAR,2.5,43.5,,0.5769658051486182,0.0531562813390943,Good,,,pending,,2.5,-110.0,assumed -110 model recommendation
 2026-10-08 09:50:51,2026,6,2026_06_PIT_TB,2026-10-18 00:00:00,TB,PIT,spread,TB,-3.0,39.5,,0.5486323622260506,0.0073479585563258,Lean,,,pending,,3.0,-110.0,assumed -110 model recommendation
 2026-10-08 09:50:51,2026,6,2026_06_BUF_LV,2026-10-18 00:00:00,LV,BUF,spread,LV,-4.5,51.5,,0.5492046186818342,0.0253950948723103,Lean,,,pending,,4.5,-110.0,assumed -110 model recommendation
+2026-10-09 09:55:22,2026,5,2026_05_BUF_LA,2026-10-12 00:00:00,LA,BUF,spread,BUF,3.0,54.5,,0.5615229070051292,0.0615229070051291,Good,,,pending,,3.0,-110.0,assumed -110 model recommendation
