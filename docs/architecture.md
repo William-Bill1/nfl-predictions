@@ -207,6 +207,13 @@ score fetch is gone.
 - `ontario_spreads.py` — opt-in Ontario sportsbook spread captures (`capture`, `manual-quote`, `coverage`, `validate`); separate from `spread_tracker.py`, whose files it never touches. Owns the one expected-slot coverage calculation (`expected_coverage`: every Wed 12:00 / Sun 09:00 Toronto slot from `TRACKING_START` = 2026-10-07 through the next Sunday; pending / awaiting capture / missed / captured, with Phase 1's inclusive window rule `in_slot_window`), shared by the `coverage` CLI and the Ontario Line Timing page
 - `ontario_line_timing.py` — display logic for `pages/7_Ontario_Line_Timing.py`: builds the Phase 2 report in memory (cached on a SHA-256 fingerprint of every capture/manual file), Toronto-time and signed labels, slot state (captured / pending / missed / empty) and default week; integrity errors stop the page
 - `scripts/ontario_spread_report.py` — read-only Wednesday-vs-Sunday comparison of Ontario spread captures (per side: spread change, break-even change, key numbers 3/7, dominance vs trade-off); writes deterministic JSON/CSV to the git-ignored `reports/ontario_spreads/`; never modifies captures
+- `scripts/frozen_spread_report.py` — read-only evaluation of the spread model on predictions frozen before kickoff (`docs/FROZEN_SPREAD_REPORT.md`):
+  - **Selection:** one `pregame_snapshots.select_captures` observation per game (latest by default, chosen before its prediction is inspected, cross-checked against the current scheduled kickoff, no fallback or backfill).
+  - **Outcomes:** the frozen underdog at its frozen handicap via `betting_log.spread_result` and `bet_journal.completion_evidence`.
+  - **Coverage and metrics:** coverage for every status, Brier/log loss vs 50% with calibration by week and code revision.
+  - **Market and returns:** market comparison only against automated Ontario-feed quotes (US reference and manual excluded) in archived captures at the exact handicap; signal-only simulated returns at archived vs assumed −110 prices.
+  - **Scope:** `--season`, or by default the latest schedule season, independent of selections; coverage distinguishes no snapshot history from games before the first snapshot. `--as-of` is an outcome cutoff over current files, not a reconstruction.
+  - **Output:** deterministic JSON/CSV to the git-ignored `reports/frozen_spread/`. It refuses output paths overlapping `data_files/`, never reads the bet journal, and corrupt inputs fail the run.
 - `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
 - `scripts/spread_value_finder.py` — reads `spread_tracker_log.csv`; for one book, ranks sides by fair-value edge (normal approx of margin of victory vs. the book's own devigged price) — point-divergence alone isn't the same as a favorable price
 - `scripts/model_line_shop.py` — reads `spread_tracker_log.csv` + `nfl_games_historical_with_predictions.csv`; extends the spread model's own probability (evaluated against nflverse's line only) to every tracked book's specific line, ranked by edge vs. the model instead of vs. the field
@@ -229,7 +236,7 @@ All data in `data_files/` (committed to git):
 - `pipeline_run_manifest.json` — provenance of the latest successful pipeline run (written by `nfl-gather-data.py`)
 - `ontario_spreads/captures/<run_id>.json` — immutable Ontario spread captures, one per scheduled slot (quotes by bookmaker with jurisdiction, provider timestamps, coverage, model-snapshot link; no model probabilities); `ontario_spreads/manual/<quote_id>.json` — manual FanDuel Ontario quotes (source `manual`)
 - `bet_journal/<record_id>.json` — **not committed** (git-ignored, personal data): actual placed wagers and their amendments, voids, grades and invalidations, append-only (`bet_journal.py`; see `docs/BET_JOURNAL.md`)
-- `pregame_snapshots/<run_id>.json` — immutable pregame spread predictions, one file per nightly run (`pregame_snapshots.py`; see `docs/PREGAME_SNAPSHOTS.md`)
+- `pregame_snapshots/<run_id>.json` — immutable pregame spread predictions, one file per nightly run (`pregame_snapshots.py`; see `docs/PREGAME_SNAPSHOTS.md`); evaluated read-only by `scripts/frozen_spread_report.py`, whose output goes to the git-ignored `reports/frozen_spread/`, never `data_files/`
 - `spread_performance.json` — season-to-date spread scorecard from `weekly_spread_report.py`
 - `best_bets_today.json` — Sports Picks Grid feed
 - `data_files/exports/` — PDF exports

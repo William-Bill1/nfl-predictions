@@ -224,6 +224,35 @@ per game, read-only. Schema, eligibility and selection rules, failure behavior
 and limitations: [`docs/PREGAME_SNAPSHOTS.md`](docs/PREGAME_SNAPSHOTS.md). This
 records predictions; it doesn't show an edge.
 
+### Frozen-pregame spread report
+
+`python scripts/frozen_spread_report.py [--which latest|earliest] [--season S]
+[--week W] [--as-of YYYY-MM-DD]` scores the spread model **only on predictions
+frozen before kickoff**. It is read-only. It writes
+`frozen_spread_report.json` and `frozen_spread_games.csv` to the git-ignored
+`reports/frozen_spread/`, and refuses any output path that overlaps
+`data_files/`.
+
+- **Selection:** one snapshot per game, chosen before its prediction is looked
+  at. No fallback to an earlier capture for a probability or a signal, and no
+  backfill.
+- **Settlement:** the frozen underdog at its frozen handicap, with
+  conservative completion evidence. The report accounts for every selected
+  game's status.
+- **Metrics:** Brier score and log loss against a 50% baseline, calibration
+  bins, and grouping by week and code revision.
+- **Market comparison:** only against archived **automated Ontario feed**
+  quotes (no US reference or manual quotes) at the exact frozen handicap.
+- **Scope:** `--season`, or by default the latest season in the schedule.
+  `--as-of` is an outcome cutoff over the current files, not a historical
+  reconstruction.
+- **Simulated returns:** signal-only, at an archived price, with assumed −110
+  shown as a separate scenario.
+- **Reading the CSV:** use `read_games_csv`, so identifiers stay text.
+
+Rules and limitations: [`docs/FROZEN_SPREAD_REPORT.md`](docs/FROZEN_SPREAD_REPORT.md).
+The sample is small and partial; it doesn't show an edge.
+
 ### Ontario spread captures
 
 GitHub's cron runs late in this fork. An optional Windows Task Scheduler
