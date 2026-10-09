@@ -177,6 +177,11 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   `pytest.ini` keeps `scripts/test_*.py` out).
 - **Python**: 3.12 or 3.13. Not 3.11 (PEP 701 f-strings).
 - **Windows**: run pipeline scripts with `PYTHONUTF8=1` (emoji prints).
+  - **Optional for `player_props/backtest.py`'s diagnostics only:** they are
+    plain ASCII via `_say()`, which escapes unencodable characters and drops a
+    message if stdout is unavailable.
+  - **New console output in app code paths:** keep it ASCII, so a redirected
+    cp1252 stdout can't turn success into failure.
 - **Deployment**: Streamlit Cloud, all data files committed. The fork's nightly
   Action commits to `main` — `git fetch` before pushing.
 

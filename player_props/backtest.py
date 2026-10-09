@@ -5,6 +5,8 @@ This module provides tools to track prediction accuracy by comparing model predi
 against actual game results. It calculates hit rates, ROI analysis, and performance metrics.
 """
 
+import sys
+
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -19,6 +21,36 @@ SCHEDULE_PATH = "data_files/nfl_games_historical.csv"
 # weekly stats, which carry no game IDs) completeness can't be established.
 COMPLETION_ATTR = "game_completion"
 END_GAME_DESC = "END GAME"
+
+
+def _say(message: str) -> None:
+    """Write one console diagnostic for this module.
+
+    The messages are plain ASCII, but they can carry text from elsewhere (an
+    exception, a file path, a player's name). With stdout redirected on
+    Windows, Python writes in the locale code page (e.g. cp1252), which can't
+    encode every character. Two output failures are handled so they don't
+    reach the caller:
+
+    * UnicodeEncodeError: the message is written again with the characters
+      the stream can't encode escaped (``\\u2603``); if that retry fails too,
+      the message is dropped.
+    * OSError / ValueError from an unavailable stream (e.g. closed): the
+      message is dropped.
+
+    (An emoji here once turned a successful collection into its failure path,
+    and then crashed the error report itself.)
+    """
+    try:
+        print(message)
+    except UnicodeEncodeError:
+        encoding = getattr(sys.stdout, "encoding", None) or "ascii"
+        try:
+            print(message.encode(encoding, "backslashreplace").decode(encoding))
+        except Exception:  # noqa: BLE001 - only a log line
+            pass
+    except (OSError, ValueError):
+        pass
 
 
 def pbp_game_completion(pbp: pd.DataFrame) -> Dict[str, Dict]:
@@ -137,7 +169,7 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
     """
     # Method 1: Try pre-aggregated weekly stats first (much faster)
     try:
-        print(f"📊 Attempting to load pre-aggregated stats for {season} Season, Week {week}...")
+        _say(f"Loading pre-aggregated stats for {season} season, Week {week}...")
         actual_stats = nfl.import_weekly_data([season], columns=[
             'player_name', 'week', 'season', 'passing_yards', 'passing_tds',
             'rushing_yards', 'rushing_tds', 'receiving_yards', 'receiving_tds',
@@ -148,19 +180,19 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
         week_stats = actual_stats[actual_stats['week'] == week].copy()
         
         if week_stats.empty:
-            print(f"⚠️  Pre-aggregated stats found but empty for Week {week}, trying PBP aggregation...")
+            _say(f"WARNING: pre-aggregated stats are empty for Week {week}; trying play-by-play aggregation...")
             raise ValueError("Empty weekly stats")
         
         # Clean up player names
         week_stats['player_name'] = week_stats['player_name'].str.strip()
         
-        print(f"✅ Collected pre-aggregated stats for {len(week_stats)} players in Week {week}")
+        _say(f"OK: collected pre-aggregated stats for {len(week_stats)} players in Week {week}")
         return week_stats, ""
         
     except Exception as e:
         # Method 2: Fallback to PBP aggregation
-        print(f"   Pre-aggregated stats unavailable ({str(e)[:50]})")
-        print(f"   Falling back to play-by-play data aggregation...")
+        _say(f"   Pre-aggregated stats unavailable ({str(e)[:50]})")
+        _say("   Falling back to play-by-play data aggregation...")
         
         try:
             # Load play-by-play data directly from nflverse parquet files
@@ -174,7 +206,7 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
             if week_pbp.empty:
                 return pd.DataFrame(), f"No play-by-play data found for Week {week}, Season {season}"
             
-            print(f"   Loaded {len(week_pbp):,} plays for Week {week}")
+            _say(f"   Loaded {len(week_pbp):,} plays for Week {week}")
             
             # Aggregate passing stats
             passing_plays = week_pbp[week_pbp['pass'] == 1].copy()
@@ -232,14 +264,14 @@ def collect_actual_results(week: int, season: int = 2025) -> tuple[pd.DataFrame,
             # Clean up player names
             combined_stats['player_name'] = combined_stats['player_name'].str.strip()
             
-            print(f"✅ Collected PBP-aggregated stats for {len(combined_stats)} players in Week {week}")
+            _say(f"OK: collected play-by-play stats for {len(combined_stats)} players in Week {week}")
             combined_stats.attrs[COMPLETION_ATTR] = pbp_game_completion(week_pbp)
 
             return combined_stats, ""
             
         except Exception as pbp_error:
             error_msg = f"Both methods failed - Pre-aggregated: {str(e)[:50]}, PBP: {str(pbp_error)[:50]}"
-            print(f"❌ Error collecting actual results: {error_msg}")
+            _say(f"ERROR: could not collect actual results: {error_msg}")
             return pd.DataFrame(), error_msg
 
 
@@ -277,7 +309,7 @@ def calculate_hit_rate(predictions_df: pd.DataFrame, actuals_df: pd.DataFrame) -
     merged = merged.dropna(subset=stat_columns, how='all')
 
     if merged.empty:
-        print("⚠️  No matching predictions found with actual results")
+        _say("WARNING: no predictions matched any actual results")
         return {
             'overall_accuracy': 0.0,
             'by_confidence_tier': pd.Series(),
@@ -373,11 +405,11 @@ def calculate_hit_rate(predictions_df: pd.DataFrame, actuals_df: pd.DataFrame) -
     reliable_hit_rate = by_reliable.get('True', {}).get('hit_rate')
     reliable_n = by_reliable.get('True', {}).get('n', 0)
 
-    print(f"📊 Accuracy Analysis Complete:")
-    print(f"   Total predictions evaluated: {len(results_df)}")
-    print(f"   Overall hit rate: {overall_hit_rate:.1%}")
+    _say("Accuracy analysis complete:")
+    _say(f"   Total predictions evaluated: {len(results_df)}")
+    _say(f"   Overall hit rate: {overall_hit_rate:.1%}")
     if reliable_n:
-        print(f"   Reliable-model props only ({reliable_n}): {reliable_hit_rate:.1%}")
+        _say(f"   Reliable-model props only ({reliable_n}): {reliable_hit_rate:.1%}")
 
     return {
         'overall_accuracy': overall_hit_rate,
@@ -508,7 +540,7 @@ def save_accuracy_results(accuracy_metrics: Dict, week: int, filepath: Optional[
     with open(filepath, 'w') as f:
         json.dump(results_to_save, f, indent=2, default=str)
 
-    print(f"💾 Accuracy results saved to: {filepath}")
+    _say(f"Accuracy results saved to: {filepath}")
 
 
 def load_accuracy_history() -> pd.DataFrame:
@@ -565,7 +597,7 @@ def load_accuracy_history() -> pd.DataFrame:
             })
 
         except Exception as e:
-            print(f"⚠️  Error loading {filepath}: {e}")
+            _say(f"WARNING: could not load {filepath}: {e}")
             continue
 
     if not history_data:
@@ -624,7 +656,7 @@ def load_accuracy_results_for_week(week: int, season: int = 2025) -> Optional[Di
             return data
 
         except Exception as e:
-            print(f"⚠️  Error loading {path}: {e}")
+            _say(f"WARNING: could not load {path}: {e}")
     return None
 
 
@@ -640,8 +672,8 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
     Returns:
         Dictionary with complete accuracy analysis
     """
-    print(f"🔍 Running accuracy check for Week {week}, Season {season}")
-    print("=" * 60)
+    _say(f"Running accuracy check for Week {week}, Season {season}")
+    _say("=" * 60)
 
     # Load predictions for the week. Prefer the frozen per-week snapshot (a true
     # prospective test); fall back to the season-less name, then the latest feed.
@@ -652,20 +684,20 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
     ]
     predictions_file = next((c for c in candidates if Path(c).exists()), None)
     if predictions_file is None:
-        print(f"❌ No predictions file found for week {week}")
+        _say(f"ERROR: no predictions file found for Week {week}")
         return {}
     if not predictions_file.endswith(f"week{week}_{season}.csv"):
-        print(f"⚠️  Using {predictions_file} (no frozen Week {week} {season} snapshot) - "
-              f"results are not a clean prospective test")
+        _say(f"WARNING: using {predictions_file} (no frozen Week {week} {season} snapshot) - "
+             f"results are not a clean prospective test")
 
     predictions_df = pd.read_csv(predictions_file)
-    print(f"📂 Loaded {len(predictions_df)} predictions")
+    _say(f"Loaded {len(predictions_df)} predictions")
 
     # Collect actual results
     actuals_df, error_msg = collect_actual_results(week, season)
 
     if actuals_df.empty:
-        print(f"❌ No actual results available for week {week}: {error_msg}")
+        _say(f"ERROR: no actual results available for Week {week}: {error_msg}")
         return {}
 
     # Calculate accuracy
@@ -677,18 +709,18 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
         roi_metrics = calculate_roi(detailed)
         accuracy_metrics['roi_analysis'] = roi_metrics
 
-        print(f"💰 ROI Analysis (at -110 odds):")
-        print(f"   Hit Rate: {roi_metrics['hit_rate']:.1%}")
-        print(f"   ROI: {roi_metrics['roi']:.1f}%")
-        print(f"   Breakeven Rate: {roi_metrics['breakeven_rate']:.1f}%")
+        _say("ROI analysis (at -110 odds):")
+        _say(f"   Hit Rate: {roi_metrics['hit_rate']:.1%}")
+        _say(f"   ROI: {roi_metrics['roi']:.1f}%")
+        _say(f"   Breakeven Rate: {roi_metrics['breakeven_rate']:.1f}%")
 
         # Same, restricted to props from models that cleared the reliability bar.
         rel = detailed[detailed.get('model_reliable', True)]
         if len(rel):
             roi_rel = calculate_roi(rel)
             accuracy_metrics['roi_analysis_reliable'] = roi_rel
-            print(f"   [reliable models only, n={len(rel)}] "
-                  f"Hit Rate: {roi_rel['hit_rate']:.1%}, ROI: {roi_rel['roi']:.1f}%")
+            _say(f"   [reliable models only, n={len(rel)}] "
+                 f"Hit Rate: {roi_rel['hit_rate']:.1%}, ROI: {roi_rel['roi']:.1f}%")
 
     # Save results - only when they're final. Provisional results (a game not
     # final yet, or play-by-play still missing a game) are returned but never
@@ -698,11 +730,11 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
     accuracy_metrics['provisional_reason'] = reason
     if final:
         save_accuracy_results(accuracy_metrics, week, season=season)
-        print("=" * 60)
-        print("✅ Weekly accuracy check complete!")
+        _say("=" * 60)
+        _say("OK: weekly accuracy check complete")
     else:
-        print("=" * 60)
-        print(f"⚠️  Provisional results, not saved: {reason}")
+        _say("=" * 60)
+        _say(f"WARNING: provisional results, not saved: {reason}")
 
     return accuracy_metrics
 
@@ -713,11 +745,11 @@ if __name__ == '__main__':
     results = run_weekly_accuracy_check(current_week)
 
     if results:
-        print("\n📈 Key Metrics:")
-        print(f"Overall Accuracy: {results['overall_accuracy']:.1%}")
-        print(f"Total Predictions: {results['total_predictions']}")
+        _say("\nKey metrics:")
+        _say(f"Overall Accuracy: {results['overall_accuracy']:.1%}")
+        _say(f"Total Predictions: {results['total_predictions']}")
 
         if 'by_confidence_tier' in results and not results['by_confidence_tier'].empty:
-            print("\n🎯 By Confidence Tier:")
+            _say("\nBy confidence tier:")
             for tier, accuracy in results['by_confidence_tier'].items():
-                print(f"  {tier}: {accuracy:.1%}")
+                _say(f"  {tier}: {accuracy:.1%}")
