@@ -8,6 +8,33 @@ bottom.
 
 ## October 2026
 
+- **`player_props/backtest.py` diagnostics are safe under Windows redirected
+  output.**
+  - **Before:** with stdout redirected on Windows (e.g. the app started with
+    its output sent to a log file), Python writes in cp1252, and the module's
+    emoji status lines raised `UnicodeEncodeError`:
+    - The first one skipped the pre-aggregated stats entirely.
+    - A successful play-by-play collection fell into its failure path.
+    - The failure report itself then crashed the Model Performance page,
+      hiding the original error.
+  - **Now:**
+    - The module's console output is plain ASCII, written through `_say()`.
+    - On an encoding error, `_say()` writes the message again with the
+      characters escaped (e.g. text from an exception, a path or a player's
+      name).
+    - If the output is unavailable (`OSError`/`ValueError`, e.g. a closed
+      stream), it drops the message.
+    - Original errors are reported and returned unchanged.
+  - **Scope:**
+    - This covers `backtest.py`'s diagnostics only, not every output path of
+      the Model Performance page or the app.
+    - Predictions, calculations, caching, settlement and the displayed
+      results are unchanged.
+    - `PYTHONUTF8=1` is no longer needed for this module's diagnostics.
+  - **Tests:** regression tests run the success paths, the original-error
+    path, the weekly check and the history loaders against a strict cp1252
+    stream.
+
 - **Windows dispatcher for Ontario spread captures** (installed separately;
   nothing is registered by default).
   - **Why:** GitHub's cron ran 4.7–5 h late on 2026-10-07 and missed the

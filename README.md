@@ -306,7 +306,14 @@ win rate, profit and ROI, and are listed under `unresolved_games` in
 - Put new helper/diagnostic scripts in `scripts/`, import-safe (no heavy loads
   at import), with a header comment and an `if __name__ == '__main__'` entry.
 - On Windows, run pipeline scripts with `PYTHONUTF8=1` — emoji `print()`
-  otherwise crashes the cp1252 console.
+  otherwise crashes the cp1252 console when output is redirected.
+  - **Optional for `player_props/backtest.py`'s diagnostics:** they are plain
+    ASCII and written through `_say()`. That function handles encoding errors
+    by escaping the characters, and drops the message if the output is
+    unavailable.
+  - **Other output paths still need it:** this covers that module only, not
+    every output path of the Model Performance page or the app.
+  - **New console output** in the app's code paths should be plain ASCII.
 
 ---
 
