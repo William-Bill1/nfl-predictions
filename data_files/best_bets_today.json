@@ -1,40 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-11T09:36:32.103710+00:00",
+    "generated_at": "2026-10-12T10:06:07.041546+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-10-12"
   },
-  "bets": [
-    {
-      "game_date": "2026-10-11",
-      "game_time": "13:00",
-      "game": "CLE @ NYJ",
-      "home_team": "NYJ",
-      "away_team": "CLE",
-      "bet_type": "Spread",
-      "pick": "CLE +2.5",
-      "confidence": 0.5785582187280346,
-      "edge": 0.0547486949185107,
-      "tier": "Strong",
-      "odds": -110,
-      "line": 2.5,
-      "notes": null
-    },
-    {
-      "game_date": "2026-10-11",
-      "game_time": "16:25",
-      "game": "SF @ SEA",
-      "home_team": "SEA",
-      "away_team": "SF",
-      "bet_type": "Spread",
-      "pick": "SF +3",
-      "confidence": 0.6475621405631625,
-      "edge": 0.1237526167536386,
-      "tier": "Elite",
-      "odds": -110,
-      "line": 3.0,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
