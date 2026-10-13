@@ -1,0 +1,186 @@
+season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odds,under_odds
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Sam Darnold,passing_yards,draftkings,219.5,-111,-113
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Bo Nix,passing_yards,draftkings,202.5,-113,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaxon Smith-Njigba,receiving_yards,draftkings,89.5,-114,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaylen Waddle,receiving_yards,draftkings,49.5,-111,-113
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Courtland Sutton,receiving_yards,draftkings,31.5,-113,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,receiving_yards,draftkings,22.5,-109,-115
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Rashid Shaheed,receiving_yards,draftkings,21.5,-115,-109
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Evan Engram,receiving_yards,draftkings,21.5,-111,-113
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Cooper Kupp,receiving_yards,draftkings,20.5,-113,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,AJ Barner,receiving_yards,draftkings,19.5,-114,-110
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Troy Franklin,receiving_yards,draftkings,17.5,-115,-109
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Marvin Mims Jr.,receiving_yards,draftkings,13.5,-114,-110
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,receiving_yards,draftkings,9.5,-114,-110
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,receiving_yards,draftkings,9.5,-110,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Tory Horton,receiving_yards,draftkings,5.5,-112,-112
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaxon Smith-Njigba,receptions,draftkings,6.5,-123,-104
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaylen Waddle,receptions,draftkings,4.5,-110,-115
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,receptions,draftkings,3.5,-112,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Courtland Sutton,receptions,draftkings,3.5,127,-163
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Evan Engram,receptions,draftkings,2.5,-137,107
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,AJ Barner,receptions,draftkings,2.5,107,-136
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Cooper Kupp,receptions,draftkings,2.5,112,-143
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Rashid Shaheed,receptions,draftkings,2.5,148,-190
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Troy Franklin,receptions,draftkings,1.5,-139,109
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,receptions,draftkings,1.5,-137,108
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,receptions,draftkings,1.5,-119,-107
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Marvin Mims Jr.,receptions,draftkings,1.5,108,-138
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Tory Horton,receptions,draftkings,0.5,-170,133
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,rushing_yards,draftkings,67.5,-109,-115
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,J.K. Dobbins,rushing_yards,draftkings,47.5,-112,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,rushing_yards,draftkings,15.5,-118,-107
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,rushing_yards,draftkings,14.5,-109,-115
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Bo Nix,rushing_yards,draftkings,13.5,-113,-111
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Sam Darnold,rushing_yards,draftkings,4.5,-111,-113
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Sam Darnold,passing_yards,fanduel,220.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Bo Nix,passing_yards,fanduel,202.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Troy Franklin,receiving_yards,fanduel,16.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Courtland Sutton,receiving_yards,fanduel,31.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,receiving_yards,fanduel,19.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Rashid Shaheed,receiving_yards,fanduel,22.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Marvin Mims Jr.,receiving_yards,fanduel,14.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Cooper Kupp,receiving_yards,fanduel,20.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaxon Smith-Njigba,receiving_yards,fanduel,90.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Tory Horton,receiving_yards,fanduel,5.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaylen Waddle,receiving_yards,fanduel,49.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Evan Engram,receiving_yards,fanduel,23.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,receiving_yards,fanduel,8.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,AJ Barner,receiving_yards,fanduel,20.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,receiving_yards,fanduel,9.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaxon Smith-Njigba,receptions,fanduel,6.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Evan Engram,receptions,fanduel,2.5,-158,118
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,receptions,fanduel,3.5,-108,-122
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Troy Franklin,receptions,fanduel,1.5,-125,-106
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Courtland Sutton,receptions,fanduel,3.5,116,-154
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Cooper Kupp,receptions,fanduel,2.5,116,-154
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Tory Horton,receptions,fanduel,0.5,-168,126
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,receptions,fanduel,1.5,-130,-102
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Rashid Shaheed,receptions,fanduel,2.5,148,-200
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,AJ Barner,receptions,fanduel,2.5,102,-136
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,receptions,fanduel,1.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Jaylen Waddle,receptions,fanduel,4.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Marvin Mims Jr.,receptions,fanduel,1.5,-102,-130
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,George Holani,rushing_yards,fanduel,14.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,RJ Harvey,rushing_yards,fanduel,14.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,J.K. Dobbins,rushing_yards,fanduel,47.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Sam Darnold,rushing_yards,fanduel,4.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Emanuel Wilson,rushing_yards,fanduel,66.5,-114,-114
+2026,6,2026_06_SEA_DEN,Denver Broncos,Seattle Seahawks,Bo Nix,rushing_yards,fanduel,13.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,C.J. Stroud,passing_yards,draftkings,255.5,-112,-112
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Trevor Lawrence,passing_yards,draftkings,226.5,-111,-113
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nico Collins,receiving_yards,draftkings,72.5,-110,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Parker Washington,receiving_yards,draftkings,62.5,-112,-112
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brenton Strange,receiving_yards,draftkings,40.5,-113,-111
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Jakobi Meyers,receiving_yards,draftkings,34.5,-114,-110
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Dalton Schultz,receiving_yards,draftkings,29.5,-115,-109
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Kayshon Boutte,receiving_yards,draftkings,28.5,-111,-113
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Josh Cameron,receiving_yards,draftkings,17.5,-108,-116
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brian Thomas Jr,receiving_yards,draftkings,14.5,-108,-116
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,receiving_yards,draftkings,13.5,-114,-110
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,receiving_yards,draftkings,7.5,-120,-105
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nate Boerkircher,receiving_yards,draftkings,5.5,-106,-118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nico Collins,receptions,draftkings,5.5,-129,101
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Parker Washington,receptions,draftkings,4.5,-131,102
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brenton Strange,receptions,draftkings,4.5,130,-167
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Dalton Schultz,receptions,draftkings,3.5,-102,-125
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Jakobi Meyers,receptions,draftkings,3.5,132,-170
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Kayshon Boutte,receptions,draftkings,2.5,-141,110
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,receptions,draftkings,2.5,-116,-109
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Josh Cameron,receptions,draftkings,1.5,-157,123
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,receptions,draftkings,1.5,-116,-110
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brian Thomas Jr,receptions,draftkings,1.5,-102,-125
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nate Boerkircher,receptions,draftkings,0.5,-185,144
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,rushing_yards,draftkings,64.5,-111,-113
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,rushing_yards,draftkings,48.5,-112,-112
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Chris Rodriguez Jr.,rushing_yards,draftkings,17.5,-110,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Trevor Lawrence,rushing_yards,draftkings,12.5,-106,-118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,C.J. Stroud,rushing_yards,draftkings,10.5,-111,-113
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Trevor Lawrence,passing_yards,fanduel,223.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,C.J. Stroud,passing_yards,fanduel,256.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Josh Cameron,receiving_yards,fanduel,16.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nate Boerkircher,receiving_yards,fanduel,5.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Jakobi Meyers,receiving_yards,fanduel,34.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Kayshon Boutte,receiving_yards,fanduel,30.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Dalton Schultz,receiving_yards,fanduel,30.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Parker Washington,receiving_yards,fanduel,61.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,receiving_yards,fanduel,12.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nico Collins,receiving_yards,fanduel,71.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,receiving_yards,fanduel,7.5,-120,-108
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brenton Strange,receiving_yards,fanduel,37.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brian Thomas Jr,receiving_yards,fanduel,15.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nico Collins,receptions,fanduel,5.5,-154,116
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Dalton Schultz,receptions,fanduel,3.5,100,-132
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brenton Strange,receptions,fanduel,3.5,-158,118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Kayshon Boutte,receptions,fanduel,2.5,-158,118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Parker Washington,receptions,fanduel,4.5,-120,-110
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Brian Thomas Jr,receptions,fanduel,1.5,-112,-118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,receptions,fanduel,2.5,-108,-122
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,receptions,fanduel,1.5,-106,-125
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Josh Cameron,receptions,fanduel,1.5,-158,118
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Jakobi Meyers,receptions,fanduel,3.5,124,-166
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Nate Boerkircher,receptions,fanduel,0.5,-198,146
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Bhayshul Tuten,rushing_yards,fanduel,63.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Chris Rodriguez Jr.,rushing_yards,fanduel,18.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,C.J. Stroud,rushing_yards,fanduel,9.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Woody Marks,rushing_yards,fanduel,47.5,-114,-114
+2026,6,2026_06_HOU_JAX,Jacksonville Jaguars,Houston Texans,Trevor Lawrence,rushing_yards,fanduel,12.5,-114,-114
+2026,6,2026_06_LAC_KC,Kansas City Chiefs,Los Angeles Chargers,Justin Herbert,passing_yards,fanduel,192.5,-114,-114
+2026,6,2026_06_LAC_KC,Kansas City Chiefs,Los Angeles Chargers,Patrick Mahomes,passing_yards,fanduel,228.5,-114,-114
+2026,6,2026_06_LAC_KC,Kansas City Chiefs,Los Angeles Chargers,Kenneth Walker III,rushing_yards,fanduel,86.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Dak Prescott,passing_yards,draftkings,276.5,-112,-112
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jordan Love,passing_yards,draftkings,268.5,-112,-112
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,CeeDee Lamb,receiving_yards,draftkings,78.5,-113,-111
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Christian Watson,receiving_yards,draftkings,69.5,-113,-111
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,George Pickens,receiving_yards,draftkings,68.5,-113,-111
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Matthew Golden,receiving_yards,draftkings,62.5,-111,-113
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Tucker Kraft,receiving_yards,draftkings,49.5,-110,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jake Ferguson,receiving_yards,draftkings,29.5,-111,-113
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,CeeDee Lamb,receptions,draftkings,6.5,121,-154
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,George Pickens,receptions,draftkings,4.5,-142,111
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Christian Watson,receptions,draftkings,4.5,-140,109
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Matthew Golden,receptions,draftkings,4.5,-129,101
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Tucker Kraft,receptions,draftkings,4.5,116,-149
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jake Ferguson,receptions,draftkings,3.5,-104,-123
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jordan Love,passing_yards,fanduel,264.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Dak Prescott,passing_yards,fanduel,277.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jake Ferguson,receiving_yards,fanduel,27.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Christian Watson,receiving_yards,fanduel,66.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Tucker Kraft,receiving_yards,fanduel,46.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,George Pickens,receiving_yards,fanduel,67.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Matthew Golden,receiving_yards,fanduel,61.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,CeeDee Lamb,receiving_yards,fanduel,78.5,-114,-114
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Christian Watson,receptions,fanduel,4.5,-130,-102
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,CeeDee Lamb,receptions,fanduel,6.5,114,-148
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Tucker Kraft,receptions,fanduel,4.5,108,-144
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Jake Ferguson,receptions,fanduel,3.5,-120,-110
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,Matthew Golden,receptions,fanduel,4.5,-148,112
+2026,6,2026_06_DAL_GB,Green Bay Packers,Dallas Cowboys,George Pickens,receptions,fanduel,4.5,-146,110
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Brock Purdy,passing_yards,draftkings,248.5,-113,-111
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jayden Daniels,passing_yards,draftkings,209.5,-112,-112
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Mike Evans,receiving_yards,draftkings,79.5,-111,-113
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,George Kittle,receiving_yards,draftkings,64.5,-111,-113
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,receiving_yards,draftkings,38.5,-114,-110
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Mike Evans,receptions,draftkings,6.5,122,-156
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,George Kittle,receptions,draftkings,5.5,108,-137
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,receptions,draftkings,4.5,-139,109
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,rushing_yards,draftkings,61.5,-110,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jacory Croskey-Merritt,rushing_yards,draftkings,45.5,-115,-109
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jayden Daniels,rushing_yards,draftkings,32.5,-116,-108
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Kaelon Black,rushing_yards,draftkings,23.5,-109,-115
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Rachaad White,rushing_yards,draftkings,21.5,-112,-112
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Brock Purdy,rushing_yards,draftkings,17.5,-107,-117
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jayden Daniels,passing_yards,fanduel,205.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Brock Purdy,passing_yards,fanduel,246.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,receiving_yards,fanduel,39.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Mike Evans,receiving_yards,fanduel,75.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,George Kittle,receiving_yards,fanduel,63.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,receptions,fanduel,4.5,-130,-102
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Mike Evans,receptions,fanduel,5.5,-168,126
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,George Kittle,receptions,fanduel,5.5,102,-136
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Kaelon Black,rushing_yards,fanduel,23.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jayden Daniels,rushing_yards,fanduel,33.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Christian McCaffrey,rushing_yards,fanduel,58.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Jacory Croskey-Merritt,rushing_yards,fanduel,45.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Rachaad White,rushing_yards,fanduel,20.5,-114,-114
+2026,6,2026_06_WAS_SF,San Francisco 49ers,Washington Commanders,Brock Purdy,rushing_yards,fanduel,16.5,-114,-114
