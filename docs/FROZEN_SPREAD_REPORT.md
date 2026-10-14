@@ -222,6 +222,69 @@ These are never actual wagers; the bet journal is not read.
   `PREGAME_SNAPSHOTS.md`).
 - **JSON:** no `NaN`; missing values are `null`.
 
+## App page: Frozen Performance
+
+`pages/9_Frozen_Performance.py` (display logic: `frozen_performance.py`) shows
+this report in the app. It is read-only and re-implements none of the
+report's selection, settlement, coverage or market logic: every number comes
+from `report_from_sources`.
+
+**Controls:**
+
+- **Season:** seasons with completed regular-season games.
+- **Week:** "All weeks", or a week with results. The default is the latest
+  fully completed week (`season_utils.completed_weeks`).
+- **Snapshot used:** latest pregame (the default) or earliest pregame.
+
+**Provisional views:** a banner marks the view provisional when the week
+isn't fully played, any game is pending or unresolved, or the view includes
+games not yet played.
+
+**Outcome cutoff:** today in Toronto, stated on the page with the report's
+`as_of_semantics`. It is not a historical reconstruction.
+
+**Separate summaries:**
+
+| Tab | Shows |
+|---|---|
+| All frozen predictions | counts plus Brier and log loss against the 50% baseline |
+| Frozen bet signals | the same, for games whose frozen prediction carried a signal |
+| Market comparison | automated Ontario feeds only, on the report's matched sample. That sample's size is shown next to the overall evaluated count. With no exact-line quote it says "unavailable" and the reason |
+| Simulated returns | the observed archived price and the assumed −110 scenario, with stake, push and ROI conventions. Labelled as not placed |
+| Actual wagers | a pointer to the Bet Journal; this page never reads it |
+
+**Coverage table:** status counts, plus four kinds of completed game without
+a snapshot: no snapshot history, before the first snapshot, missing after
+tracking began, and kickoff unavailable.
+
+**Results table:** one row per selected game:
+
+- the game, with kickoff and frozen capture time in Toronto time;
+- the frozen underdog and its signed handicap (e.g. `+3.5`);
+- the frozen probability and signal;
+- the final score;
+- win, loss or push at that handicap;
+- the status, and the exclusion reason where there is one.
+
+**Caching:** sources are loaded with `load_sources`, cached on a SHA-256
+fingerprint of every snapshot, capture and the schedule, so adding, changing
+or deleting any of them invalidates the cache. The date-dependent evaluation
+runs on every render, outside that cache.
+
+**Failures:** a corrupt or missing artifact stops the page with an integrity
+error. It never falls back to partial or older data. This also covers:
+
+- a snapshot, capture or schedule file (or folder) that exists but can't be
+  read, for example permission denied: an integrity error, not a crash;
+- a schedule without the columns the season and week choices need
+  (`season`, `week`, `game_type`, `home_score`, `away_score`): rejected
+  before any control is built.
+
+**Read-only:** nothing is written, and no API requests are made.
+
+**Scope:** the page evaluates the frozen report's predictions and signals,
+not any separate list of hand-picked selections.
+
 ## Limitations
 
 - **Small, partial sample:** captures began on 2026-10-05. Most completed

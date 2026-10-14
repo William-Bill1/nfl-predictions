@@ -565,19 +565,41 @@ LIMITATIONS = (
 )
 
 
+def load_sources(snapshot_dir: Path = SNAPSHOT_DIR, schedule_path: Path = SCHEDULE_PATH,
+                 capture_dir: Path = CAPTURE_DIR, *, which: str = "latest") -> dict:
+    """Every input the report reads, validated and selected - nothing that
+    depends on the clock. Corrupt inputs raise ReportError. Safe to cache on a
+    fingerprint of the source files (see report_from_sources)."""
+    if which not in ("latest", "earliest"):
+        raise ReportError("which must be 'latest' or 'earliest'")
+    schedule, schedule_sha = load_schedule(Path(schedule_path))
+    return {"which": which, "schedule": schedule, "schedule_sha": schedule_sha,
+            "picks": select_frozen(Path(snapshot_dir), which),
+            "first_capture": first_snapshot_capture(Path(snapshot_dir)),
+            "captures": load_market_captures(Path(capture_dir))
+            if Path(capture_dir).is_dir() else [],
+            "snapshot_files": sorted(p.name for p in Path(snapshot_dir).glob("*.json"))}
+
+
 def build_report(snapshot_dir: Path = SNAPSHOT_DIR, schedule_path: Path = SCHEDULE_PATH,
                  capture_dir: Path = CAPTURE_DIR, *, which: str = "latest",
                  season: int | None = None, week: int | None = None,
                  as_of: date | None = None) -> dict:
-    if which not in ("latest", "earliest"):
-        raise ReportError("which must be 'latest' or 'earliest'")
+    return report_from_sources(load_sources(snapshot_dir, schedule_path, capture_dir,
+                                            which=which),
+                               season=season, week=week, as_of=as_of)
+
+
+def report_from_sources(src: dict, *, season: int | None = None, week: int | None = None,
+                        as_of: date | None = None) -> dict:
+    """The report for one outcome cutoff (as_of, default today in Toronto),
+    from already-loaded sources. Doesn't modify `src`."""
+    which = src["which"]
     as_of = as_of or bj.now_utc().astimezone(on.TORONTO).date()
     now = datetime.combine(as_of, time(12, 0), tzinfo=on.TORONTO)
-    schedule, schedule_sha = load_schedule(Path(schedule_path))
-    picks = select_frozen(Path(snapshot_dir), which)
-    first_capture = first_snapshot_capture(Path(snapshot_dir))
-    captures = load_market_captures(Path(capture_dir)) if Path(capture_dir).is_dir() else []
-    snapshot_files = sorted(p.name for p in Path(snapshot_dir).glob("*.json"))
+    schedule, schedule_sha = src["schedule"], src["schedule_sha"]
+    picks, first_capture = src["picks"], src["first_capture"]
+    captures, snapshot_files = src["captures"], src["snapshot_files"]
     seasons, scope_rule = scope_seasons(schedule, season)
 
     games, outside_scope = [], 0
