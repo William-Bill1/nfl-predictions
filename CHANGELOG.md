@@ -8,6 +8,38 @@ bottom.
 
 ## October 2026
 
+- **Frozen Performance page** (`pages/9_Frozen_Performance.py`, display logic
+  `frozen_performance.py`). A read-only app view of the frozen-pregame spread
+  report: the spread model scored only on predictions frozen before kickoff.
+  - **No recomputation:** every number comes from the report.
+  - **Report split:** `scripts/frozen_spread_report.py` gained
+    `load_sources` / `report_from_sources` so the page can cache file loading
+    and still evaluate the date on every render. `build_report`'s behaviour is
+    unchanged.
+  - **Controls:** season and week, defaulting to the latest fully completed
+    week. Partly played weeks, pending games and unplayed games are labelled
+    provisional. Snapshot choice: latest pregame (default) or earliest.
+  - **Separate summaries:**
+    - all frozen predictions;
+    - the frozen bet-signal subset;
+    - the automated-Ontario market comparison on its own matched sample;
+    - simulated returns (observed archived price vs an assumed −110
+      scenario, labelled "not placed").
+
+    Actual wagers stay in the Bet Journal.
+  - **Coverage and results:** coverage counts include the reasons for missing
+    snapshots. A per-game table shows the frozen underdog, signed handicap,
+    probability, signal, final score, win/loss/push and status.
+  - **Caching and failures:** sources are cached on a SHA-256 fingerprint of
+    every snapshot, capture and the schedule. Corrupt artifacts stop the page
+    with an integrity error, and so do unreadable files (e.g. permission denied,
+    previously a crash) and a schedule missing `game_type` or the other columns
+    the season/week choices need (rejected before any control is built). The
+    page writes nothing and makes no API calls.
+  - **Tests:** `tests/test_frozen_performance.py`.
+  - **Sample:** 2026 snapshots began Oct 5, so the evaluable sample is small.
+    The page makes no accuracy or profitability claim.
+
 - **"Was waiting worthwhile?" for Ontario spreads**
   (`scripts/ontario_waiting_report.py`; a new section of the Ontario Line
   Timing page). Read-only, automated Ontario feeds only.
