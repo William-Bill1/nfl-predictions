@@ -572,6 +572,7 @@ DECISION_LABELS = {
     wr.RETAINED: "Signal retained", wr.WITHDRAWN: "Signal withdrawn",
     wr.ADDED: "Signal added", wr.SIDE_CHANGED: "Side changed",
     wr.NEITHER: "Neither signalled", wr.UNAVAILABLE: "Unavailable",
+    wr.PENDING: "Pending (decision time not reached)",
 }
 RESULT_LABELS = {wr.FINAL: "Final", wr.PENDING: "Pending", wr.UNRESOLVED: "Unresolved"}
 
@@ -619,6 +620,8 @@ def _age(minutes: int | None) -> str:
 
 
 def _decision_cells(d: dict) -> tuple:
+    if d["status"] == wr.DECISION_PENDING:
+        return ("", "", "", "", "", f"Not reached yet: {d['reason']}")
     if d["status"] != wr.AVAILABLE:
         snap = toronto(d["captured_at"]) if d["captured_at"] else ""
         return (snap, _age(d["age_minutes"]), "", "", "", f"Unavailable: {d['reason']}")

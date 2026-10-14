@@ -477,6 +477,138 @@ class TestModelDecisions:
         assert rep["rollups"]["denominators"]["games_with_model_decisions_at_both_times"] == 0
 
 
+def at_clock(w, now):
+    """The week-5 analysis at an exact clock (results AND decision timing)."""
+    w.write_schedule()
+    src = wr.load_sources(w.captures, w.store.manual_dir, w.snapshots, w.schedule)
+    return wr.analyze(src, now=now, season=2026, week=5)
+
+
+class TestDecisionTimeNotReached:
+    """A decision time later than the clock has no decision yet: it is never
+    filled with the latest snapshot that happens to exist."""
+
+    def test_future_sunday_decision_is_pending(self, w):
+        rep = at_clock(model_world(w), datetime(2026, 10, 9, 16, 0, tzinfo=UTC))   # Friday
+        chi = decision(rep, "2026_05_CHI_GB")
+        assert chi["wednesday"]["status"] == wr.AVAILABLE                 # Wed decision passed
+        assert chi["sunday"]["status"] == wr.DECISION_PENDING
+        assert (chi["sunday"]["captured_at"], chi["sunday"]["signal"], chi["sunday"]["team"]) == \
+            (None, None, None)
+        assert chi["classification"] == wr.PENDING
+        assert not chi["probability"]["comparable"]
+        mc = rep["rollups"]["model_classifications"]
+        # 7 pending; HOU (no Wednesday snapshot) and TB (kicked off before Sunday's
+        # decision time) are permanently unavailable, whatever the clock.
+        assert (mc[wr.PENDING], mc[wr.UNAVAILABLE]) == (7, 2)
+        assert sum(mc[c] for c in (wr.RETAINED, wr.WITHDRAWN, wr.ADDED, wr.SIDE_CHANGED,
+                                   wr.NEITHER)) == 0
+        assert rep["rollups"]["denominators"]["games_with_model_decisions_at_both_times"] == 0
+        assert decision(rep, "2026_05_TB_DAL")["sunday"]["status"] == wr.KICKED_OFF
+        assert decision(rep, "2026_05_HOU_TEN")["classification"] == wr.UNAVAILABLE
+
+    def test_future_wednesday_decision_is_pending(self, w):
+        rep = at_clock(model_world(w), WED_DECISION - timedelta(hours=1))
+        chi = decision(rep, "2026_05_CHI_GB")
+        assert chi["wednesday"]["status"] == chi["sunday"]["status"] == wr.DECISION_PENDING
+        assert chi["wednesday"]["captured_at"] is None and chi["classification"] == wr.PENDING
+
+    @pytest.mark.parametrize("offset,status", [(timedelta(0), "available"),
+                                               (timedelta(seconds=-1), "pending")])
+    def test_decision_time_reached_boundary(self, w, offset, status):
+        rep = at_clock(model_world(w), SUN_DECISION + offset)
+        chi = decision(rep, "2026_05_CHI_GB")
+        if status == "available":           # the clock AT the decision time: decided
+            assert chi["sunday"]["status"] == wr.AVAILABLE and chi["classification"] == wr.RETAINED
+        else:
+            assert chi["sunday"]["status"] == wr.DECISION_PENDING
+            assert chi["classification"] == wr.PENDING
+
+    def test_page_shows_pending_not_decided(self, w, page):
+        model_world(w)
+        at = page(datetime(2026, 10, 9, 18, 0, tzinfo=UTC))
+        metrics = {m.label: m.value for m in at.metric}
+        assert metrics["Games with model decisions at both times"] == "0 of 9"
+        assert metrics[olt.DECISION_LABELS[wr.PENDING]] == "7"
+        assert metrics["Signal retained"] == "0"
+        dec = frame(at, "Sunday vs Wednesday").set_index("Matchup")
+        assert dec.loc["CHI @ GB", "Sun decision"].startswith("Not reached yet")
+        assert dec.loc["CHI @ GB", "Sunday vs Wednesday"] == olt.DECISION_LABELS[wr.PENDING]
+
+    def test_one_second_after_the_decision_time(self, w):
+        rep = at_clock(model_world(w), SUN_DECISION + timedelta(seconds=1))
+        chi = decision(rep, "2026_05_CHI_GB")
+        assert chi["sunday"]["status"] == wr.AVAILABLE and chi["classification"] == wr.RETAINED
+        assert chi["sunday"]["captured_at"] == ps._iso(SNAP_SUN)
+
+    def test_snapshot_exactly_at_the_cutoff_with_the_clock_at_the_decision_time(self, w):
+        w.market(SUN_SLOT, sun_events())
+        scores(w)
+        w.snapshot(SNAP_WED, [("2026_05_CHI_GB", 3.0, 0.50, False)])
+        w.snapshot(SUN_DECISION, [("2026_05_CHI_GB", 3.0, 0.70, True)])           # at the cutoff
+        w.snapshot(SUN_DECISION + timedelta(seconds=1), [("2026_05_CHI_GB", 3.0, 0.90, True)])
+        rep = at_clock(w, SUN_DECISION)
+        sun = decision(rep, "2026_05_CHI_GB")["sunday"]
+        assert (sun["status"], sun["probability"], sun["age_minutes"]) == (wr.AVAILABLE, 0.70, 0)
+        assert decision(rep, "2026_05_CHI_GB")["classification"] == wr.ADDED
+
+    def test_kickoff_at_the_decision_time_is_unavailable_before_it_arrives(self, w):
+        w.market(SUN_SLOT, sun_events())
+        scores(w)
+        w.game("2026_05_NYG_WAS", day="2026-10-11", at="09:00")      # = Sun 13:00 UTC
+        w.snapshot(SNAP_WED, [("2026_05_NYG_WAS", 3.0, 0.6, True, ko(at="09:00"))])
+        rep = at_clock(w, datetime(2026, 10, 9, 16, 0, tzinfo=UTC))   # Friday: not reached
+        d = decision(rep, "2026_05_NYG_WAS")
+        assert d["sunday"]["status"] == wr.KICKED_OFF                  # never pending
+        assert d["classification"] == wr.UNAVAILABLE
+
+    def test_no_signal_fallback_once_the_decision_time_arrives(self, w):
+        rep = at_clock(model_world(w), SUN_DECISION)
+        lv = decision(rep, "2026_05_LV_NE")["sunday"]                  # Saturday's had a signal
+        assert (lv["status"], lv["captured_at"]) == (ps.NO_LINE, ps._iso(SNAP_SUN))
+
+    def test_same_session_crosses_the_decision_time_without_file_changes(self, w, page):
+        model_world(w)
+        at = page(SUN_DECISION - timedelta(seconds=1))
+        dec = frame(at, "Sunday vs Wednesday").set_index("Matchup")
+        assert dec.loc["CHI @ GB", "Sunday vs Wednesday"] == olt.DECISION_LABELS[wr.PENDING]
+        at = page(SUN_DECISION, at)                                     # same session, rerun
+        dec = frame(at, "Sunday vs Wednesday").set_index("Matchup")
+        assert dec.loc["CHI @ GB", "Sunday vs Wednesday"] == "Signal retained"
+        metrics = {m.label: m.value for m in at.metric}
+        assert metrics[olt.DECISION_LABELS[wr.PENDING]] == "0"
+
+
+SEL = {"captured_at": "2026-10-28T09:00:00Z", "run_id": "r", "snapshot_file": "f.json",
+       "code_revision": "c", "prediction_status": ps.PREDICTED, "underdog_team": "CHI",
+       "spread_line": 3.0, "prob_underdog_covers": 0.6, "bet_signal": True}
+
+
+@pytest.mark.parametrize("local,expected", [
+    # Week across the end of DST (Sun Nov 1, 2026 02:00): Wednesday is EDT, Sunday EST.
+    (("wednesday", datetime(2026, 10, 28, 11, 59, 59)), wr.DECISION_PENDING),
+    (("wednesday", datetime(2026, 10, 28, 12, 0, 0)), wr.AVAILABLE),
+    (("sunday", datetime(2026, 11, 1, 8, 59, 59)), wr.DECISION_PENDING),
+    (("sunday", datetime(2026, 11, 1, 9, 0, 0)), wr.AVAILABLE),
+])
+def test_decision_times_follow_toronto_dst(local, expected):
+    wed_at, sun_at = wr.decision_times({"intended_wednesday": "2026-10-28_wednesday_noon",
+                                        "intended_sunday": "2026-11-01_sunday_morning"})
+    assert (wed_at, sun_at) == (datetime(2026, 10, 28, 16, 0, tzinfo=UTC),    # 12:00 EDT
+                                datetime(2026, 11, 1, 14, 0, tzinfo=UTC))      # 09:00 EST
+    day, clock = local
+    now = clock.replace(tzinfo=on.TORONTO)            # a Toronto-aware clock
+    at = wed_at if day == "wednesday" else sun_at
+    d = wr.decision(SEL, at, datetime(2026, 11, 1, 18, 0, tzinfo=UTC), True, now=now)
+    assert d["status"] == expected
+    # 09:00 Toronto on Nov 1 is 14:00 UTC; 13:30 UTC (09:30 if EDT were wrongly kept) is
+    # still before it.
+    if day == "sunday":
+        early = wr.decision(SEL, at, datetime(2026, 11, 1, 18, 0, tzinfo=UTC), True,
+                            now=datetime(2026, 11, 1, 13, 30, tzinfo=UTC))
+        assert early["status"] == wr.DECISION_PENDING
+
+
 # ------------------------------------------------------------------ rollups --
 
 class TestRollups:
