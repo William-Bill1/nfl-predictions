@@ -49,6 +49,14 @@ def load_schedule(path: str, mtime_ns: int, size: int):
     return on.load_schedule(Path(path))[0]
 
 
+@st.cache_data(max_entries=8, show_spinner="Reading model snapshots...")
+def load_waiting_inputs(fingerprint: tuple, snapshot_dir: str, schedule_path: str) -> dict:
+    """Validated snapshots and schedule for "Was waiting worthwhile?", cached on
+    the content fingerprint of every snapshot and the schedule. Results depend
+    on the clock, so the analysis itself is built outside this cache."""
+    return olt.waiting_inputs(Path(snapshot_dir), Path(schedule_path))
+
+
 capture_dir, manual_dir = on.CAPTURE_DIR, on.MANUAL_DIR
 try:
     fingerprint = olt.source_fingerprint(capture_dir, manual_dir)
@@ -363,6 +371,133 @@ with st.container(horizontal=True):
     week = st.selectbox("Week", season_weeks, key="olt_week")
 
 slots = olt.week_slots(report, season, week, now, capture_docs)
+
+
+def _n(count: int, word: str) -> str:
+    return f"{count} {word}{'' if count == 1 else 's'}"
+
+
+def waiting_section() -> None:
+    """"Was waiting worthwhile?" for the selected week: automated Ontario feeds
+    only, the whole week (the sportsbook/game/team filters don't apply)."""
+    st.divider()
+    st.subheader("Was waiting worthwhile?")
+    st.caption("Three separate questions for the selected week: did Sunday's quote offer "
+               "better terms than Wednesday's for the **same team at the same sportsbook**; "
+               "how each offer would have settled; and whether the model changed its decision "
+               "between the two decision times. **Automated Ontario feeds only**; manual "
+               "FanDuel Ontario entries and the US reference feed are never used here. The "
+               "sportsbook, game and team filters above don't apply to this section.")
+    if view != ONT:
+        st.info("This analysis covers automated Ontario sportsbook feeds only. Switch "
+                "**Quotes** to *Ontario sportsbooks (automated feeds)* to see it.",
+                icon=":material/info:")
+        return
+    try:
+        wfp = olt.waiting_fingerprint(olt.wr.SNAPSHOT_DIR, olt.wr.SCHEDULE_PATH)
+        inputs = load_waiting_inputs(wfp, str(olt.wr.SNAPSHOT_DIR), str(olt.wr.SCHEDULE_PATH))
+        analysis = olt.waiting_analysis(report, inputs, season, week, now)
+    except olt.IntegrityError as exc:
+        st.error("**Integrity error: a model snapshot or the schedule is missing or failed "
+                 "validation.** This analysis is not shown rather than partial or substituted "
+                 f"data. Fix or restore the file, then reload.\n\n`{exc}`",
+                 icon=":material/gpp_bad:")
+        return
+    roll = analysis["rollups"]
+    den = roll["denominators"]
+    with st.container(horizontal=True):
+        st.metric("Games with paired captures", den["games_with_paired_captures"], border=True)
+        st.metric("Game/sportsbook pairs", den["game_book_pairs"], border=True)
+        st.metric("Team-side comparisons", den["team_side_comparisons"], border=True,
+                  help="One per game, team and sportsbook with an eligible Wednesday/Sunday "
+                       "pair (two per game/sportsbook pair when both sides were quoted).")
+        st.metric("Settled comparisons", den["settled_comparisons"], border=True)
+        st.metric("Games with model decisions at both times",
+                  f"{den['games_with_model_decisions_at_both_times']} of "
+                  f"{den['games_in_model_table']}", border=True)
+    st.caption(roll["independence"])
+
+    # ---- offers ---------------------------------------------------------
+    st.markdown("**Same team, same sportsbook: Wednesday 12:00 vs Sunday 09:00 offer**")
+    offers = olt.waiting_offer_rows(analysis)
+    if offers.empty:
+        w = analysis["weeks"][0] if analysis["weeks"] else {}
+        if w and w["wednesday_capture"] is None and w["intended_wednesday"]:
+            why = (f"No usable scheduled Wednesday capture is stored for this week's slot "
+                   f"(`{w['intended_wednesday']}`), so there is no Wednesday offer to compare. "
+                   "An ad-hoc capture, another week's capture or a manual entry is never used "
+                   "in its place.")
+        elif w and w["sunday_capture"] is None and w["intended_sunday"]:
+            why = (f"No usable scheduled Sunday capture is stored for this week's slot "
+                   f"(`{w['intended_sunday']}`) yet, so there is no Sunday offer to compare.")
+        else:
+            why = "No game, team and sportsbook has fresh quotes in both scheduled slots."
+        st.info(f"**No eligible Wednesday/Sunday pair for this week.** {why}",
+                icon=":material/link_off:")
+    else:
+        oc = roll["offer_classifications"]
+        with st.container(horizontal=True):
+            for key in ("sunday_dominates", "wednesday_dominates", "equivalent", "unchanged",
+                        "trade_off"):
+                st.metric(olt.OUTCOME_LABELS[key], oc[key], border=True)
+        st.caption(f"Offer comparison over {_n(den['team_side_comparisons'], 'team-side comparison')}"
+                   ", decided by payoffs before the game (see *How to read this page*). Each "
+                   "sportsbook is compared only with itself; no best book is picked per day.")
+        rp = roll["realized_profit_difference"]
+        if den["settled_comparisons"]:
+            st.markdown(
+                f"Realized, at {olt.wr.STAKE} units per offer: Sunday's offer returned more in "
+                f"**{rp['sunday_higher']}**, Wednesday's in **{rp['wednesday_higher']}**, and "
+                f"the same in **{rp['equal']}** of "
+                f"{_n(den['settled_comparisons'], 'settled comparison')} "
+                f"({_n(rp['games_represented'], 'game')}, "
+                f"{_n(rp['game_book_pairs_represented'], 'game/sportsbook pair')}).")
+        else:
+            st.caption("No compared game has a final result yet, so nothing is settled.")
+        st.warning(olt.wr.HINDSIGHT_NOTE, icon=":material/history:")
+        st.dataframe(offers, hide_index=True, key="olt_waiting_offers",
+                     column_config={"Matchup": st.column_config.TextColumn(pinned=True),
+                                    "Team": st.column_config.TextColumn(pinned=True)})
+        st.caption("Profit in units for an equal stake on each offer: win = profit at that "
+                   "offer's price (rounded to the cent), push = 0, loss = the stake. "
+                   "Sunday − Wednesday profit = Sunday's offer minus Wednesday's.")
+    missing = olt.waiting_missing_rows(analysis, slots)
+    if not missing.empty:
+        with st.expander(f"Ontario quotes without an eligible pair "
+                         f"({roll['missing_pairs']['team_sides_without_eligible_pair']} "
+                         "team-sides)", icon=":material/link_off:", expanded=offers.empty):
+            st.caption("Gaps stay gaps: these are never filled from another week, an ad-hoc "
+                       "capture, a manual entry, the US feed or another sportsbook.")
+            st.dataframe(missing, hide_index=True, key="olt_waiting_missing")
+
+    # ---- model decisions ------------------------------------------------
+    st.markdown("**Model decision at each decision time**")
+    st.caption(olt.wr.DECISION_RULE)
+    decisions = olt.waiting_decision_rows(analysis)
+    if decisions.empty:
+        st.info("No scheduled games for this week.", icon=":material/info:")
+    else:
+        mc = roll["model_classifications"]
+        with st.container(horizontal=True):
+            for key in olt.wr.DECISION_CLASSES:
+                st.metric(olt.DECISION_LABELS[key], mc[key], border=True)
+        st.caption(f"Over {_n(den['games_in_model_table'], 'game')} (one row per game, not per "
+                   "sportsbook). The model's team is the frozen underdog at its frozen handicap "
+                   "(nflverse's line at the snapshot), not a sportsbook offer. Unavailable means "
+                   "a missing snapshot, line or probability - never a deliberate no-bet "
+                   "decision. Probability changes are shown only for the same team at the same "
+                   "handicap; otherwise the two probabilities describe different bets.")
+        st.dataframe(decisions, hide_index=True, key="olt_waiting_decisions",
+                     column_config={"Matchup": st.column_config.TextColumn(pinned=True)})
+    st.info(olt.wr.INJURY_NOTE, icon=":material/medical_information:")
+    st.caption(olt.wr.NOT_CLAIMED)
+
+
+def finish() -> None:
+    waiting_section()
+    add_betting_oracle_footer()
+    st.stop()
+
 with st.container(horizontal=True):
     for day in ("wednesday", "sunday"):
         s = slots.get(day, {})
@@ -382,8 +517,7 @@ if view == MAN:
 week_rows = olt.display_rows(report, view, season, week, now, capture_docs)
 if week_rows.empty:
     st.info("No comparison rows from this source for the selected week.", icon=":material/info:")
-    add_betting_oracle_footer()
-    st.stop()
+    finish()
 
 book_options = sorted(week_rows["Sportsbook"].unique())
 games_in_week = week_rows[["_game_id", "Matchup"]].drop_duplicates().sort_values("Matchup")
@@ -407,12 +541,7 @@ rows = olt.display_rows(report, view, season, week, now, capture_docs, books=boo
 if rows.empty:
     st.info("No rows match these filters. Clear a sportsbook, game or team filter "
             "to see more.", icon=":material/filter_alt_off:")
-    add_betting_oracle_footer()
-    st.stop()
-
-
-def _n(count: int, word: str) -> str:
-    return f"{count} {word}{'' if count == 1 else 's'}"
+    finish()
 
 
 # ---- summary -------------------------------------------------------------
@@ -446,4 +575,4 @@ st.caption("Times are America/Toronto. Provider update = when the sportsbook's s
            "market last changed according to The Odds API; capture = when this project "
            "requested it.")
 
-add_betting_oracle_footer()
+finish()

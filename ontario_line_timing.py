@@ -22,6 +22,10 @@ _spec = importlib.util.spec_from_file_location("ontario_spread_report",
                                                ROOT / "scripts" / "ontario_spread_report.py")
 rpt = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(rpt)
+_wspec = importlib.util.spec_from_file_location("ontario_waiting_report",
+                                                ROOT / "scripts" / "ontario_waiting_report.py")
+wr = importlib.util.module_from_spec(_wspec)
+_wspec.loader.exec_module(wr)
 
 TORONTO = on.TORONTO
 
@@ -68,8 +72,15 @@ def source_fingerprint(capture_dir: Path, manual_dir: Path) -> tuple:
     out = []
     for label, d in (("capture", Path(capture_dir)), ("manual", Path(manual_dir))):
         for p in sorted(d.glob("*.json")) if d.exists() else []:
-            out.append((label, p.name, hashlib.sha256(p.read_bytes()).hexdigest()))
+            out.append((label, p.name, _sha256(p)))
     return tuple(out)
+
+
+def _sha256(path: Path) -> str:
+    try:
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise IntegrityError(f"{path} can't be read: {exc}") from None
 
 
 def build(capture_dir: Path, manual_dir: Path) -> dict:
@@ -519,3 +530,158 @@ def coverage_rows(captures: list[dict], now: datetime) -> pd.DataFrame:
             r["slot_id"], toronto(r["intended_utc"]), toronto(r["closes_utc"]),
             COVERAGE_STATE_LABELS[r["state"]], r["label"], r["run_id"] or "", r["attempts"]))))
     return pd.DataFrame(out, columns=COVERAGE_COLUMNS)
+
+
+# --------------------------------------------------------------------------
+# "Was waiting worthwhile?" (scripts/ontario_waiting_report.py)
+# --------------------------------------------------------------------------
+# Automated Ontario feeds only. Every figure comes from the shared report;
+# nothing is re-paired, re-settled or re-selected here.
+
+def waiting_fingerprint(snapshot_dir: Path, schedule_path: Path) -> tuple:
+    """Name + SHA-256 of every pregame snapshot and of the schedule (the cache
+    key for the analysis' file inputs; captures are keyed by
+    source_fingerprint)."""
+    d, sp = Path(snapshot_dir), Path(schedule_path)
+    out = [("snapshot_dir", d.is_dir())]
+    out += [("snapshot", p.name, _sha256(p)) for p in (sorted(d.glob("*.json")) if d.is_dir()
+                                                       else [])]
+    out.append(("schedule", sp.name, _sha256(sp) if sp.is_file() else None))
+    return tuple(out)
+
+
+def waiting_inputs(snapshot_dir: Path, schedule_path: Path) -> dict:
+    """Validated snapshots and schedule (file-dependent only, no clock)."""
+    try:
+        return wr.load_model_inputs(Path(snapshot_dir), Path(schedule_path))
+    except (wr.ReportError, ValueError, KeyError, TypeError, OSError) as exc:
+        raise IntegrityError(str(exc)) from None
+
+
+def waiting_analysis(report: dict, inputs: dict, season: int, week: int,
+                     now: datetime) -> dict:
+    """The analysis for one week at this clock - computed on every render,
+    outside any cache, because results depend on the date."""
+    try:
+        return wr.analyze({"ontario": report, **inputs}, now=now, season=season, week=week)
+    except (wr.ReportError, ValueError, KeyError, TypeError) as exc:
+        raise IntegrityError(str(exc)) from None
+
+
+DECISION_LABELS = {
+    wr.RETAINED: "Signal retained", wr.WITHDRAWN: "Signal withdrawn",
+    wr.ADDED: "Signal added", wr.SIDE_CHANGED: "Side changed",
+    wr.NEITHER: "Neither signalled", wr.UNAVAILABLE: "Unavailable",
+}
+RESULT_LABELS = {wr.FINAL: "Final", wr.PENDING: "Pending", wr.UNRESOLVED: "Unresolved"}
+
+WAITING_OFFER_COLUMNS = [
+    "Matchup", "Team", "Sportsbook", "Wednesday spread", "Wednesday price", "Sunday spread",
+    "Sunday price", "Offer comparison", "Result", "Final score", "Wednesday result",
+    "Wednesday profit", "Sunday result", "Sunday profit", "Sunday − Wednesday profit",
+    "Wednesday captured (Toronto)", "Wednesday provider update (Toronto)",
+    "Sunday captured (Toronto)", "Sunday provider update (Toronto)",
+]
+
+
+def _units(text: str | None) -> str:
+    if text is None:
+        return ""
+    return f"{float(text):+.2f}" if float(text) else "0.00"
+
+
+def waiting_offer_rows(analysis: dict) -> pd.DataFrame:
+    """One row per game, team and Ontario sportsbook with an eligible pair."""
+    out = []
+    for o in analysis["offers"]:
+        final = o["result_status"] == wr.FINAL
+        out.append(dict(zip(WAITING_OFFER_COLUMNS, (
+            o["matchup"], o["team"], o["book_title"] or o["book_key"],
+            signed_handicap(o["wed_handicap"]), signed_price(o["wed_price"]),
+            signed_handicap(o["sun_handicap"]), signed_price(o["sun_price"]),
+            OUTCOME_LABELS.get(o["classification"], o["classification"]),
+            RESULT_LABELS[o["result_status"]] + ("" if final else f" ({o['result_reason']})"),
+            f"{o['away_team']} {o['away_score']} - {o['home_score']} {o['home_team']}"
+            if final else "",
+            o["wed_result"] or "", _units(o["wed_profit"]), o["sun_result"] or "",
+            _units(o["sun_profit"]), _units(o["profit_difference"]),
+            toronto(o["wed_observed_at"]), toronto(o["wed_provider_update"]),
+            toronto(o["sun_observed_at"]), toronto(o["sun_provider_update"])))))
+    return pd.DataFrame(out, columns=WAITING_OFFER_COLUMNS)
+
+
+def _age(minutes: int | None) -> str:
+    if minutes is None:
+        return ""
+    d, rem = divmod(minutes, 1440)
+    h, m = divmod(rem, 60)
+    return (f"{d} d " if d else "") + f"{h} h {m:02d} min"
+
+
+def _decision_cells(d: dict) -> tuple:
+    if d["status"] != wr.AVAILABLE:
+        snap = toronto(d["captured_at"]) if d["captured_at"] else ""
+        return (snap, _age(d["age_minutes"]), "", "", "", f"Unavailable: {d['reason']}")
+    return (toronto(d["captured_at"]), _age(d["age_minutes"]), d["team"],
+            signed_handicap(d["handicap"]), f"{d['probability']:.1%}",
+            "Signal" if d["signal"] else "No signal")
+
+
+WAITING_DECISION_COLUMNS = [
+    "Matchup", "Kickoff (Toronto)",
+    "Wed snapshot (Toronto)", "Wed snapshot age", "Wed team", "Wed handicap", "Wed P(cover)",
+    "Wed decision",
+    "Sun snapshot (Toronto)", "Sun snapshot age", "Sun team", "Sun handicap", "Sun P(cover)",
+    "Sun decision",
+    "Sunday vs Wednesday", "Probability change",
+]
+
+
+def waiting_decision_rows(analysis: dict) -> pd.DataFrame:
+    """One row per game: the model decision at each intended decision time."""
+    out = []
+    for g in analysis["model_decisions"]:
+        p = g["probability"]
+        change = f"{p['change'] * 100:+.1f} pp ({p['note']})" if p["comparable"] else \
+            f"Not comparable: {p['note']}"
+        out.append(dict(zip(WAITING_DECISION_COLUMNS, (
+            g["matchup"], toronto(g["kickoff_utc"]), *_decision_cells(g["wednesday"]),
+            *_decision_cells(g["sunday"]), DECISION_LABELS[g["classification"]], change))))
+    return pd.DataFrame(out, columns=WAITING_DECISION_COLUMNS)
+
+
+_WAITING_REASON_TEXT = {
+    wr.TIMING_UNVERIFIED: "A quote was observed at or after the current scheduled kickoff",
+    "no_wednesday_capture_for_week": "No usable scheduled Wednesday capture for this week",
+    "no_sunday_capture_for_week": "No usable scheduled Sunday capture for this week",
+}
+
+
+_WAITING_STATUS_LABELS = {
+    wr.KICKOFF_UNVERIFIED_STATUS: "Current kickoff unavailable",
+    wr.TIMING_STATUS: "Quote not before current kickoff",
+}
+
+
+def waiting_reason_text(reason: str) -> str:
+    if reason in wr.KICKOFF_TEXT:
+        return wr.KICKOFF_TEXT[reason][:1].upper() + wr.KICKOFF_TEXT[reason][1:]
+    return _WAITING_REASON_TEXT.get(reason) or _reason_text(reason)
+
+
+def waiting_missing_rows(analysis: dict, slots: dict) -> pd.DataFrame:
+    """Ontario team-sides without an eligible pair, grouped by why (the
+    comparison table's status wording, plus the current-schedule checks)."""
+    groups: dict[tuple, dict] = {}
+    for m in analysis["missing_pairs"]:
+        why = (_WAITING_STATUS_LABELS.get(m["status"]) or display_status(m, slots),
+               "; ".join(waiting_reason_text(r) for r in m["reasons"]))
+        g = groups.setdefault(why, {"sides": 0, "games": set(), "books": set()})
+        g["sides"] += 1
+        g["games"].add(m["game_id"])
+        g["books"].add(m["book_title"] or m["book_key"])
+    rows = [{"Why no pair": k[0], "Detail": k[1], "Team-sides": v["sides"],
+             "Games": len(v["games"]), "Sportsbooks": len(v["books"])}
+            for k, v in sorted(groups.items(), key=lambda kv: (-kv[1]["sides"], kv[0]))]
+    return pd.DataFrame(rows, columns=["Why no pair", "Detail", "Team-sides", "Games",
+                                       "Sportsbooks"])

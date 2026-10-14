@@ -680,7 +680,16 @@ def select_captures(snapshot_dir: Path | str = SNAPSHOT_DIR, which: str = "earli
     """
     if which not in ("earliest", "latest"):
         raise ValueError("which must be 'earliest' or 'latest'")
-    df = load_snapshots(snapshot_dir)
+    return select_from(load_snapshots(snapshot_dir), which, statuses, before)
+
+
+def select_from(df: pd.DataFrame, which: str = "earliest", statuses: list[str] | None = None,
+                before: datetime | None = None) -> pd.DataFrame:
+    """select_captures' rule applied to rows already loaded (and validated) by
+    load_snapshots, so callers can select at several cutoffs without
+    re-reading the files."""
+    if which not in ("earliest", "latest"):
+        raise ValueError("which must be 'earliest' or 'latest'")
     if df.empty:
         return df
     cap = df["captured_at"].map(_parse_utc)

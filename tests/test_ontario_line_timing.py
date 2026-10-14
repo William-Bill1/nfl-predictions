@@ -32,6 +32,9 @@ def store(tmp_path, monkeypatch):
     # The page reads these at run time.
     monkeypatch.setattr(on, "CAPTURE_DIR", s.capture_dir)
     monkeypatch.setattr(on, "MANUAL_DIR", s.manual_dir)
+    # "Was waiting worthwhile?" inputs: temporary, never data_files/.
+    monkeypatch.setattr(olt.wr, "SNAPSHOT_DIR", tmp_path / "snapshots")
+    monkeypatch.setattr(olt.wr, "SCHEDULE_PATH", s.schedule)
     return s
 
 

@@ -338,6 +338,10 @@ row per game, with the game fields plus `run_id`, `captured_at`,
 - **Order:** `(captured_at, run_id)`. `earliest` takes the first and `latest`
   takes the last, so ties are broken by `run_id`, independent of file order.
 - **Read-only:** source files are never modified.
+- **Already loaded:** `select_from(df, which, statuses, before)` applies the
+  same rule to rows already loaded and validated by `load_snapshots`. The
+  "Was waiting worthwhile?" analysis uses it to select at several decision
+  times without re-reading the files (see docs/ONTARIO_SPREAD_TRACKING.md).
 
 ## Limitations
 
