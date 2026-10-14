@@ -777,6 +777,177 @@ only write.
 The page's cache is keyed on the files' content, so the new quote shows up
 immediately.
 
+## "Was waiting worthwhile?" (`scripts/ontario_waiting_report.py`)
+
+A read-only analysis, shown as a section at the bottom of the Ontario Line
+Timing page for the selected week, and available as a CLI:
+
+    python scripts/ontario_waiting_report.py [--season 2026] [--week 5] [--as-of 2026-10-14]
+
+The CLI writes JSON and a per-offer CSV to the git-ignored
+`reports/ontario_waiting/`. It refuses any directory that overlaps
+`data_files/`, the capture, manual or snapshot directories, the bet journal or
+`.git`.
+
+It answers three separate questions and doesn't merge them:
+
+1. **Which day offered better terms?** The same team at the same sportsbook,
+   Wednesday's quote against Sunday's.
+2. **How would each offer have settled?** Realized results, in hindsight.
+3. **Did the model change its decision** between Wednesday and Sunday?
+
+It applies only to **automated Ontario feeds**. Manual FanDuel Ontario entries
+and the US reference feed are not used. In the manual and US views, the page
+says so instead of showing the section.
+
+### Pairing (offers)
+
+The rows are exactly the Phase 2 comparison's `compared` Ontario rows, built by
+the same `ontario_spread_report.build_report` call as the page. Nothing is
+re-paired. That means:
+
+- the same season, week, game, sportsbook, jurisdiction and team;
+- the week's intended Wednesday-noon slot against its Sunday-morning slot,
+  four days apart;
+- both quotes fresh (`quoted`), in-window and before kickoff.
+
+**Never substituted:**
+
+- another week's Wednesday;
+- an ad-hoc capture;
+- a manual observation;
+- the US reference feed;
+- a different sportsbook on the other day. No "best book" is chosen per day,
+  and cross-book best-offer analysis is deferred.
+
+**Current-schedule check (fails closed):** the current schedule must list the
+game **exactly once** with a usable kickoff date and time, and both
+observations must be strictly before that kickoff. Otherwise the team-side has
+no pair; it stays in the gaps with its reason, and the kickoff recorded in the
+capture is never used instead.
+
+| Reason | Shown on the page as |
+|---|---|
+| `current_kickoff_unavailable_game_not_in_schedule` | Current kickoff unavailable: the game isn't in the current schedule |
+| `current_kickoff_unavailable_game_listed_more_than_once` | Current kickoff unavailable: listed more than once (identical or conflicting rows) |
+| `current_kickoff_unavailable_missing_kickoff` / `_invalid_kickoff` / `_ambiguous_kickoff` / `_nonexistent_kickoff` | Current kickoff unavailable: no, unreadable or DST-ambiguous/nonexistent kickoff date or time |
+| `timing_unverified_current_kickoff` | Quote not before current kickoff: the game was moved to at or before a quote |
+
+Excluded rows count toward no pair, comparison, classification, settlement or
+realized-profit figure.
+
+**Gaps stay visible:** Ontario team-sides without an eligible pair are
+counted and listed with their reasons. For example, week 5 of 2026 has no
+scheduled Wednesday capture, so it has no offer comparison. The ad-hoc capture
+from that Wednesday afternoon is not used in its place.
+
+### Each offer
+
+- Wednesday and Sunday capture and provider-update times.
+- The bettor-facing signed handicap and American price.
+- Phase 2's payoff classification: unchanged, equivalent, Sunday dominates,
+  Wednesday dominates, or trade-off. This is the **pre-game** comparison.
+- Once `bet_journal.completion_evidence` finds a final score:
+  - each offer is settled with `betting_log.spread_result` at its own signed
+    handicap, so whole-number lines push correctly;
+  - each offer is simulated at **100 units**: a win pays
+    `bet_journal.win_profit`, rounded to the cent; a push is 0.00; a loss is
+    −100;
+  - the Sunday − Wednesday profit difference is shown.
+- A game without a final score is `pending`. A game with inconsistent score
+  fields, or schedule teams that differ from the capture, is `unresolved`.
+
+Realized profit is **hindsight**. The offer that happened to win was not
+necessarily the better offer before the game.
+
+### Model decisions
+
+There is one row per scheduled game of the week, not one per sportsbook.
+
+**Decision times** are the week's intended slot times, Wednesday 12:00 and
+Sunday 09:00 America/Toronto. They are not the time a quote capture happened
+to run, so the model table is available even when a quote slot was missed.
+
+**Snapshot rule:** for each game and decision time, the model decision is the
+**latest** validated pregame snapshot that meets all of these:
+
+- captured **at or before** the decision time;
+- captured strictly before the kickoff it recorded
+  (`pregame_snapshots.select_from`);
+- the decision time itself is strictly before the game's current scheduled
+  kickoff. Otherwise the decision is `kicked_off_before_decision_time`. The
+  same unique, usable current kickoff is required as for offer pairs:
+  without one, both decisions are `kickoff_unavailable`, with the cause.
+
+The snapshot is chosen **first**, and its prediction is read afterwards.
+
+**Unavailable is not "no bet":** any of the following makes the decision
+**unavailable**:
+
+- no snapshot;
+- a snapshot with no line, a pick'em line, or no probability.
+
+An unavailable decision is never treated as a deliberate no-bet decision, and
+never replaced by an older snapshot that had a signal.
+
+**Columns:**
+
+- snapshot capture time and age at the decision time;
+- the frozen team (the underdog) and signed model handicap (`+|spread_line|`);
+- the probability and the bet signal.
+
+**Sunday classification:**
+
+- `signal_retained` (same team);
+- `side_changed` (both signalled, different teams);
+- `signal_withdrawn`;
+- `signal_added`;
+- `neither_signalled`;
+- `unavailable`.
+
+**Probability changes** are shown only for the same team at the same handicap.
+If the team or handicap changed, the two probabilities describe different
+propositions and are labelled "not comparable".
+
+The existing quote-time model link in each capture (`model_snapshot`) keeps its
+own meaning and isn't used here.
+
+### Summary and limits
+
+The denominators are kept separate:
+
+- games with paired captures;
+- game/sportsbook pairs;
+- team-side comparisons;
+- games with model decisions at both times;
+- settled comparisons.
+
+Offer classifications are counted over team-side comparisons. Realized profit
+differences are counted as Sunday higher, Wednesday higher or equal, over
+settled comparisons, with the number of games and pairs they come from.
+Nothing is summed into a single return: the same game appears once per book
+and once per side, and the two sides of a game settle in opposite directions.
+
+No preferred betting time, staking strategy or parlay is recommended, and
+nothing is concluded from a small sample.
+
+**Injuries.** *Injury information was not archived at both decision times;
+this analysis cannot determine whether injuries caused a change.* Today's
+injury report is never used to reconstruct an earlier one. Automated injury
+archiving and injury-impact modelling are outside this phase.
+
+**Integrity and caching.**
+
+- A corrupt, unreadable or invalid capture, snapshot or schedule raises an
+  integrity error. If the error is in a snapshot or the schedule, the page
+  stops this section and shows the error, with no partial fallback.
+- The file inputs are cached on a SHA-256 fingerprint of every snapshot and
+  the schedule; captures are covered by the page's existing capture
+  fingerprint.
+- Results depend on the date, so the analysis is recomputed outside the cache
+  on every render.
+- The section makes no API calls and writes nothing.
+
 ## Limitations
 
 - **Two snapshots a week.** These are Wednesday and Sunday-morning quotes,
@@ -818,3 +989,15 @@ immediately.
 - **No betting conclusions.** Phase 1 collects data; Phase 2 and the Phase 3
   page only describe how quotes moved between the two slots. Neither shows that Wednesday or
   Sunday lines are better, and neither validates any betting-time strategy.
+- **"Was waiting worthwhile?" is descriptive.**
+  - **Small samples:** a handful of games per week, with books and sides that
+    aren't independent.
+  - **Hindsight:** realized results say which quote happened to pay more for
+    one final score, not which offer was better in advance.
+  - **Snapshot timing:** model snapshots are nightly (about 05:00 Toronto),
+    so the decision current at Wednesday noon or Sunday 09:00 can be hours
+    old. Its age is shown.
+  - **Model line:** the model's handicap is nflverse's line at the snapshot,
+    not the sportsbook's quote.
+  - **Injuries:** injury news isn't archived, so changes can't be attributed
+    to it.

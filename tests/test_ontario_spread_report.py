@@ -42,6 +42,10 @@ class Store:
         df = pd.DataFrame(SCHEDULE_ROWS, columns=["game_id", "season", "week", "gameday", "gametime",
                                                   "away_team", "home_team", "away_score", "home_score"])
         df["game_type"] = "REG"
+        # Result columns as nflverse has them (the waiting analysis' schedule check reads them).
+        df["result"] = df["home_score"] - df["away_score"]
+        df["total"] = df["home_score"] + df["away_score"]
+        df["overtime"] = df["home_score"].where(df["home_score"].isna(), 0)
         df.to_csv(self.schedule, sep="\t", index=False)
 
     def capture(self, now, events, slot="auto", directory=None):

@@ -8,6 +8,51 @@ bottom.
 
 ## October 2026
 
+- **"Was waiting worthwhile?" for Ontario spreads**
+  (`scripts/ontario_waiting_report.py`; a new section of the Ontario Line
+  Timing page). Read-only, automated Ontario feeds only.
+  - **Offers:** exactly Phase 2's eligible Wednesday/Sunday pairs for the same
+    game, team and sportsbook, plus a check against the current schedule.
+    - **Fails closed on the current kickoff.** A pair needs exactly one
+      schedule row for the game, with a usable kickoff, and both quotes
+      strictly before it.
+    - A missing game, duplicated rows (even identical ones), or a missing,
+      unreadable or DST-ambiguous kickoff leave the team-sides in the gaps as
+      `current_kickoff_unavailable_*`. A kickoff moved to or before a quote is
+      `timing_unverified_current_kickoff`.
+    - The capture's older kickoff is never substituted, and excluded rows
+      count in no rollup.
+    - Model decisions need the same unique kickoff.
+    - Nothing is substituted: no other week's Wednesday, ad-hoc capture,
+      manual entry, US feed or other sportsbook. Missing pairs stay listed
+      with reasons (week 5 of 2026 has no scheduled Wednesday capture).
+    - Each offer shows its timestamps, signed handicap, price and payoff
+      classification.
+    - Once a final score is evidenced, each offer is settled with
+      `betting_log.spread_result` and `bet_journal.win_profit` at 100 units,
+      with the Sunday − Wednesday profit difference. This is labelled as
+      hindsight.
+  - **Model decisions:** one row per game.
+    - At each intended decision time (Wednesday 12:00 and Sunday 09:00
+      Toronto), the latest validated snapshot captured at or before it and
+      before kickoff is used, chosen before its prediction is read.
+    - Sunday is classified as signal retained, withdrawn, added, side
+      changed, neither, or unavailable. A missing snapshot, line or
+      probability is unavailable, never "no signal".
+    - Probabilities are compared only for the same team and handicap.
+  - **Summary:** separate denominators: games with paired captures,
+    game/sportsbook pairs, team-side comparisons, games with decisions at
+    both times, and settled comparisons. Nothing is summed into one return,
+    and no betting time, staking or parlay is recommended. The injury
+    limitation is stated.
+  - **Integrity:** corrupt or unreadable inputs stop the analysis with an
+    integrity error. The page's capture fingerprint now reports an
+    unreadable file as an integrity error instead of crashing. File inputs
+    are cached on content fingerprints, and results are recomputed per
+    render.
+  - **Other changes:** `pregame_snapshots.select_from` (select_captures' rule
+    on already-loaded rows; behaviour unchanged). The CLI writes only to the
+    git-ignored `reports/ontario_waiting/`.
 - **Frozen-pregame spread performance report** (`scripts/frozen_spread_report.py`,
   read-only CLI). It evaluates the spread model only on predictions frozen
   before kickoff in `data_files/pregame_snapshots/`, never on regenerated
