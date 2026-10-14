@@ -8,6 +8,17 @@ bottom.
 
 ## October 2026
 
+- **Fix: model decisions wait for their decision time** ("Was waiting
+  worthwhile?").
+  - **Bug:** a decision time still in the future was filled with the latest
+    snapshot that existed. After the Week 6 Wednesday capture, the Sunday
+    decision showed as available for 13 games, and 4 counted as "signal
+    retained".
+  - **Fix:** it is now `decision_time_not_reached`, and the game is a new
+    `pending` class, kept out of "model decisions at both times".
+  - **Unchanged:** permanent unavailability (kicked off before the decision
+    time, no snapshot or line) still wins, and past decision times are not
+    affected.
 - **Frozen Performance page** (`pages/9_Frozen_Performance.py`, display logic
   `frozen_performance.py`). A read-only app view of the frozen-pregame spread
   report: the spread model scored only on predictions frozen before kickoff.

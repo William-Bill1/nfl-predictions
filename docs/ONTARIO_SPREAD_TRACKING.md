@@ -881,6 +881,12 @@ to run, so the model table is available even when a quote slot was missed.
 
 The snapshot is chosen **first**, and its prediction is read afterwards.
 
+**Not reached yet:** a decision time later than the current clock has no
+decision. It is `decision_time_not_reached`, and the game is `pending`. It is
+never filled with the latest snapshot that happens to exist, so the Sunday
+decision stays pending until Sunday 09:00 Toronto. A game that kicks off
+before the decision time stays permanently unavailable, whatever the clock.
+
 **Unavailable is not "no bet":** any of the following makes the decision
 **unavailable**:
 
@@ -903,7 +909,8 @@ never replaced by an older snapshot that had a signal.
 - `signal_withdrawn`;
 - `signal_added`;
 - `neither_signalled`;
-- `unavailable`.
+- `unavailable`;
+- `pending` (a decision time hasn't arrived yet; not counted as decided).
 
 **Probability changes** are shown only for the same team at the same handicap.
 If the team or handicap changed, the two probabilities describe different

@@ -67,11 +67,13 @@ NOT_ANCHORED = "week_not_anchored"
 KICKOFF_UNKNOWN = "kickoff_unavailable"
 KICKED_OFF = "kicked_off_before_decision_time"
 NO_SNAPSHOT = "no_snapshot_at_or_before_decision_time"
+DECISION_PENDING = "decision_time_not_reached"       # the clock is before the decision time
 UNAVAILABLE_REASONS = {
     NOT_ANCHORED: "the week's Wednesday/Sunday slots can't be determined",
     KICKOFF_UNKNOWN: "no single usable scheduled kickoff for this game",
-    KICKED_OFF: "the game kicked off before this decision time",
+    KICKED_OFF: "the game's scheduled kickoff is at or before this decision time",
     NO_SNAPSHOT: "no validated model snapshot captured at or before this decision time",
+    DECISION_PENDING: "this decision time hasn't been reached yet",
     ps.NO_LINE: "the selected snapshot had no line (not a no-bet decision)",
     ps.PICKEM: "the selected snapshot had a pick'em line (no underdog to price)",
     ps.NO_PROBABILITY: "the selected snapshot had no probability (not a no-bet decision)",
@@ -80,7 +82,8 @@ UNAVAILABLE_REASONS = {
 # Sunday's decision relative to Wednesday's (per game)
 RETAINED, WITHDRAWN, ADDED = "signal_retained", "signal_withdrawn", "signal_added"
 SIDE_CHANGED, NEITHER, UNAVAILABLE = "side_changed", "neither_signalled", "unavailable"
-DECISION_CLASSES = (RETAINED, WITHDRAWN, ADDED, SIDE_CHANGED, NEITHER, UNAVAILABLE)
+PENDING = "pending"                  # a decision time is still in the future
+DECISION_CLASSES = (RETAINED, WITHDRAWN, ADDED, SIDE_CHANGED, NEITHER, UNAVAILABLE, PENDING)
 
 # Checks against the CURRENT schedule on top of Phase 2's own (which uses the
 # kickoffs recorded in the captures). A pair needs exactly one schedule row for
@@ -113,7 +116,8 @@ DECISION_RULE = (
     "(pregame_snapshots.select_from); the decision time must itself be strictly before the "
     "game's current scheduled kickoff. The snapshot is chosen first and its prediction read "
     "afterwards: a snapshot without a line or probability is 'unavailable', never replaced "
-    "by an older snapshot that had one, and never read as a deliberate no-bet decision.")
+    "by an older snapshot that had one, and never read as a deliberate no-bet decision. A "
+    "decision time later than now is 'pending' - not filled with the latest snapshot.")
 PAIRING_RULE = (
     "Exactly the Ontario Line Timing comparison's eligible pairs (ontario_spread_report): "
     "automated Ontario sportsbook feeds only; the same season, week, game, sportsbook, "
@@ -320,10 +324,11 @@ def select_at(snapshots: pd.DataFrame, decision: datetime) -> dict[str, dict]:
 
 
 def decision(sel: dict | None, at: datetime | None, kickoff: datetime | None,
-             anchored: bool, kickoff_reason: str | None = None) -> dict:
+             anchored: bool, kickoff_reason: str | None = None, *, now: datetime) -> dict:
     """The model decision for one game at one decision time. Needs the same
     unique, usable current kickoff as an offer pair (kickoff_reason says why
-    there isn't one)."""
+    there isn't one). A decision time later than `now` has no decision yet
+    (pending): the latest snapshot that happens to exist is NOT used for it."""
     d = {"decision_time": ps._iso(at) if at else None, "status": None, "reason": "",
          "run_id": None, "snapshot_file": None, "captured_at": None, "age_minutes": None,
          "code_revision": None, "team": None, "handicap": None, "probability": None,
@@ -334,6 +339,8 @@ def decision(sel: dict | None, at: datetime | None, kickoff: datetime | None,
         d["status"] = KICKOFF_UNKNOWN
     elif not at < kickoff:
         d["status"] = KICKED_OFF
+    elif at > now:
+        d["status"] = DECISION_PENDING
     elif sel is None:
         d["status"] = NO_SNAPSHOT
     else:
@@ -357,9 +364,13 @@ def decision(sel: dict | None, at: datetime | None, kickoff: datetime | None,
 
 def classify_decisions(wed: dict, sun: dict) -> str:
     """Sunday's decision relative to Wednesday's. Unavailable inputs (missing
-    snapshot, line or probability) are never read as 'no signal'."""
-    if wed["status"] != AVAILABLE or sun["status"] != AVAILABLE:
+    snapshot, line or probability) are never read as 'no signal'; a decision
+    time not reached yet makes the game pending."""
+    statuses = {wed["status"], sun["status"]}
+    if statuses - {AVAILABLE, DECISION_PENDING}:
         return UNAVAILABLE
+    if DECISION_PENDING in statuses:
+        return PENDING
     if wed["signal"] and sun["signal"]:
         return RETAINED if wed["team"] == sun["team"] else SIDE_CHANGED
     if wed["signal"]:
@@ -373,7 +384,8 @@ def probability_change(wed: dict, sun: dict) -> dict:
     """The probabilities are directly comparable only for the same proposition:
     the same team at the same handicap."""
     if wed["status"] != AVAILABLE or sun["status"] != AVAILABLE:
-        return {"comparable": False, "change": None, "note": "a decision is unavailable"}
+        return {"comparable": False, "change": None,
+                "note": "a decision is unavailable or not reached yet"}
     if wed["team"] != sun["team"]:
         return {"comparable": False, "change": None,
                 "note": f"different team ({wed['team']} then {sun['team']}): the probabilities "
@@ -389,8 +401,9 @@ def probability_change(wed: dict, sun: dict) -> dict:
 
 
 def model_decisions(ontario: dict, schedule: pd.DataFrame, snapshots: pd.DataFrame,
-                    season: int | None = None, week: int | None = None) -> list[dict]:
-    """One row per scheduled game of each analysed week."""
+                    season: int | None = None, week: int | None = None, *,
+                    now: datetime) -> list[dict]:
+    """One row per scheduled game of each analysed week, as of `now`."""
     sched_season = pd.to_numeric(schedule["season"], errors="coerce")
     sched_week = pd.to_numeric(schedule["week"], errors="coerce")
     out, cache = [], {}
@@ -406,8 +419,8 @@ def model_decisions(ontario: dict, schedule: pd.DataFrame, snapshots: pd.DataFra
         for gid in sorted(set(games["game_id"])):
             g = games[games["game_id"] == gid].iloc[0]
             ko, ko_why = current_kickoff(schedule, gid)
-            wed = decision(cache.get(wed_at, {}).get(gid), wed_at, ko, anchored, ko_why)
-            sun = decision(cache.get(sun_at, {}).get(gid), sun_at, ko, anchored, ko_why)
+            wed = decision(cache.get(wed_at, {}).get(gid), wed_at, ko, anchored, ko_why, now=now)
+            sun = decision(cache.get(sun_at, {}).get(gid), sun_at, ko, anchored, ko_why, now=now)
             out.append({"season": w["season"], "week": w["week"], "game_id": gid,
                         "matchup": f"{g['away_team']} @ {g['home_team']}",
                         "kickoff_utc": ps._iso(ko) if ko else None,
@@ -437,7 +450,7 @@ def rollups(paired: list[dict], missing: list[dict], decisions: list[dict]) -> d
             "team_side_comparisons": len(paired),
             "games_in_model_table": len(decisions),
             "games_with_model_decisions_at_both_times":
-                sum(d["classification"] != UNAVAILABLE for d in decisions),
+                sum(d["classification"] not in (UNAVAILABLE, PENDING) for d in decisions),
             "settled_comparisons": len(settled),
         },
         "offer_classifications": {
@@ -472,7 +485,7 @@ def analyze(src: dict, *, now: datetime, season: int | None = None,
     ontario, schedule = src["ontario"], src["schedule"]
     try:
         paired, missing = offers(ontario, schedule, now, season, week)
-        decisions = model_decisions(ontario, schedule, src["snapshots"], season, week)
+        decisions = model_decisions(ontario, schedule, src["snapshots"], season, week, now=now)
     except (ValueError, KeyError, TypeError) as exc:
         raise ReportError(f"inputs are inconsistent: {exc}") from None
     weeks = []

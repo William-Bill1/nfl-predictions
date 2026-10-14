@@ -485,7 +485,7 @@ def waiting_section() -> None:
                    "sportsbook). The model's team is the frozen underdog at its frozen handicap "
                    "(nflverse's line at the snapshot), not a sportsbook offer. Unavailable means "
                    "a missing snapshot, line or probability - never a deliberate no-bet "
-                   "decision. Probability changes are shown only for the same team at the same "
+                   "decision. Pending means a decision time hasn't arrived yet. Probability changes are shown only for the same team at the same "
                    "handicap; otherwise the two probabilities describe different bets.")
         st.dataframe(decisions, hide_index=True, key="olt_waiting_decisions",
                      column_config={"Matchup": st.column_config.TextColumn(pinned=True)})
