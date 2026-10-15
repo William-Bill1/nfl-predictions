@@ -1,10 +1,25 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-14T08:19:40.408718+00:00",
+    "generated_at": "2026-10-15T07:57:23.925867+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-10-14"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-10-15",
+      "game_time": "20:15",
+      "game": "SEA @ DEN",
+      "home_team": "DEN",
+      "away_team": "SEA",
+      "bet_type": "Spread",
+      "pick": "DEN +2.5",
+      "confidence": 0.5941115337946333,
+      "edge": 0.074880764563864,
+      "tier": "Strong",
+      "odds": -108,
+      "line": 2.5,
+      "notes": null
+    }
+  ]
 }
