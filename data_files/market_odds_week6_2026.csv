@@ -413,3 +413,55 @@ season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odd
 2026,6,2026_06_BUF_LV,Las Vegas Raiders,Buffalo Bills,Kirk Cousins,rushing_yards,fanduel,2.5,136,-178
 2026,6,2026_06_BUF_LV,Las Vegas Raiders,Buffalo Bills,Ashton Jeanty,rushing_yards,fanduel,54.5,-114,-114
 2026,6,2026_06_BUF_LV,Las Vegas Raiders,Buffalo Bills,Josh Allen,rushing_yards,fanduel,33.5,-114,-114
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Deshaun Watson,passing_yards,draftkings,201.5,-113,-111
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Denzel Boston,receiving_yards,draftkings,54.5,-111,-113
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Denzel Boston,receptions,draftkings,3.5,-133,104
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Derrick Henry,rushing_yards,draftkings,88.5,-112,-112
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Deshaun Watson,rushing_yards,draftkings,28.5,-117,-107
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Deshaun Watson,passing_yards,fanduel,200.5,-114,-114
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Denzel Boston,receiving_yards,fanduel,54.5,-114,-114
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Denzel Boston,receptions,fanduel,3.5,-136,102
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Deshaun Watson,rushing_yards,fanduel,28.5,-114,-114
+2026,6,2026_06_BAL_CLE,Cleveland Browns,Baltimore Ravens,Derrick Henry,rushing_yards,fanduel,89.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Aaron Rodgers,passing_yards,draftkings,233.5,-111,-113
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Jalon Daniels,passing_yards,draftkings,177.5,-111,-113
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,DK Metcalf,receiving_yards,draftkings,50.5,-111,-113
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Germie Bernard,receiving_yards,draftkings,41.5,-115,-110
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Emeka Egbuka,receiving_yards,draftkings,35.5,-115,-109
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Pat Freiermuth,receiving_yards,draftkings,35.5,-110,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Cade Otton,receiving_yards,draftkings,30.5,-111,-113
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Chris Godwin,receiving_yards,draftkings,29.5,-112,-112
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Darnell Washington,receiving_yards,draftkings,20.5,-112,-112
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,receiving_yards,draftkings,11.5,-112,-112
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,DK Metcalf,receptions,draftkings,3.5,-164,128
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Germie Bernard,receptions,draftkings,3.5,-155,122
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Emeka Egbuka,receptions,draftkings,3.5,-138,108
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Pat Freiermuth,receptions,draftkings,3.5,117,-150
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Chris Godwin,receptions,draftkings,3.5,118,-151
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Cade Otton,receptions,draftkings,3.5,122,-157
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Darnell Washington,receptions,draftkings,2.5,102,-130
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,receptions,draftkings,1.5,-188,146
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,rushing_yards,draftkings,63.5,-114,-110
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Jalon Daniels,rushing_yards,draftkings,36.5,-112,-112
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Aaron Rodgers,rushing_yards,draftkings,0.5,100,-125
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Jalon Daniels,passing_yards,fanduel,176.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Aaron Rodgers,passing_yards,fanduel,231.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Germie Bernard,receiving_yards,fanduel,40.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Pat Freiermuth,receiving_yards,fanduel,36.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Emeka Egbuka,receiving_yards,fanduel,34.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Chris Godwin,receiving_yards,fanduel,26.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,receiving_yards,fanduel,10.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Darnell Washington,receiving_yards,fanduel,20.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,DK Metcalf,receiving_yards,fanduel,51.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Cade Otton,receiving_yards,fanduel,29.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Pat Freiermuth,receptions,fanduel,3.5,118,-158
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Germie Bernard,receptions,fanduel,3.5,-154,116
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,DK Metcalf,receptions,fanduel,4.5,130,-174
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Darnell Washington,receptions,fanduel,2.5,-102,-130
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,receptions,fanduel,1.5,-172,128
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Chris Godwin,receptions,fanduel,3.5,120,-160
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Cade Otton,receptions,fanduel,3.5,116,-154
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Emeka Egbuka,receptions,fanduel,3.5,-130,-102
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Jalon Daniels,rushing_yards,fanduel,37.5,-114,-114
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Aaron Rodgers,rushing_yards,fanduel,0.5,102,-132
+2026,6,2026_06_PIT_TB,Tampa Bay Buccaneers,Pittsburgh Steelers,Bucky Irving,rushing_yards,fanduel,64.5,-114,-114
