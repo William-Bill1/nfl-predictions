@@ -1,10 +1,85 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-17T07:27:14.303333+00:00",
+    "generated_at": "2026-10-18T07:41:19.599069+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-10-17"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-10-18",
+      "game_time": "13:00",
+      "game": "BAL @ CLE",
+      "home_team": "CLE",
+      "away_team": "BAL",
+      "bet_type": "Spread",
+      "pick": "CLE +3",
+      "confidence": 0.5571532303076752,
+      "edge": 0.0379224610769058,
+      "tier": "Strong",
+      "odds": -108,
+      "line": 3.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-18",
+      "game_time": "13:00",
+      "game": "TEN @ IND",
+      "home_team": "IND",
+      "away_team": "TEN",
+      "bet_type": "Spread",
+      "pick": "TEN +6.5",
+      "confidence": 0.5802059525438809,
+      "edge": 0.0802059525438808,
+      "tier": "Strong",
+      "odds": 100,
+      "line": 6.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-18",
+      "game_time": "13:00",
+      "game": "NYJ @ NE",
+      "home_team": "NE",
+      "away_team": "NYJ",
+      "bet_type": "Spread",
+      "pick": "NYJ +7.5",
+      "confidence": 0.627172895166212,
+      "edge": 0.0988710083737591,
+      "tier": "Elite",
+      "odds": -112,
+      "line": 7.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-18",
+      "game_time": "16:25",
+      "game": "LAC @ KC",
+      "home_team": "KC",
+      "away_team": "LAC",
+      "bet_type": "Spread",
+      "pick": "LAC +7.5",
+      "confidence": 0.546680024589939,
+      "edge": 0.0183781377974862,
+      "tier": "Good",
+      "odds": -112,
+      "line": 7.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-18",
+      "game_time": "16:25",
+      "game": "BUF @ LV",
+      "home_team": "LV",
+      "away_team": "BUF",
+      "bet_type": "Spread",
+      "pick": "LV +5.5",
+      "confidence": 0.556027763093584,
+      "edge": 0.0322182392840602,
+      "tier": "Strong",
+      "odds": -110,
+      "line": 5.5,
+      "notes": null
+    }
+  ]
 }
