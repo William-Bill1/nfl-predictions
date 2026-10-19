@@ -8,6 +8,31 @@ bottom.
 
 ## October 2026
 
+- **Bet Journal: on-demand Excel export** (`bet_journal_export.py`; an
+  *Excel export (viewing copy)* section on the Bet Journal page).
+  - **Flow:** *Prepare Excel export* builds an .xlsx in memory from one fresh,
+    validated read of the journal. *Download Excel* serves it as
+    `bet_journal_YYYYMMDD_HHMMSS.xlsx` (Toronto time).
+  - **Sheets:**
+    - **Summary:** totals from `bet_journal.totals()`, plus what each total
+      includes and which wagers are excluded and why;
+    - **Wagers:** one row per wager on its current terms; pending,
+      unverified and voided wagers have a blank profit, never a settled $0;
+    - **History:** every record, with precise timestamps and links.
+  - **Integrity:**
+    - a corrupt, tampered, stray or broken-link journal refuses the export;
+    - a prepared workbook reflects the journal at preparation time (shown on
+      the page); after a journal change it is discarded on the page's next
+      rerun, and the page asks you to prepare again;
+    - nothing is written to disk, and no network is used;
+    - it's a viewing copy, not an editable replacement or a backup.
+  - **Excel safety:** text is never stored as a formula (`=`, `+`, `-` and `@`
+    stay literal). IDs and timestamps are text; amounts, ROI, handicap and
+    odds are numeric with CAD, percentage and signed formats.
+  - **Dependency:** `openpyxl==3.1.5` added to `requirements.txt`.
+  - **Tests:** `tests/test_bet_journal_export.py` reads the generated .xlsx
+    independently, with zipfile and ElementTree.
+
 - **Fix: Bet Journal rejected its own timestamps** ("Not saved: new wager:
   '…:38.086319Z' is not a UTC timestamp…").
   - **Cause:** `bet_journal.iso()` writes `recorded_at` with microseconds

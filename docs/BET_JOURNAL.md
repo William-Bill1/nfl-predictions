@@ -256,6 +256,74 @@ repaired:
 **Effect:** the page shows the error and **no totals**. Saving and grading
 also refuse, so a damaged history is never extended or silently resolved.
 
+## Excel export (viewing copy)
+
+On the page, open **Excel export (viewing copy)** and click **Prepare Excel
+export**, then **Download Excel**. The file is named after the time it was
+built in Toronto, for example `bet_journal_20261019_143000.xlsx`.
+
+**It's a view, not the journal.** The JSON records stay authoritative:
+
+- Editing the workbook never changes the journal.
+- It isn't a complete backup, because checksums and other record fields are
+  left out. Back up `data_files/bet_journal/` itself (see below).
+- It's built in memory only when you click. No spreadsheet is kept beside
+  the journal, and nothing is written to disk.
+
+**Consistent as of preparation.** All three sheets come from one validated
+read of the journal (`bet_journal_export.read_journal`), and never from the
+page's cache.
+
+- If files change during the read, it is repeated.
+- A prepared workbook shows the journal as it was at preparation time; the
+  page shows when it was prepared. It isn't updated afterwards.
+- If the journal changes later (a save, correction or grading), the page
+  discards that workbook on its next rerun and asks you to prepare again.
+  There's no background polling, so prepare again after any change before
+  downloading.
+- Any invalid record, broken link or stray file refuses the export with an
+  integrity error. A partial workbook is never produced.
+
+**No new calculations.** Totals, statuses, grades and history order come
+from `totals()`, `current_state()` and `history_rows()`.
+
+### Sheets
+
+- **Summary:**
+  - the export time (America/Toronto and UTC), the currency (CAD) and the
+    journal totals;
+  - which wagers enter each total;
+  - the wagers left out of profit and ROI, with the reason: void, pending
+    or unverified.
+- **Wagers:** one row per wager, on its current effective terms:
+  - game, season and week, team, sportsbook, signed handicap, American odds
+    and CAD stake;
+  - placement time (Toronto and UTC) and recording time (precise UTC);
+  - status, result, profit and how the profit was settled;
+  - grade verification, the exclusion note, reference and note.
+
+  Profit is **blank** for pending, unverified and voided wagers, never a
+  settled $0.00. A push shows $0.00 with the result `push`.
+- **History:** every record (wagers, amendments, voids, grades and
+  invalidations), in the History tab's order:
+  - precise recording times;
+  - the record each one follows (previous or superseded);
+  - the terms record, result, profit, stake, details, reason and code
+    revision.
+
+### Formatting and safety
+
+- **Header rows** are frozen and filtered, and columns have readable widths.
+- **Amounts** are numeric CAD cells, and ROI is a numeric percentage.
+- **Handicap and odds** are numeric, with a format that always shows the
+  sign (`+3.5`, `-110`).
+- **Identifiers, references, notes and precise timestamps** are text cells,
+  so nothing is truncated and microseconds are kept.
+- **No formulas:** text is never stored as a formula. Notes, references and
+  sportsbook names beginning with `=`, `+`, `-` or `@` stay literal, with
+  Excel's quote prefix so they also stay literal when edited.
+- **Dependency:** `openpyxl` (pinned in `requirements.txt`).
+
 ## Backup and restore
 
 `data_files/bet_journal/` is **git-ignored** because these are personal

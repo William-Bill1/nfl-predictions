@@ -17,6 +17,7 @@ import streamlit as st
 sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 import bet_journal as bj  # noqa: E402
+import bet_journal_export as bjx  # noqa: E402
 import ontario_spreads as on  # noqa: E402
 from footer import add_betting_oracle_footer  # noqa: E402
 
@@ -148,6 +149,18 @@ def _new_args() -> dict:
     args = _terms_args("bj", game_id)
     args["second"] = bool(st.session_state.get("bj_second"))
     return args
+
+
+def _on_export() -> None:
+    """Builds the workbook now, in memory, from a fresh validated read of the
+    journal (not the page's cache). Any integrity problem refuses the export."""
+    st.session_state.pop("bj_export", None)
+    try:
+        st.session_state["bj_export"] = bjx.export(bj.JOURNAL_DIR, bj.now_utc())
+    except (bj.IntegrityError, bjx.ExportError, OSError) as exc:
+        st.session_state["bj_export_result"] = (
+            "error", f"Export refused: the journal failed validation, so no workbook was "
+                     f"built (never a partial one). {exc}")
 
 
 def _on_preview() -> None:
@@ -377,6 +390,34 @@ if tot["unverified"]:
                "new grade; see Status note and History.", icon=":material/report:")
 if tot["voided"]:
     st.caption(f"{tot['voided']} voided wager(s) excluded from totals; see History.")
+
+with st.expander("Excel export (viewing copy)", icon=":material/table_view:"):
+    st.caption("Builds an .xlsx workbook (Summary, Wagers, History) **for viewing**, from a "
+               "fresh validated read of the journal, only when you click. The JSON records "
+               "stay the authoritative journal: editing the workbook never changes it, and it "
+               "is **not a complete backup** - back up `data_files/bet_journal/` itself. "
+               "Nothing is saved on this computer; the file goes to your browser's downloads. "
+               "A prepared workbook shows the journal **as it was when you prepared it**: "
+               "after recording, correcting or grading wagers, prepare it again.")
+    st.button("Prepare Excel export", icon=":material/table_view:", key="bj_export_prepare",
+              on_click=_on_export)
+    _show_result("bj_export_result")
+    prepared = st.session_state.get("bj_export")
+    if prepared and prepared["fingerprint"] != bj.fingerprint(bj.JOURNAL_DIR):
+        # Checked when the page reruns: a workbook prepared before a journal change
+        # is discarded then (there's no background polling).
+        st.session_state.pop("bj_export", None)
+        st.info("The journal changed since the export was prepared, so that workbook was "
+                "discarded; prepare it again.")
+    elif prepared:
+        when = prepared["exported_at"].astimezone(on.TORONTO)
+        st.download_button("Download Excel", data=prepared["data"],
+                           file_name=prepared["file_name"], mime=bjx.MIME,
+                           icon=":material/download:", key="bj_export_download",
+                           on_click="ignore", type="primary")
+        st.caption(f"Prepared {when:%Y-%m-%d %H:%M:%S %Z} from {prepared['records']} "
+                   f"record(s), {prepared['wagers']} wager(s): `{prepared['file_name']}`. "
+                   "It reflects the journal at that time; prepare again after any change.")
 
 # Stateful tabs: the selected tab survives reruns even when the messages
 # above it change (otherwise the browser falls back to the first tab).
