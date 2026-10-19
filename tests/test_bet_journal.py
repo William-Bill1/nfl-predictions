@@ -1491,3 +1491,143 @@ class TestValidateCli:
         assert bj.main(["validate", "--dir", str(backup)]) == 1
         assert "INTEGRITY ERROR" in capsys.readouterr().out
         assert bj.main(["validate", "--dir", str(jr.dir)]) == 0   # read-only: original intact
+
+
+# ------------------------------------------------- real-clock timestamps --
+# A real clock almost always has nonzero microseconds; recorded_at keeps them
+# (bet_journal.iso), so validation must accept that canonical form. This is
+# the exact clock value of the reported "Not saved: new wager" failure.
+
+REAL = datetime(2026, 10, 19, 11, 25, 38, 86319, tzinfo=UTC)
+REAL_TEXT = "2026-10-19T11:25:38.086319Z"
+
+
+class TestRealClockTimestamps:
+    def test_wager_recorded_with_microseconds_saves_and_reloads(self, jr):
+        t, sha = terms(jr, now=REAL)          # late entry: placed Oct 4, recorded Oct 19
+        doc = bj.prepare_wager(t, sha, confirmed_existing=[], now=REAL)
+        assert doc["recorded_at"] == REAL_TEXT
+        assert doc["record_id"].startswith("W-20261019T112538Z-")
+        assert doc["terms"]["placed_at"] == "2026-10-04T16:00:00Z"     # placement kept apart
+        bj.save_wager(doc, jr.dir)
+        [loaded] = bj.load_records(jr.dir)                              # re-validated on load
+        assert {k: v for k, v in loaded.items() if k != "_file"} == doc
+        assert state(jr)[doc["record_id"]].terms["placed_at"] == "2026-10-04T16:00:00Z"
+        assert bj.main(["validate", "--dir", str(jr.dir)]) == 0
+
+    def test_late_entry_of_a_pregame_wager_placed_the_day_before(self, jr):
+        # Placed Sat 16:00 UTC, before the Sun 20:25 kickoff; recorded days later.
+        t, sha = terms(jr, placed_at=datetime(2026, 10, 3, 16, 0, 30, 123456, tzinfo=UTC),
+                       now=REAL)
+        assert t["placed_at"] == "2026-10-03T16:00:00Z"                  # whole minute
+        doc = bj.prepare_wager(t, sha, confirmed_existing=[], now=REAL)
+        bj.save_wager(doc, jr.dir)
+        assert bj.parse_ts(doc["terms"]["placed_at"]) < bj.parse_ts(doc["terms"]["kickoff_utc"])
+        assert bj.parse_ts(doc["terms"]["placed_at"]) <= bj.parse_ts(doc["recorded_at"])
+
+    @pytest.mark.parametrize("placed,why", [
+        (datetime(2026, 10, 4, 20, 25, tzinfo=UTC), "not before kickoff"),
+        (REAL + timedelta(minutes=5), "in the future"),
+    ])
+    def test_placement_rules_still_hold_with_a_real_clock(self, jr, placed, why):
+        with pytest.raises(bj.JournalError, match=why):
+            terms(jr, placed_at=placed, now=REAL)
+
+    def test_placed_after_recorded_is_rejected(self, jr):
+        t, sha = terms(jr, now=REAL)
+        doc = bj.prepare_wager(t, sha, confirmed_existing=[], now=REAL)
+        bad = {**doc, "terms": {**doc["terms"], "placed_at": "2026-10-19T11:26:00Z"}}
+        bad.pop(bj.CHECKSUM_FIELD)
+        with pytest.raises(bj.IntegrityError, match="placed"):
+            bj.validate_record(bj._seal(bad), "x")
+
+    def test_amendment_void_grade_and_invalidation_with_microseconds(self, jr):
+        w = record(jr, at=REAL)
+        a = prep_amend(jr, w["record_id"], *terms(jr, stake="60.00", now=REAL), "stake typo",
+                       now=REAL + timedelta(microseconds=250_000))
+        bj.save_amendment(a, jr.dir)
+        [g] = bj.grade(jr.dir, jr.schedule, now=REAL + timedelta(microseconds=500_000))
+        assert g["recorded_at"] == "2026-10-19T11:25:38.586319Z"
+        jr.set_scores((None, None))                                     # evidence withdrawn
+        [inv] = bj.grade(jr.dir, jr.schedule, now=REAL + timedelta(seconds=1, microseconds=7))
+        assert inv["kind"] == bj.KIND_INVALIDATION and inv["recorded_at"].endswith(".086326Z")
+        w2 = record(jr, at=REAL + timedelta(seconds=2, microseconds=1), game_id=CHI_GB,
+                    team="GB", placed_at=datetime(2026, 10, 7, 16, 0, tzinfo=UTC), now=REAL)
+        v = prep_void(jr, w2["record_id"], "entered twice",
+                      now=REAL + timedelta(seconds=2, microseconds=2))
+        bj.save_void(v, jr.dir)
+        s = state(jr)
+        assert s[w["record_id"]].terms["stake_cad"] == "60.00" and s[w2["record_id"]].void
+
+    def test_same_second_records_order_by_microseconds(self, jr):
+        w = record(jr, at=REAL)                                          # ...38.086319
+        a = prep_amend(jr, w["record_id"], *terms(jr, stake="60.00", now=REAL), "typo",
+                       now=REAL.replace(microsecond=900_000))            # ...38.900000
+        bj.save_amendment(a, jr.dir)
+        rows = bj.history_rows(bj.load_records(jr.dir), state(jr))
+        assert [r["Record"] for r in rows] == ["wager", "amendment"]
+        assert state(jr)[w["record_id"]].terms["stake_cad"] == "60.00"
+
+    def test_record_earlier_than_its_link_within_the_same_second_is_rejected(self, jr):
+        w = record(jr, at=REAL)                                          # ...38.086319
+        a = prep_amend(jr, w["record_id"], *terms(jr, stake="60.00", now=REAL), "typo",
+                       now=REAL.replace(microsecond=1))                  # ...38.000001 (earlier)
+        bj._write(a, jr.dir)                                             # bypass save checks
+        with pytest.raises(bj.IntegrityError, match="recorded before"):
+            state(jr)
+
+    def test_settlement_then_void_in_the_same_second(self, jr):
+        w = record(jr, at=REAL)
+        bj.grade(jr.dir, jr.schedule, now=REAL.replace(microsecond=200_000))
+        bj.save_void(prep_void(jr, w["record_id"], "voided by the book",
+                               now=REAL.replace(microsecond=300_000)), jr.dir)
+        assert state(jr)[w["record_id"]].void                           # strictly before: ok
+
+    def test_mixed_precision_history_is_ordered_by_time_not_text(self, jr):
+        w1 = record(jr, at=REAL.replace(microsecond=0))                 # legacy ...38Z
+        w2 = record(jr, at=REAL.replace(microsecond=500_000), confirmed=[w1["record_id"]],
+                    reference="T-2")                                    # ...38.500000Z
+        w0 = record(jr, at=REAL.replace(second=37, microsecond=999_999),
+                    confirmed=[], reference="T-0", game_id=CHI_GB, team="GB",
+                    placed_at=datetime(2026, 10, 7, 16, 0, tzinfo=UTC))  # ...37.999999Z
+        ids = [r["Record ID"] for r in bj.history_rows(bj.load_records(jr.dir), state(jr))]
+        assert ids == [w0["record_id"], w1["record_id"], w2["record_id"]]
+        # Plain text order would put ...38.500000Z before ...38Z ('.' < 'Z').
+        assert sorted([w1["recorded_at"], w2["recorded_at"]])[0] == w2["recorded_at"]
+
+    @pytest.mark.parametrize("text", [
+        "2026-10-19T11:25:38.000000Z",       # zero fraction: not canonical (iso writes ...38Z)
+        "2026-10-19T11:25:38.086Z",          # 3 digits
+        "2026-10-19T11:25:38.0863190Z",      # 7 digits
+        "2026-10-19T11:25:38.086319+00:00",  # offset instead of Z
+        "2026-10-19 11:25:38.086319Z",       # space separator
+        "2026-10-19T11:25:38",               # no zone
+    ])
+    def test_non_canonical_timestamps_are_rejected(self, jr, text):
+        with pytest.raises(ValueError):
+            bj.parse_ts(text)
+        doc = bj.prepare_wager(*terms(jr, now=REAL), confirmed_existing=[], now=REAL)
+        bad = {k: v for k, v in doc.items() if k != bj.CHECKSUM_FIELD}
+        bad["recorded_at"] = text
+        with pytest.raises(bj.IntegrityError):
+            bj.validate_record(bj._seal(bad), "x")
+
+    def test_canonical_round_trip(self):
+        for dt in (REAL, REAL.replace(microsecond=0), REAL.replace(microsecond=1)):
+            assert bj.parse_ts(bj.iso(dt)) == dt
+
+    def test_snapshot_and_capture_validation_stay_whole_second(self):
+        with pytest.raises(ValueError):
+            on.parse_utc(REAL_TEXT)                 # Ontario captures / pregame snapshots
+
+    def test_page_preview_then_save_with_a_real_clock(self, jr, render):
+        at = fill(render(now=REAL), jr, ref="TK-REAL")
+        at.button(key="bj_save").click()
+        at.run()
+        assert "Saved wager" in text(at, "success"), text(at, "error")
+        [path] = jr.files()
+        doc = json.loads(path.read_text())
+        assert doc["recorded_at"] == REAL_TEXT and doc["terms"]["placed_at"] == "2026-10-04T16:00:00Z"
+        at = render(now=REAL + timedelta(seconds=3), at=at)              # reload the page
+        assert not at.error
+        assert bj.main(["validate", "--dir", str(jr.dir)]) == 0

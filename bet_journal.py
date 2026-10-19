@@ -115,9 +115,30 @@ def now_utc() -> datetime:
 
 
 def iso(dt: datetime) -> str:
+    """Canonical journal timestamp: UTC, 'Z', whole seconds when the clock has
+    no microseconds, otherwise exactly six fractional digits."""
     dt = dt.astimezone(timezone.utc)
     return dt.isoformat(timespec="microseconds" if dt.microsecond else "seconds").replace(
         "+00:00", "Z")
+
+
+# Journal timestamps keep the clock's microseconds in recorded_at, so records
+# written within the same second still order correctly; placed_at and
+# kickoff_utc are whole seconds, and so are older records. Only the canonical
+# spelling iso() writes is accepted - one spelling per instant (no ".000000",
+# no offsets). Snapshot and Ontario capture timestamps keep their own,
+# whole-second rule (ontario_spreads.parse_utc).
+_TS_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d{6})?Z$")
+
+
+def parse_ts(text) -> datetime:
+    """A canonical journal timestamp -> aware UTC datetime (ValueError otherwise)."""
+    if isinstance(text, str) and _TS_RE.match(text):
+        dt = ps._parse_iso(text)
+        if iso(dt) == text:
+            return dt
+    raise ValueError(f"{text!r} is not a UTC timestamp of the form YYYY-MM-DDTHH:MM:SSZ "
+                     "or YYYY-MM-DDTHH:MM:SS.ffffffZ")
 
 
 def money(value) -> Decimal:
@@ -206,7 +227,7 @@ def _check_terms(t: dict, where: str) -> None:
 
 def _ts(text, where) -> datetime:
     try:
-        return on.parse_utc(text)
+        return parse_ts(text)
     except ValueError as exc:
         raise IntegrityError(f"{where}: {exc}") from None
 
@@ -992,7 +1013,7 @@ def team_name(abbr: str) -> str:
 
 
 def toronto_text(ts: str) -> str:
-    dt = on.parse_utc(ts).astimezone(on.TORONTO)
+    dt = parse_ts(ts).astimezone(on.TORONTO)
     return f"{dt:%Y-%m-%d %H:%M %Z}"
 
 
@@ -1043,7 +1064,8 @@ def history_rows(records: list[dict], states: dict[str, WagerState] | None = Non
         for i, r in enumerate(s.settlements):
             position[r["record_id"]] = i
     rows = []
-    for r in sorted(records, key=lambda r: (r["recorded_at"], _KIND_RANK[r["kind"]],
+    # By time, not text: "...:38.5Z" sorts before "...:38Z" as text.
+    for r in sorted(records, key=lambda r: (parse_ts(r["recorded_at"]), _KIND_RANK[r["kind"]],
                                             position.get(r["record_id"], 0), r["record_id"])):
         k = r["kind"]
         confirmed = (f"; confirmed separate from {', '.join(r['confirmed_existing'])}"

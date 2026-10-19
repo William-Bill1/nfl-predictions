@@ -110,7 +110,7 @@ def _terms_args(prefix: str, game_id: str) -> dict:
 
 
 def _build(args: dict) -> tuple[dict, str]:
-    return bj.build_terms(**{**args, "placed_at": on.parse_utc(args["placed_at"])},
+    return bj.build_terms(**{**args, "placed_at": bj.parse_ts(args["placed_at"])},
                           now=bj.now_utc(), schedule_path=bj.SCHEDULE_PATH)
 
 
@@ -467,7 +467,7 @@ with tab_fix:
             st.session_state.pop("bjf_stake", None)
         if st.session_state.get("bjf_action") == "amend" and "bjf_stake" not in st.session_state:
             # prefill with the current terms (again if the fields were hidden by "void")
-            placed = on.parse_utc(t["placed_at"]).astimezone(on.TORONTO)
+            placed = bj.parse_ts(t["placed_at"]).astimezone(on.TORONTO)
             st.session_state.update({
                 "bjf_book": t["sportsbook_key"],
                 "bjf_book_name": t["sportsbook_name"] if t["sportsbook_key"] == "other_on" else "",
