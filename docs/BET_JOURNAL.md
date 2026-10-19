@@ -191,6 +191,17 @@ Every record is one file, `data_files/bet_journal/<record_id>.json`.
   `A` amendment, `V` void, `G` grade or `X` invalidation. The ID timestamp
   matches the UTC second of `recorded_at`; `recorded_at` retains subsecond
   precision to validate chronology between independent chains.
+- **Timestamp format:** UTC with `Z`, either whole seconds
+  (`2026-10-07T17:00:00Z`) or exactly six fractional digits
+  (`2026-10-19T11:25:38.086319Z`).
+  - **Which fields:** `recorded_at` keeps the clock's microseconds;
+    `placed_at` (whole minute) and `kickoff_utc` are whole seconds.
+  - **One spelling per instant:** only the form the journal writes is
+    accepted. `.000000`, other digit counts and offsets are rejected.
+  - **Older records:** whole-second records remain valid.
+  - **Comparison:** records are compared and listed by time, not as text.
+  - **Not relaxed elsewhere:** pregame snapshots and Ontario captures keep
+    their own whole-second rule.
 - **Written once:**
   - via a temporary file and an exclusive link, so a record is never
     overwritten;

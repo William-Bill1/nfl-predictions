@@ -8,6 +8,24 @@ bottom.
 
 ## October 2026
 
+- **Fix: Bet Journal rejected its own timestamps** ("Not saved: new wager:
+  '…:38.086319Z' is not a UTC timestamp…").
+  - **Cause:** `bet_journal.iso()` writes `recorded_at` with microseconds
+    whenever the clock has them, as designed for ordering. Validation used
+    the snapshot/Ontario parser, which accepts whole seconds only, so every
+    real-clock save failed.
+  - **Fix:** a journal-only parser (`bet_journal.parse_ts`) accepts
+    canonical whole-second and six-digit microsecond UTC timestamps, and
+    only the spelling the journal writes. Validation, the page and display
+    use it. History is now ordered by time rather than text, since
+    `…:38.5Z` sorts before `…:38Z` as text.
+  - **Preserved:** existing records, checksums, record IDs, duplicate
+    protection, history chains, settlement and the placement rules
+    (before kickoff, not after recording). Snapshot and Ontario capture
+    validation is unchanged.
+  - **Tests:** real-clock regression tests: Preview → Save, reload and
+    validation, late entry, amendment/void/grade/invalidation, same-second
+    ordering, and rejection of non-canonical forms.
 - **Fix: model decisions wait for their decision time** ("Was waiting
   worthwhile?").
   - **Bug:** a decision time still in the future was filled with the latest
