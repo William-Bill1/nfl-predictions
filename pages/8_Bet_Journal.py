@@ -93,17 +93,31 @@ def _placed_utc(prefix: str):
     return bj.toronto_to_utc(s[f"{prefix}_date"], s[f"{prefix}_time"])
 
 
+_BONUS_RETURNED = {"not_returned": False, "returned": True}
+
+
 def _terms_args(prefix: str, game_id: str) -> dict:
-    """The wager terms described by a form's submitted values."""
+    """The wager terms described by a form's submitted values (market and
+    funding come from the choices above the form)."""
     s = st.session_state
-    if s.get(f"{prefix}_spread") is None or s.get(f"{prefix}_odds") is None:
-        raise bj.JournalError("enter the spread and the American odds")
+    market = s.get(f"{prefix}_market", "spread")
+    funding = s.get(f"{prefix}_funding", "cash")
+    if s.get(f"{prefix}_odds") is None:
+        raise bj.JournalError("enter the accepted American odds")
+    if market == "spread" and s.get(f"{prefix}_spread") is None:
+        raise bj.JournalError("enter the spread")
     if not (s.get(f"{prefix}_stake") or "").strip():
-        raise bj.JournalError("enter the stake in CAD")
+        raise bj.JournalError("enter the stake in CAD" if funding == "cash"
+                              else "enter the bonus bet amount (its face value in CAD)")
     return {"sportsbook_key": s[f"{prefix}_book"],
             "sportsbook_name": (s.get(f"{prefix}_book_name") or "").strip() or None,
             "game_id": game_id, "team": s[f"{prefix}_team"],
-            "handicap": float(s[f"{prefix}_spread"]), "odds": int(s[f"{prefix}_odds"]),
+            "market": market, "funding": funding,
+            "handicap": float(s[f"{prefix}_spread"]) if market == "spread" else None,
+            "tie_rule": s.get(f"{prefix}_tie") if market == "moneyline" else None,
+            "bonus_stake_returned": _BONUS_RETURNED.get(s.get(f"{prefix}_bonus_ret"))
+            if funding == "bonus" else None,
+            "odds": int(s[f"{prefix}_odds"]),
             "stake": s[f"{prefix}_stake"].strip(),
             "placed_at": on.iso(_placed_utc(prefix)),
             "reference": (s.get(f"{prefix}_ref") or "").strip() or None,
@@ -116,7 +130,7 @@ def _build(args: dict) -> tuple[dict, str]:
 
 
 def _summary(terms: dict) -> str:
-    return (f"**{bj.bet_text(terms)}** - stake **\\${terms['stake_cad']} CAD** at "
+    return (f"**{bj.bet_text(terms)}** - **{_md_safe(bj.stake_text(terms))}** at "
             f"{terms['sportsbook_name']}, placed {bj.toronto_text(terms['placed_at'])} "
             f"({terms['placed_at']} UTC)")
 
@@ -221,7 +235,7 @@ def _on_save() -> None:
     st.session_state.pop("bj_pending", None)
     st.session_state["bj_second"] = False
     st.session_state["bj_result"] = ("success", f"Saved wager {doc['record_id']}: "
-                                                f"{bj.bet_text(terms)}, ${terms['stake_cad']} CAD "
+                                                f"{bj.bet_text(terms)}, {bj.stake_text(terms)} "
                                                 f"({path.name}).")
 
 
@@ -337,6 +351,18 @@ def _book_label(key: str) -> str:
     return bj.SPORTSBOOKS[key]
 
 
+def _market_funding(prefix: str) -> None:
+    """Market and funding, outside the form so the fields below match them."""
+    with st.container(horizontal=True):
+        st.radio("Market", list(bj.MARKETS), horizontal=True, key=f"{prefix}_market",
+                 format_func={"spread": "Spread", "moneyline": "Moneyline"}.get,
+                 help="Moneyline: your team must win outright; it has no handicap.")
+        st.radio("Funding", list(bj.FUNDINGS), horizontal=True, key=f"{prefix}_funding",
+                 format_func={"cash": "Cash", "bonus": "Bonus bet"}.get,
+                 help="A wager is funded entirely with cash or entirely with one sportsbook "
+                      "bonus bet; mixed funding isn't supported.")
+
+
 def _term_fields(prefix: str, game: dict) -> None:
     st.selectbox("Ontario sportsbook", list(bj.SPORTSBOOKS), format_func=_book_label,
                  key=f"{prefix}_book")
@@ -344,16 +370,36 @@ def _term_fields(prefix: str, game: dict) -> None:
                   key=f"{prefix}_book_name")
     st.selectbox("Team you bet on", [game["away_team"], game["home_team"]],
                  format_func=lambda t: f"{bj.team_name(t)} ({t})", key=f"{prefix}_team")
+    market = st.session_state.get(f"{prefix}_market", "spread")
+    funding = st.session_state.get(f"{prefix}_funding", "cash")
     with st.container(horizontal=True):
-        st.number_input("Spread (bettor-facing, signed)", min_value=-60.0, max_value=60.0,
-                        step=0.5, value=None, format="%.1f", placeholder="e.g. +3.5 or -7",
-                        key=f"{prefix}_spread",
-                        help="Your team's handicap as the ticket shows it: -3.5 lays 3.5, "
-                             "+3.5 gets 3.5, 0 is pick'em.")
+        if market == "spread":
+            st.number_input("Spread (bettor-facing, signed)", min_value=-60.0, max_value=60.0,
+                            step=0.5, value=None, format="%.1f", placeholder="e.g. +3.5 or -7",
+                            key=f"{prefix}_spread",
+                            help="Your team's handicap as the ticket shows it: -3.5 lays 3.5, "
+                                 "+3.5 gets 3.5, 0 is pick'em.")
         st.number_input("Accepted American odds", step=1, value=None,
-                        placeholder="e.g. -110 or +105", key=f"{prefix}_odds")
-        st.text_input("Stake (CAD)", max_chars=12, placeholder="e.g. 25.00",
-                      key=f"{prefix}_stake")
+                        placeholder="e.g. -110 or +320", key=f"{prefix}_odds")
+        st.text_input("Stake (CAD)" if funding == "cash" else "Bonus bet amount (CAD, face value)",
+                      max_chars=12, placeholder="e.g. 25.00", key=f"{prefix}_stake")
+    if market == "moneyline":
+        st.radio("If the game ends in a tie, this sportsbook...", list(bj.TIE_RULES),
+                 index=None, horizontal=True, key=f"{prefix}_tie",
+                 format_func={"push": "refunds the bet (push)",
+                              "loss": "settles it as a loss"}.get,
+                 help="From the sportsbook's rules for this market (most two-way NFL "
+                      "moneylines refund on a tie; three-way markets lose). Required - a tie "
+                      "is never assumed to be a loss.")
+    if funding == "bonus":
+        st.radio("Bonus stake on a win", list(_BONUS_RETURNED), index=None, horizontal=True,
+                 key=f"{prefix}_bonus_ret",
+                 format_func={"not_returned": "not returned (winnings only)",
+                              "returned": "returned as cash with the winnings"}.get,
+                 help="From the promotion's terms. Most bonus bets pay winnings only: a $25 "
+                      "bonus at +320 that wins pays $80 cash, not $105. Choose 'returned' "
+                      "only if the stake comes back as cash; a stake reissued as bonus "
+                      "credit is not cash and counts as not returned.")
     with st.container(horizontal=True):
         st.date_input("Placed on (Toronto)", key=f"{prefix}_date")
         st.time_input("Placed at (Toronto)", step=60, key=f"{prefix}_time")
@@ -371,13 +417,30 @@ cols[0].metric("Current wagers", tot["wagers"],
                help="Not voided. Amended wagers count once, on their current terms.")
 cols[1].metric("Record (W-L-P)", f"{tot['win']}-{tot['loss']}-{tot['push']}")
 cols[2].metric("Net profit (CAD)", bj.cad(tot["net_profit_cad"]),
-               help="Graded current wagers only.")
+               help="Graded cash-funded current wagers only (bonus bets are shown "
+                    "separately).")
 cols[3].metric("ROI", "n/a" if tot["roi_pct"] is None else f"{tot['roi_pct']}%",
-               help="Net profit / total stake of graded current wagers (wins, losses and "
-                    "pushes). Pending and voided wagers are excluded.")
+               help="Cash bets only: net profit / cash stake of graded cash-funded wagers "
+                    "(wins, losses and pushes). Bonus bets, pending and voided wagers are "
+                    "excluded.")
 cols[4].metric("Pending", f"{tot['pending']} ({bj.cad(tot['stake_pending_cad'])})",
                help="Current wagers without a verified grade (no completion evidence yet, "
-                    "amended since grading, or unverified); not in profit or ROI.")
+                    "amended since grading, or unverified); not in profit or ROI. The amount "
+                    "is pending cash stake; pending bonus stake is shown below.")
+if tot["bonus_wagers"]:
+    bcols = st.columns(4)
+    bcols[0].metric("Bonus stake used", bj.cad(tot["bonus_stake_used_cad"]),
+                    help="Face value of graded bonus bets that won or lost. Not cash staked.")
+    bcols[1].metric("Cash won from bonus bets", bj.cad(tot["bonus_cash_winnings_cad"]),
+                    help="Cash paid by winning bonus bets; never part of cash ROI.")
+    bcols[2].metric("Unresolved bonus outcomes",
+                    f"{tot['bonus_unresolved']} ({bj.cad(tot['bonus_stake_unresolved_cad'])})",
+                    help="Bonus bets that pushed or tied: whether the sportsbook reissues the "
+                         "bonus isn't recorded, so it is neither cash nor counted as used.")
+    bcols[3].metric("Net cash incl. bonus winnings", bj.cad(tot["net_cash_cad"]),
+                    help="Cash-bet net profit + cash won from bonus bets.")
+    if tot["bonus_stake_pending_cad"]:
+        st.caption(f"Pending bonus stake (face value): {bj.cad(tot['bonus_stake_pending_cad'])}.")
 st.button("Grade settled wagers", icon=":material/sports_score:", on_click=_on_grade,
           key="bj_grade",
           help="Settles every current wager whose game has a final score in "
@@ -430,14 +493,19 @@ with tab_current:
     rows = bj.current_rows(states, include_void=show_void)
     if rows:
         st.dataframe(pd.DataFrame(rows), hide_index=True, width="stretch", column_config={
-            "Stake (CAD)": st.column_config.NumberColumn(format="$%.2f"),
-            "Net profit (CAD)": st.column_config.NumberColumn(format="$%.2f")})
+            "Stake (CAD)": st.column_config.NumberColumn(format="$%.2f",
+                                                         help="Cash stake (0 for bonus bets)"),
+            "Bonus stake (CAD)": st.column_config.NumberColumn(format="$%.2f"),
+            "Net profit (CAD)": st.column_config.NumberColumn(
+                format="$%.2f", help="Cash result: bonus bets pay cash winnings only")})
     else:
         st.info("No wagers recorded yet. Use **Record a wager** to add one you've placed.")
 
 with tab_new:
-    st.caption("Record a single-game spread wager **you have already placed**, exactly as the "
-               "sportsbook accepted it. A wager placed before kickoff can be recorded later.")
+    st.caption("Record a single-game spread or moneyline wager **you have already placed**, "
+               "exactly as the sportsbook accepted it - cash-funded or one bonus bet. A wager "
+               "placed before kickoff can be recorded later. Parlays, odds boosts, cash-outs "
+               "and mixed cash/bonus stakes aren't supported.")
     _show_result("bj_result")
     games = _games()
     if not games:
@@ -454,6 +522,7 @@ with tab_new:
             pending = None
         st.session_state.setdefault("bj_date", local_now.date())
         st.session_state.setdefault("bj_time", local_now.time().replace(second=0, microsecond=0))
+        _market_funding("bj")
         with st.form("bj_form", border=False):
             _term_fields("bj", game)
             st.checkbox("This is a separate, second wager on terms identical to one already "
@@ -509,14 +578,20 @@ with tab_fix:
         if st.session_state.get("bjf_action") == "amend" and "bjf_stake" not in st.session_state:
             # prefill with the current terms (again if the fields were hidden by "void")
             placed = bj.parse_ts(t["placed_at"]).astimezone(on.TORONTO)
+            v = bj.terms_view(t)
             st.session_state.update({
                 "bjf_book": t["sportsbook_key"],
                 "bjf_book_name": t["sportsbook_name"] if t["sportsbook_key"] == "other_on" else "",
-                "bjf_team": t["team"], "bjf_spread": t["handicap"], "bjf_odds": t["odds"],
-                "bjf_stake": t["stake_cad"], "bjf_date": placed.date(),
+                "bjf_team": t["team"], "bjf_spread": v["handicap"], "bjf_odds": t["odds"],
+                "bjf_market": v["market"], "bjf_funding": v["funding"], "bjf_tie": v["tie_rule"],
+                "bjf_bonus_ret": None if v["bonus_stake_returned"] is None else
+                ("returned" if v["bonus_stake_returned"] else "not_returned"),
+                "bjf_stake": v["stake_face_cad"], "bjf_date": placed.date(),
                 "bjf_time": placed.time().replace(tzinfo=None), "bjf_ref": t["reference"] or "",
                 "bjf_note": t["note"] or "", "bjf_second": False})
         st.session_state["bjf_game_id"] = t["game_id"]
+        if st.session_state.get("bjf_action") == "amend":
+            _market_funding("bjf")
         with st.form("bjf_form", border=False):
             if st.session_state.get("bjf_action") == "amend":
                 st.caption(f"Game (fixed): {t['away_team']} @ {t['home_team']}, "

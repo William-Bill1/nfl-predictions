@@ -157,7 +157,7 @@ class TestWorkbook:
         assert list(book) == ["Summary", "Wagers", "History"]
         s = summary(book)
         assert (val(s["Current wagers"]), val(s["Graded (verified)"]), val(s["Voided"])) == (0, 0, 0)
-        assert val(s["ROI"]) == "n/a (no graded wagers)"
+        assert val(s["ROI"]) == "n/a (no graded cash wagers)"
         assert val(s["Currency"]) == "CAD"
         assert table(book["Wagers"]) == [] and table(book["History"]) == []
         cells = [c["v"] for row in book["Summary"]["rows"] for c in row if c]
@@ -192,7 +192,7 @@ class TestWorkbook:
         assert set(rows) == set(st_) and len(table(book["Wagers"])) == len(st_)
         for wid, s in st_.items():
             assert val(rows[wid]["Status"]) == s.status
-        assert val(rows[w["amended"]["record_id"]]["Stake (CAD)"]) == 35.0     # current terms
+        assert val(rows[w["amended"]["record_id"]]["Cash stake (CAD)"]) == 35.0     # current terms
         assert val(rows[w["amended"]["record_id"]]["Amendments"]) == 1
         hist = table(book["History"])
         assert [val(r["Record ID"]) for r in hist] == \
@@ -222,7 +222,7 @@ class TestWorkbook:
             ("n", -2.5, bjx.HANDICAP_FMT)
         assert (loss["Odds (American)"]["v"], loss["Odds (American)"]["fmt"]) == \
             (150.0, bjx.ODDS_FMT)
-        assert win["Stake (CAD)"]["fmt"] == bjx.CAD_FMT
+        assert win["Cash stake (CAD)"]["fmt"] == bjx.CAD_FMT
         for col in ("Wager ID", "Game ID", "Recorded at (UTC, wager record)", "Placed at (UTC)"):
             assert win[col]["t"] == "inlineStr"
 
@@ -304,7 +304,7 @@ class TestIntegrityAndFreshness:
         bj.save_amendment(prep_amend(jr, w["record_id"], *terms(jr, stake="75.00"), "typo"),
                           jr.dir)
         rows = table(export(jr)["Wagers"])
-        assert val(rows[0]["Stake (CAD)"]) == 75.0
+        assert val(rows[0]["Cash stake (CAD)"]) == 75.0
         bj.grade(jr.dir, jr.schedule, now=NOW)
         assert val(table(export(jr)["Wagers"])[0]["Result"]) == "win"
         jr.set_scores((None, None))

@@ -8,6 +8,38 @@ bottom.
 
 ## October 2026
 
+- **Bet Journal: moneyline wagers and bonus bets** (schema 2; cash spreads
+  unchanged).
+  - **Markets:** a wager is a spread or a moneyline. A moneyline has no
+    handicap (`null`, never +0) and settles on the outright winner. A tie
+    follows the wager's recorded tie rule from the sportsbook's terms
+    (refunded as a push, or a loss); it is never assumed to be a loss.
+  - **Funding:** entirely cash, or entirely one bonus bet with its face
+    value and whether the stake is returned as cash on a win (reissued
+    bonus credit is not cash). Mixed funding,
+    parlays, boosts and cash-outs are rejected or out of scope.
+  - **Bonus payouts:** a win pays bonus × multiplier in cash (plus the
+    stake only when returned). A loss is $0.00 cash. A push leaves the
+    bonus outcome unresolved. Example: $25 at +320, stake not returned:
+    win $80.00, loss $0.00.
+  - **Totals:** ROI covers cash-funded wagers only, and bonus face value
+    never counts as cash staked. Bonus stake used, cash won from bonus
+    bets, unresolved outcomes and pending bonus stake are separate. *Net
+    cash incl. bonus winnings* is labelled with its components.
+  - **Compatibility:** existing records and checksums are untouched.
+    Schema 1 keeps encoding cash spreads (legacy defaults: spread, cash).
+    Schema 2 is written only for moneyline or bonus terms and their
+    grades. Unknown versions are rejected.
+  - **Grades and duplicates:** grades record market, funding and bonus
+    outcome, checked against their terms. Duplicate detection includes
+    market and funding.
+  - **Page and Excel:** market and funding controls, the tie-rule and
+    bonus-return choices, and Preview/Save agreement on all of them. A
+    bonus-bet totals row. The Excel export has market, funding,
+    cash/bonus stake, tie-rule and bonus-outcome columns and the bonus
+    Summary rows.
+  - **Tests:** `tests/test_bet_journal_moneyline_bonus.py`.
+
 - **Bet Journal: on-demand Excel export** (`bet_journal_export.py`; an
   *Excel export (viewing copy)* section on the Bet Journal page).
   - **Flow:** *Prepare Excel export* builds an .xlsx in memory from one fresh,
