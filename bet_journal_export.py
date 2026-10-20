@@ -179,14 +179,22 @@ def _verification(s: bj.WagerState) -> tuple[str, str]:
 
 
 def _profit(s: bj.WagerState) -> tuple[Decimal | None, str]:
-    """Settled profit, or None (blank) when there is no verified grade - an
-    ungraded wager is never shown as a settled $0.00."""
+    """Settled cash result, or None (blank) when there is no verified grade -
+    an ungraded wager is never shown as a settled $0.00."""
     if s.void:
         return None, "excluded: void"
     if s.grade:
-        if s.grade["result"] == "push":
+        bonus = bj.terms_view(s.terms)["funding"] == "bonus"
+        result = s.grade["result"]
+        if bonus:
+            return Decimal(s.grade["profit_cad"]), {
+                "win": "settled: bonus bet won (cash winnings)",
+                "loss": "settled: bonus bet lost ($0.00 cash; bonus used)",
+                "push": "settled: bonus bet pushed ($0.00 cash; bonus outcome unresolved)",
+            }[result]
+        if result == "push":
             return Decimal(s.grade["profit_cad"]), "settled: push (stake returned, $0.00)"
-        return Decimal(s.grade["profit_cad"]), f"settled: {s.grade['result']}"
+        return Decimal(s.grade["profit_cad"]), f"settled: {result}"
     if s.status == "unverified":
         return None, "unavailable: grade withdrawn (unverified)"
     return None, "unavailable: not graded (pending)"
@@ -196,8 +204,10 @@ WAGER_COLUMNS = [
     ("Wager ID", None), ("Status", None), ("Result", None), ("Profit (CAD)", CAD_FMT),
     ("Profit basis", None), ("Season", INT_FMT), ("Week", INT_FMT), ("Game ID", None),
     ("Game", None), ("Kickoff (America/Toronto)", None), ("Team", None), ("Team name", None),
-    ("Sportsbook", None), ("Handicap", HANDICAP_FMT), ("Odds (American)", ODDS_FMT),
-    ("Stake (CAD)", CAD_FMT), ("Placed at (America/Toronto)", None), ("Placed at (UTC)", None),
+    ("Sportsbook", None), ("Market", None), ("Handicap", HANDICAP_FMT),
+    ("Odds (American)", ODDS_FMT), ("Funding", None), ("Cash stake (CAD)", CAD_FMT),
+    ("Bonus stake (CAD)", CAD_FMT), ("Bonus stake returned as cash on win", None),
+    ("Moneyline tie rule", None), ("Placed at (America/Toronto)", None), ("Placed at (UTC)", None),
     ("Recorded at (UTC, wager record)", None), ("Current terms record", None),
     ("Terms recorded at (UTC)", None), ("Amendments", INT_FMT), ("Grade verification", None),
     ("Exclusion / status note", None), ("Grade record", None),
@@ -209,7 +219,8 @@ def wager_rows(states: dict) -> list[list]:
     rows = []
     for s in sorted(states.values(), key=lambda x: (bj.parse_ts(x.terms["placed_at"]),
                                                      x.wager_id)):
-        t = s.terms
+        t = bj.terms_view(s.terms)
+        bonus = t["funding"] == "bonus"
         terms_record = s.amendments[-1] if s.amendments else s.wager
         verification, note = _verification(s)
         profit, basis = _profit(s)
@@ -219,8 +230,12 @@ def wager_rows(states: dict) -> list[list]:
             ("not graded" if s.status in ("pending", "unverified") else "void"),
             profit, basis, t["season"], t["week"], t["game_id"],
             f"{t['away_team']} @ {t['home_team']}", _toronto(t["kickoff_utc"]), t["team"],
-            bj.team_name(t["team"]), t["sportsbook_name"], t["handicap"], t["odds"],
-            Decimal(t["stake_cad"]), _toronto(t["placed_at"]), t["placed_at"],
+            bj.team_name(t["team"]), t["sportsbook_name"], t["market"], t["handicap"], t["odds"],
+            "bonus bet" if bonus else "cash", Decimal(t["cash_stake_cad"]),
+            Decimal(t["bonus_stake_cad"]) if bonus else None,
+            ("yes" if t["bonus_stake_returned"] else "no") if bonus else None,
+            {"push": "tie refunded (push)", "loss": "tie settles as a loss"}.get(t["tie_rule"]),
+            _toronto(t["placed_at"]), t["placed_at"],
             s.wager["recorded_at"], s.terms_record_id, terms_record["recorded_at"],
             len(s.amendments), verification, note,
             s.grade["record_id"] if s.grade and not s.void else None,
@@ -232,9 +247,11 @@ def wager_rows(states: dict) -> list[list]:
 
 HISTORY_COLUMNS = [
     ("Recorded at (UTC, precise)", None), ("Recorded at (America/Toronto)", None),
-    ("Kind", None), ("Record ID", None), ("Wager ID", None), ("Follows record", None),
-    ("Terms record", None), ("Link", None), ("Result", None), ("Profit (CAD)", CAD_FMT),
-    ("Stake (CAD)", CAD_FMT), ("Detail", None), ("Reason", None), ("Code revision", None),
+    ("Kind", None), ("Schema", INT_FMT), ("Record ID", None), ("Wager ID", None),
+    ("Follows record", None), ("Terms record", None), ("Link", None), ("Market", None),
+    ("Funding", None), ("Result", None), ("Profit (CAD)", CAD_FMT), ("Bonus outcome", None),
+    ("Cash stake (CAD)", CAD_FMT), ("Bonus stake (CAD)", CAD_FMT), ("Detail", None),
+    ("Reason", None), ("Code revision", None),
 ]
 
 
@@ -246,13 +263,24 @@ def history_rows(records: list[dict], states: dict) -> list[list]:
     for h in bj.history_rows(records, states):
         r = by_id[h["Record ID"]]
         follows = r.get("previous") or r.get("supersedes")
-        terms = r.get("terms")
+        view = bj.terms_view(r["terms"]) if r.get("terms") else None
+        if view:
+            market, funding = view["market"], view["funding"]
+        elif r["kind"] == bj.KIND_GRADE:          # schema-1 grades settle cash spreads
+            market, funding = r.get("market", "spread"), r.get("funding", "cash")
+        else:
+            market = funding = None
+        bonus = view is not None and view["funding"] == "bonus"
         rows.append([
-            r["recorded_at"], _toronto(r["recorded_at"]), h["Record"], r["record_id"],
-            h["Wager"], follows, r.get("terms_record_id"), h["Link"], r.get("result"),
+            r["recorded_at"], _toronto(r["recorded_at"]), h["Record"], r["schema_version"],
+            r["record_id"], h["Wager"], follows, r.get("terms_record_id"), h["Link"], market,
+            None if funding is None else ("bonus bet" if funding == "bonus" else "cash"),
+            r.get("result"),
             Decimal(r["profit_cad"]) if r.get("profit_cad") is not None else None,
-            Decimal(terms["stake_cad"]) if terms else None, h["Detail"], r.get("reason"),
-            r["code_revision"],
+            r.get("bonus_outcome"),
+            Decimal(view["cash_stake_cad"]) if view else None,
+            Decimal(view["bonus_stake_cad"]) if bonus else None,
+            h["Detail"], r.get("reason"), r["code_revision"],
         ])
     return rows
 
@@ -281,21 +309,49 @@ def summary_rows(records: list[dict], states: dict, exported_at: datetime) -> li
                               "counted in graded stake."],
         ["Pending", t["pending"], "Current wagers without a verified grade: not graded yet, "
                                   "graded on earlier terms, or unverified. Not in profit or ROI."],
-        ["Pending exposure (CAD)", t["stake_pending_cad"], "Stake of the pending wagers."],
+        ["Pending exposure (CAD)", t["stake_pending_cad"], "Cash stake of the pending wagers "
+                                                           "(pending bonus stake is below)."],
         ["Unverified (included in Pending)", t["unverified"],
          "Wagers whose grade was withdrawn by an invalidation; excluded from profit and ROI "
          "until a new grade."],
         ["Voided", t["voided"], "Voided wagers: kept in History, excluded from every total."],
-        ["Graded stake (CAD)", t["stake_graded_cad"], "Stake of graded wagers (wins, losses "
-                                                      "and pushes)."],
-        ["Net profit (CAD)", t["net_profit_cad"], "Sum of the graded wagers' profit."],
-        ["ROI", roi if roi is not None else "n/a (no graded wagers)",
-         "Net profit / graded stake (bet_journal.totals)."],
+        ["Cash-funded wagers", t["cash_wagers"], "Current wagers staked with cash."],
+        ["Bonus-bet wagers", t["bonus_wagers"], "Current wagers placed with one sportsbook "
+                                                "bonus bet (never mixed with cash)."],
+        ["Moneyline wagers", t["moneyline_wagers"], "Current moneyline wagers (the rest are "
+                                                    "spread wagers)."],
+        ["Graded stake (CAD)", t["stake_graded_cad"], "Cash stake of graded cash-funded "
+                                                      "wagers (wins, losses and pushes)."],
+        ["Net profit (CAD)", t["net_profit_cad"], "Cash-funded wagers only: sum of their "
+                                                  "graded profit."],
+        ["ROI", roi if roi is not None else "n/a (no graded cash wagers)",
+         "Cash-funded wagers only: net profit / graded cash stake (bet_journal.totals). "
+         "Bonus bets never enter it."],
+        ["Bonus stake used (CAD, face value)", t["bonus_stake_used_cad"],
+         "Bonus stake of graded bonus bets that won or lost. Not cash staked."],
+        ["Cash winnings from bonus bets (CAD)", t["bonus_cash_winnings_cad"],
+         "Cash paid by winning bonus bets (winnings only, plus the stake where the "
+         "promotion returns it as cash; reissued bonus credit is not counted). Not part of "
+         "cash ROI."],
+        ["Unresolved bonus outcomes", t["bonus_unresolved"],
+         "Bonus bets that pushed or tied: whether the bonus is reissued isn't recorded, so "
+         "it is neither cash nor counted as used."],
+        ["Unresolved bonus stake (CAD, face value)", t["bonus_stake_unresolved_cad"],
+         "Bonus stake of those pushes/ties."],
+        ["Pending bonus stake (CAD, face value)", t["bonus_stake_pending_cad"],
+         "Bonus stake of bonus bets without a verified grade."],
+        ["Net cash incl. bonus winnings (CAD)", t["net_cash_cad"],
+         "Cash-bet net profit + cash winnings from bonus bets."],
     ]
 
 
 _SUMMARY_FORMATS = {"Pending exposure (CAD)": CAD_FMT, "Graded stake (CAD)": CAD_FMT,
-                    "Net profit (CAD)": CAD_FMT, "ROI": PCT_FMT}
+                    "Net profit (CAD)": CAD_FMT, "ROI": PCT_FMT,
+                    "Bonus stake used (CAD, face value)": CAD_FMT,
+                    "Cash winnings from bonus bets (CAD)": CAD_FMT,
+                    "Unresolved bonus stake (CAD, face value)": CAD_FMT,
+                    "Pending bonus stake (CAD, face value)": CAD_FMT,
+                    "Net cash incl. bonus winnings (CAD)": CAD_FMT}
 
 
 def _summary_sheet(ws, records, states, exported_at):

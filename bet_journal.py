@@ -56,7 +56,24 @@ ROOT = Path(__file__).resolve().parent
 JOURNAL_DIR = ROOT / "data_files" / "bet_journal"
 SCHEDULE_PATH = ROOT / "data_files" / ps.SCHEDULE_NAME
 
+# Schema versions (an unknown version is rejected, never guessed):
+#   1 - the original records: a wager's terms are a cash-funded spread bet. Every
+#       existing file is schema 1 and stays valid, unchanged. Voids and
+#       invalidations are always schema 1.
+#   2 - wager/amendment terms with an explicit market (spread or moneyline) and
+#       funding (cash or bonus bet), and grades of such terms. Written only for
+#       terms schema 1 can't express (a moneyline or a bonus bet), so every
+#       cash-funded spread wager keeps exactly one encoding: schema 1.
 SCHEMA_VERSION = 1
+SCHEMA_V2 = 2
+SCHEMA_VERSIONS = (SCHEMA_VERSION, SCHEMA_V2)
+MARKETS = ("spread", "moneyline")
+FUNDINGS = ("cash", "bonus")
+# What the sportsbook does with a moneyline bet when the game ends in a tie,
+# as entered from its rules (never assumed): "push" refunds the stake (most
+# two-way NFL moneylines); "loss" settles it as a loss (e.g. a three-way market).
+TIE_RULES = ("push", "loss")
+BONUS_OUTCOMES = ("used", "unresolved")
 KIND_WAGER = "bet_journal_wager"
 KIND_AMENDMENT = "bet_journal_amendment"
 KIND_VOID = "bet_journal_void"
@@ -82,10 +99,15 @@ _GAME_ID_RE = re.compile(r"^(?P<season>\d{4})_(?P<week>\d{2})_(?P<away>[A-Z]{2,3
 _MONEY_RE = re.compile(r"^-?\d+\.\d{2}$")
 TERM_FIELDS = ("sportsbook_key", "sportsbook_name", "jurisdiction", "game_id", "season", "week",
                "home_team", "away_team", "kickoff_utc", "team", "team_side", "handicap", "odds",
-               "stake_cad", "placed_at", "reference", "note")
-# Two wagers are "identical" when all of these match (see docs/BET_JOURNAL.md).
-IDENTITY_FIELDS = ("sportsbook_key", "sportsbook_name", "game_id", "team", "handicap", "odds",
-                   "stake_cad", "placed_at")
+               "stake_cad", "placed_at", "reference", "note")           # schema 1
+TERM_FIELDS_V2 = tuple(f for f in TERM_FIELDS if f != "stake_cad") + (
+    "market", "tie_rule", "cash_stake_cad", "bonus_stake_cad", "bonus_stake_returned")
+# Two wagers are "identical" when all of these match (see docs/BET_JOURNAL.md),
+# compared on terms_view(), so a schema-1 wager and a schema-2 wager compare
+# on the same footing. Market and funding are part of the identity.
+IDENTITY_FIELDS = ("sportsbook_key", "sportsbook_name", "game_id", "market", "team", "handicap",
+                   "odds", "cash_stake_cad", "bonus_stake_cad", "bonus_stake_returned",
+                   "tie_rule", "placed_at")
 RESULTS = ("win", "loss", "push")
 EVIDENCE_FIELDS = ("gameday", "home_score", "away_score", "result", "total", "overtime")
 
@@ -158,15 +180,77 @@ def win_profit(odds: int, stake: Decimal) -> Decimal:
     return (stake * ratio).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def terms_view(t: dict) -> dict:
+    """Terms of either schema with market and funding made explicit.
+
+    Schema-1 terms get the documented legacy defaults - market "spread",
+    funding "cash", the stake as the cash stake, no bonus stake and no tie
+    rule. Stored terms are never rewritten; this is a read-only view."""
+    if "market" in t:                                        # schema 2
+        cash, bonus = t["cash_stake_cad"], t["bonus_stake_cad"]
+        view = {**t}
+    else:                                                    # schema 1
+        cash, bonus = t["stake_cad"], "0.00"
+        view = {k: v for k, v in t.items() if k != "stake_cad"}
+        view.update(market="spread", tie_rule=None, bonus_stake_returned=None)
+    view.update(cash_stake_cad=cash, bonus_stake_cad=bonus,
+                funding="bonus" if Decimal(bonus) > 0 else "cash",
+                stake_face_cad=bonus if Decimal(bonus) > 0 else cash)
+    return view
+
+
+def identity(terms: dict) -> tuple:
+    v = terms_view(terms)
+    return tuple(v[f] for f in IDENTITY_FIELDS)
+
+
+def market_result(terms: dict, home_score: float, away_score: float) -> str:
+    """win / loss / push of the selected team, by market:
+    spread - margin plus the team's handicap (betting_log.spread_result);
+    moneyline - the team wins outright; a tie follows the wager's recorded
+    tie_rule (push or loss), never an assumption."""
+    v = terms_view(terms)
+    if v["market"] == "spread":
+        return betting_log.spread_result(v["team"], v["home_team"], v["away_team"],
+                                         v["handicap"], home_score, away_score)
+    margin = (float(home_score) - float(away_score)) * (1 if v["team"] == v["home_team"] else -1)
+    if margin > 0:
+        return "win"
+    if margin < 0:
+        return "loss"
+    return v["tie_rule"]
+
+
+def bonus_outcome(terms: dict, result: str) -> str | None:
+    """What happened to a bonus bet's promotional stake: "used" once the bet
+    won or lost; "unresolved" on a push/tie - whether the sportsbook reissues
+    the bonus isn't known, so it is never assumed (or counted as cash).
+    None for a cash-funded wager."""
+    if terms_view(terms)["funding"] != "bonus":
+        return None
+    return "used" if result in ("win", "loss") else "unresolved"
+
+
 def settle(terms: dict, home_score: float, away_score: float) -> tuple[str, Decimal]:
-    """(result, net profit in CAD) for the recorded team and handicap at the
-    accepted odds and stake. Uses the reviewed betting_log.spread_result."""
-    result = betting_log.spread_result(terms["team"], terms["home_team"], terms["away_team"],
-                                       terms["handicap"], home_score, away_score)
-    stake = money(terms["stake_cad"])
-    profit = win_profit(int(terms["odds"]), stake) if result == "win" else \
-        (-stake if result == "loss" else Decimal("0.00"))
-    return result, profit
+    """(result, net cash result in CAD) at the accepted odds.
+
+    Cash-funded: win = win_profit(odds, stake), loss = -stake, push = 0.
+    Bonus bet: the bonus stake is not cash, so a loss or push changes cash by
+    0.00 and a win pays win_profit(odds, bonus stake) in cash - plus the
+    bonus stake itself only if the promotion returns it with winnings.
+    Example: $25 bonus at +320, stake not returned: win 80.00, loss 0.00."""
+    v = terms_view(terms)
+    result = market_result(terms, home_score, away_score)
+    odds = int(v["odds"])
+    if v["funding"] == "cash":
+        stake = money(v["cash_stake_cad"])
+        profit = win_profit(odds, stake) if result == "win" else \
+            (-stake if result == "loss" else Decimal("0.00"))
+        return result, profit
+    bonus = money(v["bonus_stake_cad"])
+    if result != "win":
+        return result, Decimal("0.00")
+    return result, win_profit(odds, bonus) + (bonus if v["bonus_stake_returned"] else Decimal("0.00"))
 
 
 def _seal(doc: dict) -> dict:
@@ -199,8 +283,10 @@ def _is_id(v, kinds) -> bool:
     return isinstance(v, str) and bool(_ID_RE.match(v)) and v[0] in {PREFIX[k] for k in kinds}
 
 
-def _check_terms(t: dict, where: str) -> None:
-    _need(isinstance(t, dict) and set(t) == set(TERM_FIELDS), where, "terms fields differ from schema")
+def _check_terms(t: dict, where: str, version: int = SCHEMA_VERSION) -> None:
+    fields = TERM_FIELDS if version == SCHEMA_VERSION else TERM_FIELDS_V2
+    _need(isinstance(t, dict) and set(t) == set(fields), where,
+          f"terms fields differ from schema {version}")
     _need(t["sportsbook_key"] in SPORTSBOOKS, where, "unknown sportsbook")
     _need(isinstance(t["sportsbook_name"], str) and t["sportsbook_name"].strip(), where,
           "sportsbook name")
@@ -215,14 +301,48 @@ def _check_terms(t: dict, where: str) -> None:
           "teams don't match game_id")
     _need(t["team"] in (t["home_team"], t["away_team"]), where, "team not in game")
     _need(t["team_side"] == ("home" if t["team"] == t["home_team"] else "away"), where, "team side")
-    _need(on.valid_handicap(t["handicap"]) and isinstance(t["handicap"], float), where, "handicap")
     _need(_is_int(t["odds"]) and on.valid_american(t["odds"]), where, "odds")
-    _need(isinstance(t["stake_cad"], str) and _MONEY_RE.match(t["stake_cad"])
-          and Decimal("0") < Decimal(t["stake_cad"]) <= MAX_STAKE, where, "stake")
+    if version == SCHEMA_VERSION:
+        _need(on.valid_handicap(t["handicap"]) and isinstance(t["handicap"], float), where,
+              "handicap")
+        _need(isinstance(t["stake_cad"], str) and _MONEY_RE.match(t["stake_cad"])
+              and Decimal("0") < Decimal(t["stake_cad"]) <= MAX_STAKE, where, "stake")
+    else:
+        _check_v2_terms(t, where)
     placed, kickoff = _ts(t["placed_at"], where), _ts(t["kickoff_utc"], where)
     _need(placed < kickoff, where, "placed at or after kickoff")
     for f in ("reference", "note"):
         _need(t[f] is None or (isinstance(t[f], str) and 0 < len(t[f]) <= MAX_TEXT), where, f)
+
+
+def _check_v2_terms(t: dict, where: str) -> None:
+    """Market and funding rules of schema-2 terms."""
+    _need(t["market"] in MARKETS, where, f"unknown market {t['market']!r}")
+    if t["market"] == "spread":
+        _need(on.valid_handicap(t["handicap"]) and isinstance(t["handicap"], float), where,
+              "handicap")
+        _need(t["tie_rule"] is None, where, "a spread wager has no tie rule")
+    else:
+        _need(t["handicap"] is None, where, "a moneyline wager has no handicap")
+        _need(t["tie_rule"] in TIE_RULES, where, "a moneyline wager needs its tie rule "
+                                                 "(push or loss)")
+    amounts = []
+    for f in ("cash_stake_cad", "bonus_stake_cad"):
+        _need(isinstance(t[f], str) and _MONEY_RE.match(t[f])
+              and Decimal("0") <= Decimal(t[f]) <= MAX_STAKE, where, f)
+        amounts.append(Decimal(t[f]))
+    cash, bonus = amounts
+    _need((cash > 0) != (bonus > 0), where, "a wager is funded entirely with cash or entirely "
+                                            "with a bonus bet (mixed funding isn't supported)")
+    if bonus > 0:
+        _need(isinstance(t["bonus_stake_returned"], bool), where,
+              "a bonus bet must say whether the bonus stake is returned as cash with "
+              "winnings")
+    else:
+        _need(t["bonus_stake_returned"] is None, where, "bonus_stake_returned applies only to "
+                                                        "bonus bets")
+    _need(not (t["market"] == "spread" and cash > 0), where,
+          "a cash-funded spread wager is a schema-1 record")
 
 
 def _ts(text, where) -> datetime:
@@ -272,6 +392,12 @@ _FIELDS = {
     KIND_INVALIDATION: ("wager_id", "terms_record_id", "supersedes", "schedule", "reason"),
 }
 _COMMON = ("schema_version", "kind", "record_id", "recorded_at", "code_revision", CHECKSUM_FIELD)
+# Schema 2 adds only these; kinds not listed don't exist in schema 2.
+_FIELDS_V2 = {
+    KIND_WAGER: _FIELDS[KIND_WAGER],
+    KIND_AMENDMENT: _FIELDS[KIND_AMENDMENT],
+    KIND_GRADE: _FIELDS[KIND_GRADE] + ("market", "funding", "bonus_outcome"),
+}
 
 
 def validate_record(doc, where: str = "record") -> None:
@@ -280,9 +406,14 @@ def validate_record(doc, where: str = "record") -> None:
     _need(isinstance(doc, dict), where, "not an object")
     kind = doc.get("kind")
     _need(kind in _FIELDS, where, f"unknown kind {kind!r}")
-    _need(set(doc) == set(_COMMON + _FIELDS[kind]), where,
-          f"fields differ from schema: {sorted(set(doc) ^ set(_COMMON + _FIELDS[kind]))}")
-    _need(doc["schema_version"] == SCHEMA_VERSION, where, "unsupported schema_version")
+    version = doc.get("schema_version")
+    _need(version in SCHEMA_VERSIONS and not isinstance(version, bool), where,
+          f"unsupported schema_version {version!r}")
+    _need(version == SCHEMA_VERSION or kind in _FIELDS_V2, where,
+          f"{kind} records exist only in schema {SCHEMA_VERSION}")
+    fields = _FIELDS[kind] if version == SCHEMA_VERSION else _FIELDS_V2[kind]
+    _need(set(doc) == set(_COMMON + fields), where,
+          f"fields differ from schema: {sorted(set(doc) ^ set(_COMMON + fields))}")
     try:
         ok = doc[CHECKSUM_FIELD] == ps.payload_checksum(doc)
     except ValueError:                          # NaN/Infinity can't be canonical JSON
@@ -294,7 +425,7 @@ def validate_record(doc, where: str = "record") -> None:
           "record_id doesn't match recorded_at")
     _need(isinstance(doc["code_revision"], str) and doc["code_revision"], where, "code_revision")
     if kind in (KIND_WAGER, KIND_AMENDMENT):
-        _check_terms(doc["terms"], where)
+        _check_terms(doc["terms"], where, version)
         _need(_ts(doc["terms"]["placed_at"], where) <= recorded, where, "placed after recorded")
         _check_confirmed(doc["confirmed_existing"], where)
         _check_schedule(doc["schedule"], where)
@@ -326,6 +457,17 @@ def validate_record(doc, where: str = "record") -> None:
         _need(isinstance(doc["profit_cad"], str) and _MONEY_RE.match(doc["profit_cad"]), where,
               "profit")
         check_evidence(doc["evidence"], where)
+        if version == SCHEMA_V2:
+            _need(doc["market"] in MARKETS and doc["funding"] in FUNDINGS, where,
+                  "grade market/funding")
+            if doc["funding"] == "cash":
+                _need(doc["bonus_outcome"] is None, where, "a cash wager has no bonus outcome")
+            else:
+                _need(doc["bonus_outcome"] ==
+                      ("used" if doc["result"] in ("win", "loss") else "unresolved"), where,
+                      "bonus_outcome doesn't follow from the result")
+                _need(Decimal(doc["profit_cad"]) >= 0, where,
+                      "a bonus bet can't lose cash")
     if kind == KIND_INVALIDATION:
         _need(_is_id(doc["supersedes"], (KIND_GRADE,)), where, "supersedes must name a grade")
 
@@ -510,9 +652,18 @@ def current_state(records: list[dict]) -> dict[str, WagerState]:
                 _need(s["terms_sha256"] == terms_sha256(t["terms"]), s["_file"],
                       "terms_sha256 doesn't match the referenced terms")
                 h, a = check_evidence(s["evidence"], s["_file"])
+                _need(s["schema_version"] == t["schema_version"], s["_file"],
+                      "a grade has the schema version of the terms it settles")
+                if s["schema_version"] == SCHEMA_V2:
+                    view = terms_view(t["terms"])
+                    _need((s["market"], s["funding"]) == (view["market"], view["funding"]),
+                          s["_file"], "grade market/funding differ from the terms")
                 result, profit = settle(t["terms"], h, a)
                 _need((result, f"{profit:.2f}") == (s["result"], s["profit_cad"]), s["_file"],
                       "result/profit don't follow from the terms and scores")
+                if s["schema_version"] == SCHEMA_V2:
+                    _need(s["bonus_outcome"] == bonus_outcome(t["terms"], result), s["_file"],
+                          "bonus_outcome doesn't follow from the terms and scores")
             else:
                 _need(by_id[s["supersedes"]]["terms_record_id"] == s["terms_record_id"],
                       s["_file"], "invalidation names other terms than the grade it voids")
@@ -548,9 +699,7 @@ def current_state(records: list[dict]) -> dict[str, WagerState]:
                           other_terms["reference"])
             if terms["reference"] and same_book == other_book:
                 _need(False, where, "confirmed wager reuses an existing sportsbook reference")
-            if (tuple(terms[f] for f in IDENTITY_FIELDS) ==
-                    tuple(other_terms[f] for f in IDENTITY_FIELDS)
-                    and _refs_compatible(terms, other_terms)):
+            if identity(terms) == identity(other_terms) and _refs_compatible(terms, other_terms):
                 expected.append(s.wager_id)
         _need(sorted(expected) == r["confirmed_existing"], where,
               "confirmed_existing doesn't match the active duplicate wagers at record time")
@@ -558,23 +707,53 @@ def current_state(records: list[dict]) -> dict[str, WagerState]:
 
 
 def totals(states: dict[str, WagerState]) -> dict:
-    """Current (non-void) wagers only. ROI = net profit / stake of graded
-    wagers (wins, losses and pushes). Pending and unverified stake is shown
-    separately and excluded; voided wagers are excluded entirely."""
+    """Current (non-void) wagers only; voided wagers are excluded entirely.
+
+    Cash-funded wagers (the original keys, unchanged in meaning): graded
+    stake, net profit and ROI = net profit / graded stake of graded cash
+    wagers (wins, losses and pushes); pending cash stake is shown separately.
+    Bonus bets are kept apart - bonus face value is never cash staked, and
+    their cash winnings never enter cash ROI:
+      bonus_stake_used_cad     - bonus stake of graded wins and losses;
+      bonus_cash_winnings_cad  - cash those wins paid;
+      bonus_unresolved, bonus_stake_unresolved_cad - graded pushes/ties whose bonus outcome
+                                 is unknown (not assumed reissued or cash);
+      bonus_stake_pending_cad  - bonus stake without a verified grade.
+    net_cash_cad = cash net profit + bonus cash winnings (a labelled
+    combination). W-L-P and pending counts cover every current wager."""
     live = [s for s in states.values() if not s.void]
     graded = [s for s in live if s.grade]
-    stake_graded = sum((money(s.terms["stake_cad"]) for s in graded), Decimal("0.00"))
-    profit = sum((money(s.grade["profit_cad"]) for s in graded), Decimal("0.00"))
+    view = {s.wager_id: terms_view(s.terms) for s in live}
+    cash_g = [s for s in graded if view[s.wager_id]["funding"] == "cash"]
+    bonus_g = [s for s in graded if view[s.wager_id]["funding"] == "bonus"]
+    zero = Decimal("0.00")
+    stake_graded = sum((money(view[s.wager_id]["cash_stake_cad"]) for s in cash_g), zero)
+    profit = sum((money(s.grade["profit_cad"]) for s in cash_g), zero)
+    bonus_winnings = sum((money(s.grade["profit_cad"]) for s in bonus_g), zero)
+    unresolved = [s for s in bonus_g if s.grade["result"] == "push"]
     counts = {k: sum(1 for s in graded if s.grade["result"] == k) for k in RESULTS}
     return {
         "wagers": len(live), "graded": len(graded), "pending": len(live) - len(graded),
         "unverified": sum(1 for s in live if s.status == "unverified"),
         "voided": sum(1 for s in states.values() if s.void), **counts,
+        "cash_wagers": sum(1 for s in live if view[s.wager_id]["funding"] == "cash"),
+        "bonus_wagers": sum(1 for s in live if view[s.wager_id]["funding"] == "bonus"),
+        "moneyline_wagers": sum(1 for s in live if view[s.wager_id]["market"] == "moneyline"),
+        "cash_graded": len(cash_g), "bonus_graded": len(bonus_g),
         "stake_graded_cad": stake_graded,
-        "stake_pending_cad": sum((money(s.terms["stake_cad"]) for s in live if not s.grade),
-                                 Decimal("0.00")),
+        "stake_pending_cad": sum((money(view[s.wager_id]["cash_stake_cad"]) for s in live
+                                  if not s.grade), zero),
         "net_profit_cad": profit,
         "roi_pct": None if not stake_graded else (profit / stake_graded * 100).quantize(CENT),
+        "bonus_stake_used_cad": sum((money(view[s.wager_id]["bonus_stake_cad"]) for s in bonus_g
+                                     if s.grade["result"] != "push"), zero),
+        "bonus_cash_winnings_cad": bonus_winnings,
+        "bonus_unresolved": len(unresolved),
+        "bonus_stake_unresolved_cad": sum((money(view[s.wager_id]["bonus_stake_cad"])
+                                           for s in unresolved), zero),
+        "bonus_stake_pending_cad": sum((money(view[s.wager_id]["bonus_stake_cad"]) for s in live
+                                        if not s.grade), zero),
+        "net_cash_cad": profit + bonus_winnings,
     }
 
 
@@ -597,7 +776,9 @@ def _schedule_game(game_id: str, schedule_path: Path) -> tuple[dict, str]:
 
 def build_terms(*, sportsbook_key: str, sportsbook_name: str | None, game_id: str, team: str,
                 handicap, odds, stake, placed_at: datetime, reference: str | None,
-                note: str | None, now: datetime, schedule_path: Path) -> tuple[dict, str]:
+                note: str | None, now: datetime, schedule_path: Path,
+                market: str = "spread", funding: str = "cash", tie_rule: str | None = None,
+                bonus_stake_returned: bool | None = None) -> tuple[dict, str]:
     """Validated accepted terms of a wager, plus the schedule's sha256.
 
     placed_at must be timezone-aware, not in the future (vs `now`) and
@@ -621,12 +802,34 @@ def build_terms(*, sportsbook_key: str, sportsbook_name: str | None, game_id: st
     team = str(team).strip().upper()
     if team not in (game["home_team"], game["away_team"]):
         raise JournalError(f"team {team} is not playing in {game_id}")
-    try:
-        handicap = float(handicap) + 0.0
-    except (TypeError, ValueError):
-        raise JournalError("enter the spread") from None
-    if not on.valid_handicap(handicap):
-        raise JournalError(f"spread {handicap:g} isn't a half-point value within 60")
+    if market not in MARKETS:
+        raise JournalError(f"choose the market (spread or moneyline), not {market!r}")
+    if funding not in FUNDINGS:
+        raise JournalError(f"choose the funding (cash or bonus bet), not {funding!r}")
+    if market == "spread":
+        try:
+            handicap = float(handicap) + 0.0
+        except (TypeError, ValueError):
+            raise JournalError("enter the spread") from None
+        if not on.valid_handicap(handicap):
+            raise JournalError(f"spread {handicap:g} isn't a half-point value within 60")
+        if tie_rule is not None:
+            raise JournalError("a tie rule applies only to moneyline wagers")
+    else:
+        if handicap not in (None, ""):
+            raise JournalError("a moneyline wager has no handicap; leave the spread empty")
+        handicap = None
+        if tie_rule not in TIE_RULES:
+            raise JournalError("choose what the sportsbook does with this moneyline bet if the "
+                               "game ends in a tie (refunded as a push, or settled as a loss), "
+                               "from its rules")
+    if funding == "bonus":
+        if not isinstance(bonus_stake_returned, bool):
+            raise JournalError("say whether the bonus stake is returned as cash with winnings, "
+                               "from the promotion's terms (a stake reissued as bonus credit "
+                               "is not returned)")
+    elif bonus_stake_returned is not None:
+        raise JournalError("'bonus stake returned' applies only to bonus bets")
     if odds is None or not on.valid_american(odds):
         raise JournalError("odds must be American odds (e.g. -110, +105)")
     stake_d = money(stake)
@@ -642,8 +845,16 @@ def build_terms(*, sportsbook_key: str, sportsbook_name: str | None, game_id: st
         "handicap": handicap, "odds": int(odds), "stake_cad": f"{stake_d:.2f}",
         "placed_at": iso(placed), "reference": clean(reference), "note": clean(note),
     }
+    version = SCHEMA_VERSION
+    if (market, funding) != ("spread", "cash"):          # not expressible in schema 1
+        version = SCHEMA_V2
+        stake_txt = terms.pop("stake_cad")
+        terms.update(market=market, tie_rule=tie_rule if market == "moneyline" else None,
+                     cash_stake_cad=stake_txt if funding == "cash" else "0.00",
+                     bonus_stake_cad=stake_txt if funding == "bonus" else "0.00",
+                     bonus_stake_returned=bonus_stake_returned if funding == "bonus" else None)
     try:
-        _check_terms(terms, "terms")
+        _check_terms(terms, "terms", version)
     except IntegrityError as exc:
         raise JournalError(str(exc)) from None
     return terms, sha
@@ -653,9 +864,9 @@ def identical_wagers(terms: dict, states: dict[str, WagerState],
                      exclude: str | None = None) -> list[str]:
     """Active wagers (other than `exclude`) whose effective terms have the
     same identity as `terms`."""
-    key = tuple(terms[f] for f in IDENTITY_FIELDS)
+    key = identity(terms)
     return sorted(s.wager_id for s in states.values() if not s.void and s.wager_id != exclude
-                  and tuple(s.terms[f] for f in IDENTITY_FIELDS) == key
+                  and identity(s.terms) == key
                   and _refs_compatible(s.terms, terms))
 
 
@@ -674,8 +885,13 @@ def same_reference(terms: dict, states: dict[str, WagerState], exclude: str | No
                   and s.terms["reference"] == terms["reference"])
 
 
-def _base(kind: str, now: datetime, repo_dir: Path) -> dict:
-    return {"schema_version": SCHEMA_VERSION, "kind": kind, "record_id": _new_id(kind, now),
+def terms_version(terms: dict) -> int:
+    """Schema 2 only for terms schema 1 can't express (moneyline or bonus)."""
+    return SCHEMA_V2 if "market" in terms else SCHEMA_VERSION
+
+
+def _base(kind: str, now: datetime, repo_dir: Path, version: int = SCHEMA_VERSION) -> dict:
+    return {"schema_version": version, "kind": kind, "record_id": _new_id(kind, now),
             "recorded_at": iso(now), "code_revision": ps.code_revision(repo_dir)[0]}
 
 
@@ -690,7 +906,7 @@ def _finish(doc: dict, what: str) -> dict:
 
 def prepare_wager(terms: dict, schedule_sha: str, *, confirmed_existing: list[str],
                   now: datetime, repo_dir: Path = ROOT) -> dict:
-    doc = {**_base(KIND_WAGER, now, repo_dir), "terms": terms,
+    doc = {**_base(KIND_WAGER, now, repo_dir, terms_version(terms)), "terms": terms,
            "confirmed_existing": sorted(set(confirmed_existing)),
            "schedule": {"path": ps.SCHEDULE_NAME, "sha256": schedule_sha}}
     return _finish(doc, "new wager")
@@ -703,7 +919,8 @@ def prepare_amendment(wager_id: str, previous: str, terms: dict, schedule_sha: s
     was previewed; saving refuses if it is no longer current."""
     if not (reason or "").strip():
         raise JournalError("a reason is required")
-    doc = {**_base(KIND_AMENDMENT, now, repo_dir), "amends": wager_id, "previous": previous,
+    doc = {**_base(KIND_AMENDMENT, now, repo_dir, terms_version(terms)), "amends": wager_id,
+           "previous": previous,
            "reason": reason.strip()[:MAX_TEXT], "terms": terms,
            "confirmed_existing": sorted(set(confirmed_existing)),
            "schedule": {"path": ps.SCHEDULE_NAME, "sha256": schedule_sha}}
@@ -940,6 +1157,11 @@ def grade(journal_dir: Path = JOURNAL_DIR, schedule_path: Path = SCHEDULE_PATH, 
                 doc = _settlement(KIND_GRADE, s, tip, sha, reason, now, code)
                 doc.update(terms_sha256=terms_sha256(s.terms), result=result,
                            profit_cad=f"{profit:.2f}", evidence=evidence)
+                if terms_version(s.terms) == SCHEMA_V2:      # grade carries market/funding
+                    view = terms_view(s.terms)
+                    doc.update(schema_version=SCHEMA_V2, market=view["market"],
+                               funding=view["funding"],
+                               bonus_outcome=bonus_outcome(s.terms, result))
             _seal(doc)
             validate_record(doc, "new settlement")
             _write(doc, journal_dir)
@@ -1018,23 +1240,48 @@ def toronto_text(ts: str) -> str:
 
 
 def bet_text(terms: dict) -> str:
-    """'Chicago Bears +3.5 at −110' (the bettor-facing line)."""
-    h = terms["handicap"]
+    """'Chicago Bears +3.5 at −110' or 'Chicago Bears moneyline at +150'."""
+    v = terms_view(terms)
+    if v["market"] == "moneyline":
+        return f"{team_name(v['team'])} moneyline at {v['odds']:+d}".replace("-", MINUS)
+    h = v["handicap"]
     hs = "PK" if h == 0 else (f"{h:+.1f}"[:-2] if float(h).is_integer() else f"{h:+.1f}")
-    return f"{team_name(terms['team'])} {hs} at {terms['odds']:+d}".replace("-", MINUS)
+    return f"{team_name(v['team'])} {hs} at {v['odds']:+d}".replace("-", MINUS)
+
+
+TIE_RULE_TEXT = {"push": "a tie is refunded (push)", "loss": "a tie settles as a loss"}
+
+
+def stake_text(terms: dict) -> str:
+    """'$25.00 CAD' or '$25.00 bonus bet (stake not returned with winnings)', plus the
+    moneyline tie rule."""
+    v = terms_view(terms)
+    if v["funding"] == "bonus":
+        returned = "returned as cash" if v["bonus_stake_returned"] else "not returned"
+        text = f"${v['bonus_stake_cad']} bonus bet (stake {returned} with winnings)"
+    else:
+        text = f"${v['cash_stake_cad']} CAD"
+    if v["market"] == "moneyline":
+        text += f"; {TIE_RULE_TEXT[v['tie_rule']]}"
+    return text
 
 def current_rows(states: dict[str, WagerState], include_void: bool = False) -> list[dict]:
     rows = []
     for s in sorted(states.values(), key=lambda x: x.terms["placed_at"], reverse=True):
         if s.void and not include_void:
             continue
-        t = s.terms
+        t = terms_view(s.terms)
         ev = s.grade["evidence"] if s.grade else None
+        bonus = t["funding"] == "bonus"
         rows.append({
-            "Wager ID": s.wager_id, "Status": s.status, "Status note": s.status_note,
+            "Wager ID": s.wager_id, "Status": s.status, "Status note": s.status_note
+            or ("bonus outcome unresolved (tie/push): not assumed reissued or cash"
+                if bonus and s.grade and s.grade["result"] == "push" else ""),
             "Sportsbook": t["sportsbook_name"],
             "Game": f"{t['season']} wk {t['week']}: {t['away_team']} @ {t['home_team']}",
-            "Bet": bet_text(t), "Stake (CAD)": float(t["stake_cad"]),
+            "Market": t["market"], "Funding": "bonus bet" if bonus else "cash",
+            "Bet": bet_text(t), "Stake (CAD)": float(t["cash_stake_cad"]),
+            "Bonus stake (CAD)": float(t["bonus_stake_cad"]) if bonus else None,
             "Net profit (CAD)": float(s.grade["profit_cad"]) if s.grade and not s.void else None,
             "Final (away-home)": f"{ev['away_score']}-{ev['home_score']}" if ev else "",
             "Placed (Toronto)": toronto_text(t["placed_at"]),
@@ -1045,7 +1292,7 @@ def current_rows(states: dict[str, WagerState], include_void: bool = False) -> l
 
 
 def _terms_detail(terms: dict) -> str:
-    return (f"{terms['sportsbook_name']}: {bet_text(terms)}, ${terms['stake_cad']} CAD, "
+    return (f"{terms['sportsbook_name']}: {bet_text(terms)}, {stake_text(terms)}, "
             f"placed {toronto_text(terms['placed_at'])}")
 
 
@@ -1084,6 +1331,10 @@ def history_rows(records: list[dict], states: dict[str, WagerState] | None = Non
             detail = (f"{r['result']} {r['profit_cad']} CAD on terms {r['terms_record_id']}, "
                       f"final {ev['away_score']}-{ev['home_score']} (away-home), "
                       f"game day {ev['gameday']}, schedule {r['schedule']['sha256'][:12]}")
+            if r.get("funding") == "bonus":
+                detail += f"; bonus bet, bonus outcome {r['bonus_outcome']}"
+            if r.get("market") == "moneyline":
+                detail += "; moneyline"
         else:
             target, link = r["wager_id"], f"supersedes {r['supersedes']}"
             detail = (f"grade invalidated (terms {r['terms_record_id']}), "
