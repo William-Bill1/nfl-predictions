@@ -53,3 +53,4 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-10-19 08:23:23,2026,7,2026_07_CIN_BAL,2026-10-25 00:00:00,BAL,CIN,spread,CIN,3.0,50.5,,0.5456483155059275,0.010764594575695,Lean,,,pending,,3.0,-110.0,assumed -110 model recommendation
 2026-10-19 08:23:23,2026,7,2026_07_IND_MIN,2026-10-25 00:00:00,MIN,IND,spread,IND,5.5,41.5,,0.5494304623068536,0.0301996930760842,Lean,,,pending,,5.5,-110.0,assumed -110 model recommendation
 2026-10-19 08:23:23,2026,7,2026_07_DAL_PHI,2026-10-26 00:00:00,PHI,DAL,spread,PHI,-4.5,44.5,,0.559018012853593,0.0397872436228237,Good,,,pending,,4.5,-110.0,assumed -110 model recommendation
+2026-10-20 08:08:19,2026,7,2026_07_CLE_TEN,2026-10-25 00:00:00,TEN,CLE,spread,TEN,-1.5,38.5,,0.5439581068238283,0.0317629848726087,Lean,,,pending,,1.5,-110.0,assumed -110 model recommendation
