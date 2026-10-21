@@ -134,6 +134,11 @@ signal-only results as a separate subset.
   `by_code_revision`.
 - **No significance tests or profitability claims** are made; the
   `sample_note` states how small the sample is.
+- **Reliability view:** `scripts/frozen_model_reliability.py`
+  ([`FROZEN_MODEL_RELIABILITY.md`](FROZEN_MODEL_RELIABILITY.md)) builds on
+  this report's per-game rows. It adds fixed five-bin calibration with Wilson
+  intervals and week-clustered paired comparisons against 50% and the
+  matched Ontario market. This report's 10-bin calibration is unchanged.
 
 ## 5. Market comparison
 

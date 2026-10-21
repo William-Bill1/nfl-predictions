@@ -218,6 +218,13 @@ score fetch is gone.
   - **Market and returns:** market comparison only against automated Ontario-feed quotes (US reference and manual excluded) in archived captures at the exact handicap; signal-only simulated returns at archived vs assumed −110 prices.
   - **Scope:** `--season`, or by default the latest schedule season, independent of selections; coverage distinguishes no snapshot history from games before the first snapshot. `--as-of` is an outcome cutoff over current files, not a reconstruction.
   - **Output:** deterministic JSON/CSV to the git-ignored `reports/frozen_spread/`. It refuses output paths overlapping `data_files/`, never reads the bet journal, and corrupt inputs fail the run.
+- `scripts/frozen_model_reliability.py` — read-only, evidence-only reliability view built on `frozen_spread_report` (no competing selection, settlement or market matching; `docs/FROZEN_MODEL_RELIABILITY.md`):
+  - **Protocol v1** (fixed for subsequent evaluation; results on the games already evaluated are exploratory): the latest pregame snapshot, chosen first; pushes counted separately; all predictions and the signal subset separately.
+  - **Samples:** overall (model vs 50%) and matched Ontario market (model vs market vs 50%, one game = one observation).
+  - **Calibration:** fixed bins [0,.40) / [.40,.50) / [.50,.60) / [.60,.70) / [.70,1] with 95% Wilson intervals (binomial reference intervals that ignore dependence between games); sparse bins are descriptive only.
+  - **Uncertainty:** paired per-game Brier/log-loss differences with a paired season/week cluster bootstrap (10,000 replicates, seed 20261005; unavailable below 5 weeks).
+  - **Sensitivity:** an optional separate earliest-snapshot view.
+  - **Output:** JSON/CSV/SVG to the git-ignored `reports/frozen_reliability/`, with source fingerprints. Protected output paths; no source writes, network or journal access.
 - `scripts/spread_tracker_report.py` — rolls `spread_tracker_log.csv` up into `spread_tracker_report.json` (per-book ranking, best-line-per-game, anomaly flags)
 - `scripts/spread_value_finder.py` — reads `spread_tracker_log.csv`; for one book, ranks sides by fair-value edge (normal approx of margin of victory vs. the book's own devigged price) — point-divergence alone isn't the same as a favorable price
 - `scripts/model_line_shop.py` — reads `spread_tracker_log.csv` + `nfl_games_historical_with_predictions.csv`; extends the spread model's own probability (evaluated against nflverse's line only) to every tracked book's specific line, ranked by edge vs. the model instead of vs. the field

@@ -8,6 +8,39 @@ bottom.
 
 ## October 2026
 
+- **Frozen-model reliability report (read-only, evidence only)**
+  (`scripts/frozen_model_reliability.py`, `docs/FROZEN_MODEL_RELIABILITY.md`).
+  - **Built on the frozen-spread report:** it uses that report's selection,
+    timing cross-check, settlement, coverage and exact-line Ontario market
+    match unchanged.
+  - **Protocol v1, fixed for subsequent evaluation** (not registered before
+    the games already evaluated, whose results are exploratory):
+    - the latest pregame snapshot, chosen first, with no fallback;
+    - pushes counted separately;
+    - all predictions and the signal subset reported separately;
+    - two explicit samples: overall (model vs 50%) and matched Ontario
+      market (model vs market vs 50%; books averaged, so one game is one
+      observation).
+  - **Calibration:** fixed bins [0,.40) / [.40,.50) / [.50,.60) / [.60,.70) /
+    [.70,1] with 95% Wilson intervals. These are binomial reference
+    intervals that ignore dependence between games, separate from the
+    bootstrap. Empty bins are kept; sparse bins are descriptive only.
+  - **Uncertainty:** paired per-game Brier and log-loss differences (model
+    minus baseline) with a paired season/week cluster bootstrap (10,000
+    replicates, seed 20261005). The interval is unavailable with fewer than
+    5 weeks. Reaching 5 only permits an exploratory interval, not a reliable
+    one, and no edge is claimed.
+  - **Sensitivity:** an optional, separate earliest-snapshot view, never
+    pooled.
+  - **Output:** JSON, two CSVs and a standalone SVG calibration plot in
+    the git-ignored `reports/frozen_reliability/`, with source fingerprints
+    and protected output paths. Corrupt inputs fail the run; no source
+    writes, network calls or journal access.
+  - **Sample:** frozen tracking began 2026-10-05, so the sample is short.
+    Changing thresholds on it would need a new, untouched evaluation
+    period.
+  - **Tests:** `tests/test_frozen_model_reliability.py`.
+
 - **Injury report archive, phase 1 (evidence only)** (`injury_reports.py`,
   `docs/INJURY_REPORT_ARCHIVE.md`).
   - **What it does:** around each Ontario decision slot, the Ontario Spread
