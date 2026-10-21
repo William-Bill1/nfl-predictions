@@ -114,3 +114,271 @@ season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odd
 2026,7,2026_07_KC_SEA,Seattle Seahawks,Kansas City Chiefs,Cooper Kupp,receptions,fanduel,2.5,106,-140
 2026,7,2026_07_KC_SEA,Seattle Seahawks,Kansas City Chiefs,Jaxon Smith-Njigba,receptions,fanduel,6.5,-138,104
 2026,7,2026_07_KC_SEA,Seattle Seahawks,Kansas City Chiefs,Kenneth Walker III,rushing_yards,fanduel,92.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brock Purdy,passing_yards,draftkings,243.5,-112,-112
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Michael Penix Jr.,passing_yards,draftkings,229.5,-112,-112
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Drake London,receiving_yards,draftkings,76.5,-113,-111
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,George Kittle,receiving_yards,draftkings,68.5,-111,-113
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,receiving_yards,draftkings,45.5,-110,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kyle Pitts,receiving_yards,draftkings,35.5,-111,-113
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Jahan Dotson,receiving_yards,draftkings,29.5,-112,-112
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,receiving_yards,draftkings,24.5,-109,-115
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Drake London,receptions,draftkings,5.5,-134,105
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,George Kittle,receptions,draftkings,5.5,-106,-120
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,receptions,draftkings,5.5,104,-133
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,receptions,draftkings,3.5,-146,114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kyle Pitts,receptions,draftkings,3.5,104,-132
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Jahan Dotson,receptions,draftkings,2.5,124,-159
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,rushing_yards,draftkings,83.5,-114,-110
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,rushing_yards,draftkings,60.5,-114,-110
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kaelon Black,rushing_yards,draftkings,29.5,-113,-111
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brian Robinson Jr.,rushing_yards,draftkings,27.5,-113,-111
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brock Purdy,rushing_yards,draftkings,18.5,-114,-110
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Michael Penix Jr.,rushing_yards,draftkings,1.5,-117,-107
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Michael Penix Jr.,passing_yards,fanduel,227.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brock Purdy,passing_yards,fanduel,240.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kyle Pitts,receiving_yards,fanduel,35.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Jahan Dotson,receiving_yards,fanduel,29.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,receiving_yards,fanduel,24.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,receiving_yards,fanduel,44.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,George Kittle,receiving_yards,fanduel,66.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Drake London,receiving_yards,fanduel,76.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Drake London,receptions,fanduel,5.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,receptions,fanduel,3.5,-172,128
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Jahan Dotson,receptions,fanduel,1.5,-205,152
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,receptions,fanduel,5.5,106,-140
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,George Kittle,receptions,fanduel,5.5,-102,-130
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kyle Pitts,receptions,fanduel,3.5,106,-140
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Michael Penix Jr.,rushing_yards,fanduel,2.5,-102,-128
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brian Robinson Jr.,rushing_yards,fanduel,26.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Brock Purdy,rushing_yards,fanduel,19.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Kaelon Black,rushing_yards,fanduel,31.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Bijan Robinson,rushing_yards,fanduel,83.5,-114,-114
+2026,7,2026_07_SF_ATL,Atlanta Falcons,San Francisco 49ers,Christian McCaffrey,rushing_yards,fanduel,60.5,-114,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Joe Burrow,passing_yards,draftkings,259.5,-113,-111
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Ja'Marr Chase,receiving_yards,draftkings,77.5,-111,-113
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Tee Higgins,receiving_yards,draftkings,63.5,-113,-111
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Ja'Marr Chase,receptions,draftkings,6.5,-138,108
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Tee Higgins,receptions,draftkings,4.5,-136,107
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Derrick Henry,rushing_yards,draftkings,86.5,-113,-111
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Chase Brown,rushing_yards,draftkings,50.5,-110,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Joe Burrow,passing_yards,fanduel,260.5,-114,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Ja'Marr Chase,receiving_yards,fanduel,79.5,-114,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Tee Higgins,receiving_yards,fanduel,65.5,-114,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Tee Higgins,receptions,fanduel,5.5,140,-188
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Ja'Marr Chase,receptions,fanduel,6.5,-172,128
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Chase Brown,rushing_yards,fanduel,50.5,-114,-114
+2026,7,2026_07_CIN_BAL,Baltimore Ravens,Cincinnati Bengals,Derrick Henry,rushing_yards,fanduel,85.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Deshaun Watson,passing_yards,draftkings,205.5,-111,-113
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Cam Ward,passing_yards,draftkings,185.5,-112,-112
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Carnell Tate,receiving_yards,draftkings,53.5,-113,-111
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Denzel Boston,receiving_yards,draftkings,50.5,-112,-112
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,KC Concepcion,receiving_yards,draftkings,38.5,-110,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Wan'Dale Robinson,receiving_yards,draftkings,34.5,-114,-110
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Harold Fannin Jr.,receiving_yards,draftkings,30.5,-109,-116
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Carnell Tate,receptions,draftkings,4.5,-120,-106
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,KC Concepcion,receptions,draftkings,4.5,-103,-124
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Wan'Dale Robinson,receptions,draftkings,3.5,-167,130
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Harold Fannin Jr.,receptions,draftkings,3.5,-109,-117
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Denzel Boston,receptions,draftkings,3.5,110,-140
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Tony Pollard,rushing_yards,draftkings,67.5,-114,-110
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Deshaun Watson,passing_yards,fanduel,208.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Cam Ward,passing_yards,fanduel,187.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Denzel Boston,receiving_yards,fanduel,51.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Carnell Tate,receiving_yards,fanduel,53.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Harold Fannin Jr.,receiving_yards,fanduel,29.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Wan'Dale Robinson,receiving_yards,fanduel,34.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,KC Concepcion,receiving_yards,fanduel,38.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Denzel Boston,receptions,fanduel,3.5,112,-148
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Harold Fannin Jr.,receptions,fanduel,3.5,-102,-130
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Carnell Tate,receptions,fanduel,4.5,-122,-108
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Wan'Dale Robinson,receptions,fanduel,4.5,124,-166
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,KC Concepcion,receptions,fanduel,4.5,-114,-114
+2026,7,2026_07_CLE_TEN,Tennessee Titans,Cleveland Browns,Tony Pollard,rushing_yards,fanduel,67.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Kyler Murray,passing_yards,draftkings,204.5,-113,-111
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Daniel Jones,passing_yards,draftkings,201.5,-111,-113
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Justin Jefferson,receiving_yards,draftkings,74.5,-113,-111
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jordan Addison,receiving_yards,draftkings,43.5,-112,-112
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,receiving_yards,draftkings,16.5,-107,-117
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Justin Jefferson,receptions,draftkings,5.5,-142,111
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jordan Addison,receptions,draftkings,3.5,113,-144
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,receptions,draftkings,2.5,117,-150
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,rushing_yards,draftkings,69.5,-110,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Kyler Murray,passing_yards,fanduel,205.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Daniel Jones,passing_yards,fanduel,196.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jordan Addison,receiving_yards,fanduel,43.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Justin Jefferson,receiving_yards,fanduel,72.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,receiving_yards,fanduel,17.5,-114,-114
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,receptions,fanduel,2.5,108,-144
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Justin Jefferson,receptions,fanduel,5.5,-132,100
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jordan Addison,receptions,fanduel,3.5,116,-154
+2026,7,2026_07_IND_MIN,Minnesota Vikings,Indianapolis Colts,Jonathan Taylor,rushing_yards,fanduel,71.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Bo Nix,passing_yards,draftkings,216.5,-113,-111
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Trey McBride,receiving_yards,draftkings,65.5,-114,-110
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jaylen Waddle,receiving_yards,draftkings,55.5,-115,-109
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Michael Wilson,receiving_yards,draftkings,48.5,-115,-109
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Kendrick Bourne,receiving_yards,draftkings,37.5,-113,-111
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Courtland Sutton,receiving_yards,draftkings,35.5,-113,-111
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Evan Engram,receiving_yards,draftkings,22.5,-113,-111
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Elijah Higgins,receiving_yards,draftkings,17.5,-110,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jalen Brooks,receiving_yards,draftkings,17.5,-110,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Troy Franklin,receiving_yards,draftkings,15.5,-112,-112
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Marvin Mims Jr.,receiving_yards,draftkings,12.5,-110,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Trey McBride,receptions,draftkings,7.5,111,-142
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jaylen Waddle,receptions,draftkings,5.5,117,-149
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Michael Wilson,receptions,draftkings,4.5,104,-132
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Kendrick Bourne,receptions,draftkings,3.5,-124,-103
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Courtland Sutton,receptions,draftkings,3.5,106,-135
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Evan Engram,receptions,draftkings,2.5,-125,-102
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Elijah Higgins,receptions,draftkings,1.5,-175,137
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jalen Brooks,receptions,draftkings,1.5,-131,103
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Troy Franklin,receptions,draftkings,1.5,-122,-105
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Marvin Mims Jr.,receptions,draftkings,1.5,-107,-119
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,J.K. Dobbins,rushing_yards,draftkings,58.5,-114,-110
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Bo Nix,rushing_yards,draftkings,12.5,-106,-118
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Bo Nix,passing_yards,fanduel,221.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jalen Brooks,receiving_yards,fanduel,17.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Troy Franklin,receiving_yards,fanduel,17.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Michael Wilson,receiving_yards,fanduel,47.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jaylen Waddle,receiving_yards,fanduel,54.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Courtland Sutton,receiving_yards,fanduel,35.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Elijah Higgins,receiving_yards,fanduel,17.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Marvin Mims Jr.,receiving_yards,fanduel,12.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Evan Engram,receiving_yards,fanduel,23.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Kendrick Bourne,receiving_yards,fanduel,37.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Trey McBride,receiving_yards,fanduel,65.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Trey McBride,receptions,fanduel,7.5,106,-140
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jaylen Waddle,receptions,fanduel,4.5,-148,112
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Courtland Sutton,receptions,fanduel,3.5,116,-154
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Marvin Mims Jr.,receptions,fanduel,1.5,-122,-106
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Michael Wilson,receptions,fanduel,4.5,116,-154
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Kendrick Bourne,receptions,fanduel,3.5,-130,-102
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Troy Franklin,receptions,fanduel,1.5,-138,104
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Elijah Higgins,receptions,fanduel,2.5,134,-180
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Evan Engram,receptions,fanduel,2.5,-130,-102
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Jalen Brooks,receptions,fanduel,1.5,-132,100
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,J.K. Dobbins,rushing_yards,fanduel,58.5,-114,-114
+2026,7,2026_07_DEN_ARI,Arizona Cardinals,Denver Broncos,Bo Nix,rushing_yards,fanduel,12.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jared Goff,passing_yards,draftkings,279.5,-112,-112
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jordan Love,passing_yards,draftkings,279.5,-112,-112
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Amon-Ra St. Brown,receiving_yards,draftkings,78.5,-111,-113
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Christian Watson,receiving_yards,draftkings,75.5,-113,-111
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Matthew Golden,receiving_yards,draftkings,73.5,-110,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jameson Williams,receiving_yards,draftkings,53.5,-111,-113
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Sam LaPorta,receiving_yards,draftkings,50.5,-110,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Tucker Kraft,receiving_yards,draftkings,47.5,-110,-115
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,receiving_yards,draftkings,38.5,-109,-115
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Isaac TeSlaa,receiving_yards,draftkings,22.5,-113,-111
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Savion Williams,receiving_yards,draftkings,21.5,-115,-109
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Amon-Ra St. Brown,receptions,draftkings,7.5,-107,-119
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Sam LaPorta,receptions,draftkings,5.5,121,-154
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,receptions,draftkings,4.5,-155,121
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Matthew Golden,receptions,draftkings,4.5,-155,121
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Christian Watson,receptions,draftkings,4.5,-102,-125
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Tucker Kraft,receptions,draftkings,4.5,119,-152
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jameson Williams,receptions,draftkings,3.5,-137,108
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Savion Williams,receptions,draftkings,2.5,106,-135
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Isaac TeSlaa,receptions,draftkings,1.5,-145,114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,rushing_yards,draftkings,92.5,-114,-110
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jordan Love,passing_yards,fanduel,277.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jared Goff,passing_yards,fanduel,278.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,receiving_yards,fanduel,38.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Sam LaPorta,receiving_yards,fanduel,49.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Tucker Kraft,receiving_yards,fanduel,48.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jameson Williams,receiving_yards,fanduel,54.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Isaac TeSlaa,receiving_yards,fanduel,24.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Savion Williams,receiving_yards,fanduel,19.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Christian Watson,receiving_yards,fanduel,75.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Amon-Ra St. Brown,receiving_yards,fanduel,78.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Matthew Golden,receiving_yards,fanduel,73.5,-114,-114
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Sam LaPorta,receptions,fanduel,4.5,-148,112
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Christian Watson,receptions,fanduel,4.5,-108,-122
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,receptions,fanduel,4.5,-172,128
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Matthew Golden,receptions,fanduel,4.5,-158,118
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jameson Williams,receptions,fanduel,3.5,-138,104
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Savion Williams,receptions,fanduel,2.5,116,-154
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Isaac TeSlaa,receptions,fanduel,1.5,-144,108
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Amon-Ra St. Brown,receptions,fanduel,7.5,100,-132
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Tucker Kraft,receptions,fanduel,4.5,102,-136
+2026,7,2026_07_GB_DET,Detroit Lions,Green Bay Packers,Jahmyr Gibbs,rushing_yards,fanduel,93.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Matthew Stafford,passing_yards,draftkings,276.5,-111,-112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kirk Cousins,passing_yards,draftkings,237.5,-113,-111
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Puka Nacua,receiving_yards,draftkings,94.5,-113,-111
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Brock Bowers,receiving_yards,draftkings,69.5,-112,-112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tre Tucker,receiving_yards,draftkings,38.5,-112,-112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tyler Higbee,receiving_yards,draftkings,37.5,-109,-115
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Michael Mayer,receiving_yards,draftkings,29.5,-112,-112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,receiving_yards,draftkings,26.5,-114,-110
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,receiving_yards,draftkings,24.5,-115,-109
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Colby Parkinson,receiving_yards,draftkings,19.5,-109,-115
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Konata Mumpfield,receiving_yards,draftkings,18.5,-112,-112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,receiving_yards,draftkings,7.5,-106,-118
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Puka Nacua,receptions,draftkings,7.5,-128,100
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Brock Bowers,receptions,draftkings,5.5,-154,121
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,receptions,draftkings,3.5,-142,111
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tyler Higbee,receptions,draftkings,3.5,-140,110
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,receptions,draftkings,3.5,-134,105
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Michael Mayer,receptions,draftkings,3.5,-124,-103
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tre Tucker,receptions,draftkings,3.5,125,-160
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Colby Parkinson,receptions,draftkings,2.5,129,-165
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Konata Mumpfield,receptions,draftkings,1.5,-172,134
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,receptions,draftkings,1.5,152,-196
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,rushing_yards,draftkings,64.5,-110,-115
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,rushing_yards,draftkings,50.5,-111,-113
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,rushing_yards,draftkings,37.5,-110,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Mike Washington Jr.,rushing_yards,draftkings,21.5,-109,-115
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Matthew Stafford,passing_yards,fanduel,270.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kirk Cousins,passing_yards,fanduel,236.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tre Tucker,receiving_yards,fanduel,40.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Konata Mumpfield,receiving_yards,fanduel,18.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tyler Higbee,receiving_yards,fanduel,37.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Colby Parkinson,receiving_yards,fanduel,19.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,receiving_yards,fanduel,6.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Puka Nacua,receiving_yards,fanduel,94.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,receiving_yards,fanduel,24.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,receiving_yards,fanduel,25.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Michael Mayer,receiving_yards,fanduel,30.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Brock Bowers,receiving_yards,fanduel,70.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tre Tucker,receptions,fanduel,3.5,106,-140
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,receptions,fanduel,1.5,144,-194
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,receptions,fanduel,3.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Puka Nacua,receptions,fanduel,7.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,receptions,fanduel,3.5,-148,112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Michael Mayer,receptions,fanduel,3.5,-138,104
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Brock Bowers,receptions,fanduel,6.5,116,-154
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Colby Parkinson,receptions,fanduel,2.5,116,-154
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Konata Mumpfield,receptions,fanduel,1.5,-172,128
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Tyler Higbee,receptions,fanduel,3.5,-148,112
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Mike Washington Jr.,rushing_yards,fanduel,20.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Kyren Williams,rushing_yards,fanduel,63.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Ashton Jeanty,rushing_yards,fanduel,49.5,-114,-114
+2026,7,2026_07_LA_LV,Las Vegas Raiders,Los Angeles Rams,Blake Corum,rushing_yards,fanduel,37.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dak Prescott,passing_yards,draftkings,265.5,-112,-112
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Tanner McKee,passing_yards,draftkings,215.5,-113,-111
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,CeeDee Lamb,receiving_yards,draftkings,81.5,-112,-112
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,George Pickens,receiving_yards,draftkings,61.5,-113,-111
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dallas Goedert,receiving_yards,draftkings,42.5,-114,-110
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Ryan Flournoy,receiving_yards,draftkings,32.5,-113,-111
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Jake Ferguson,receiving_yards,draftkings,18.5,-115,-109
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,receiving_yards,draftkings,12.5,-111,-113
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,CeeDee Lamb,receptions,draftkings,7.5,117,-149
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dallas Goedert,receptions,draftkings,4.5,-144,113
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,George Pickens,receptions,draftkings,4.5,-139,109
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Ryan Flournoy,receptions,draftkings,3.5,101,-129
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Jake Ferguson,receptions,draftkings,2.5,-106,-121
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,receptions,draftkings,2.5,116,-148
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,rushing_yards,draftkings,67.5,-113,-111
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Tanner McKee,passing_yards,fanduel,211.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dak Prescott,passing_yards,fanduel,268.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Jake Ferguson,receiving_yards,fanduel,19.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,CeeDee Lamb,receiving_yards,fanduel,81.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,receiving_yards,fanduel,12.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dallas Goedert,receiving_yards,fanduel,40.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,George Pickens,receiving_yards,fanduel,62.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Ryan Flournoy,receiving_yards,fanduel,32.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,receptions,fanduel,2.5,106,-140
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,George Pickens,receptions,fanduel,4.5,-140,106
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Dallas Goedert,receptions,fanduel,4.5,-144,108
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Ryan Flournoy,receptions,fanduel,3.5,100,-132
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,CeeDee Lamb,receptions,fanduel,7.5,114,-152
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Jake Ferguson,receptions,fanduel,2.5,-114,-114
+2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,rushing_yards,fanduel,66.5,-114,-114
