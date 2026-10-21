@@ -8,6 +8,41 @@ bottom.
 
 ## October 2026
 
+- **Injury report archive, phase 1 (evidence only)** (`injury_reports.py`,
+  `docs/INJURY_REPORT_ARCHIVE.md`).
+  - **What it does:** around each Ontario decision slot, the Ontario Spread
+    Capture run also saves ESPN's injury report as an immutable, checksummed
+    capture in `data_files/injury_reports/captures/`.
+  - **Source semantics:** raw statuses are kept as supplied. ESPN's status
+    isn't the official game report, and the feed has no practice
+    participation, so that is stored as unavailable. ESPN's per-entry
+    `date` is kept raw (plus UTC when parseable) as a source *entry date*
+    whose meaning is unverified. It is never a last-update time or
+    freshness evidence, and HTTP `Date` / `Last-Modified` stay separate.
+  - **Truthful times:** request and receipt times are stored, and the slot
+    is judged at receipt with the sportsbook capture's Toronto rules: on
+    time, late, or outside the window (which doesn't fill the slot). Ad-hoc
+    captures are labelled, and past slots are never reconstructed. Under
+    the slot lock, the duplicate check is repeated and the clock re-read
+    immediately before the request. If the window has closed by then,
+    nothing is requested (`window_closed`), and the run never switches slot
+    or to ad hoc.
+  - **Coverage:** per in-scope team (rows listed / listed without rows /
+    absent). Outcomes are full / partial / empty / unavailable, and empty
+    or unavailable captures are kept as evidence while the slot stays open.
+  - **Isolation:** the workflow steps run after every sportsbook step, never
+    see `ODDS_API_KEY` and are `continue-on-error`, so sportsbook capture
+    behaviour and the run's conclusion are unchanged. Failures show as
+    annotations and in the run summary. The commit stages only this run's
+    file and refuses if a sportsbook commit is unpushed. Persistence is
+    verified against a fresh fetch of remote `main` by sha256: persisted /
+    committed locally only / never committed / unverified, plus whether the
+    artifact holds a copy. A clean working tree is never taken as proof.
+  - **Not included:** no injury model, adjustments, scores, recommendations
+    or page. `espn_injuries.csv` and the dispatcher are untouched.
+    `python injury_reports.py list` validates and lists captures.
+  - **Tests:** `tests/test_injury_reports.py`.
+
 - **Bet Journal: moneyline wagers and bonus bets** (schema 2; cash spreads
   unchanged).
   - **Markets:** a wager is a spread or a moneyline. A moneyline has no
