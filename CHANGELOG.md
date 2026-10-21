@@ -8,6 +8,12 @@ bottom.
 
 ## October 2026
 
+- **Reliability plot: nothing clipped** (`scripts/frozen_model_reliability.py`). The
+  calibration SVG's footer note ran past the 560 px canvas. It now wraps onto two
+  lines with the same wording, and the canvas is taller. A long title wraps
+  before its details, and a count label near the right edge sits left of its
+  point. Layout only: report metrics, JSON and CSVs are unchanged.
+
 - **Frozen-model reliability report (read-only, evidence only)**
   (`scripts/frozen_model_reliability.py`, `docs/FROZEN_MODEL_RELIABILITY.md`).
   - **Built on the frozen-spread report:** it uses that report's selection,
