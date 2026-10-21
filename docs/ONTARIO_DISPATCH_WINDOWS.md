@@ -529,6 +529,13 @@ the only trigger.
 fails or finishes without a capture, the 12:30 / 09:30 retry dispatches once
 more, within the limits.
 
+**Injury archive.** The dispatched run also archives ESPN's injury report
+(`injury_reports.py`; see [`INJURY_REPORT_ARCHIVE.md`](INJURY_REPORT_ARCHIVE.md)).
+The dispatcher is unchanged and judges only the sportsbook capture. Injury
+steps never change a run's conclusion, so an injury failure doesn't trigger a
+retry dispatch. It shows only in that run's summary, and in
+`python injury_reports.py list`.
+
 **Timezone:** triggers are local times. If Windows' timezone changes, the
 dispatcher logs `timezone_mismatch`. Its decisions still use Toronto time,
 but the triggers fire at the wrong moments until you fix the timezone.

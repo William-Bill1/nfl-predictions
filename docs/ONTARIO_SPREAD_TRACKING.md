@@ -345,6 +345,30 @@ the artifact that holds it, or saying it is lost if the upload also failed.
 Re-committing from the artifact is a manual step. A manual run on a branch
 other than `main` doesn't commit, so it is reported the same way.
 
+### Injury report archive (same run, evidence only)
+
+After every sportsbook step above has finished, the same run saves ESPN's
+injury report for the slot as an immutable capture (`injury_reports.py`,
+`data_files/injury_reports/captures/`). See
+[`INJURY_REPORT_ARCHIVE.md`](INJURY_REPORT_ARCHIVE.md).
+
+- **Same slot rules:** it uses the same `slot` input and windows. The slot is
+  judged at the time the injury response arrived, and that time is stored
+  as it is, never moved to the slot time.
+- **Can't affect the sportsbook capture:** the steps never see
+  `ODDS_API_KEY` and are `continue-on-error`. The sportsbook capture's
+  eligibility, idempotency, retries, credit use, commit and persistence
+  report are unchanged, and so is the run's conclusion, which the dispatcher
+  reads.
+- **Failures are visible:** an injury failure appears as an `::error::`
+  annotation and a ❌ section in the run summary. It never fails the run.
+- **Persistence is checked:** the run commits only its own injury file. The
+  report then checks that file against a fresh fetch of remote `main`, by
+  content. Otherwise it says the file is committed locally only, never
+  committed, or unverified, and names the artifact holding a copy (or says
+  there is none).
+- **Evidence only:** nothing in this guide's reports uses these captures yet.
+
 ## Credit budget
 
 These estimates were made by reading the code that makes requests. No live
@@ -940,8 +964,20 @@ nothing is concluded from a small sample.
 
 **Injuries.** *Injury information was not archived at both decision times;
 this analysis cannot determine whether injuries caused a change.* Today's
-injury report is never used to reconstruct an earlier one. Automated injury
-archiving and injury-impact modelling are outside this phase.
+injury report is never used to reconstruct an earlier one.
+
+**The injury archive** ([`INJURY_REPORT_ARCHIVE.md`](INJURY_REPORT_ARCHIVE.md))
+now saves ESPN's injury report at each slot from its first scheduled run
+onward. It isn't used here, and it can't support causal claims:
+- **Different times:** the quote, the injury capture and the model snapshot
+  are observed at different moments, and news can land between them.
+- **Not the official report:** the feed is ESPN's status, with no practice
+  data.
+- **No earlier history:** earlier slots have none, and nothing is
+  backfilled.
+
+At most, a later phase could describe listed status changes next to line
+movement. Injury-impact modelling remains out of scope.
 
 **Integrity and caching.**
 
@@ -1006,5 +1042,7 @@ archiving and injury-impact modelling are outside this phase.
     old. Its age is shown.
   - **Model line:** the model's handicap is nflverse's line at the snapshot,
     not the sportsbook's quote.
-  - **Injuries:** injury news isn't archived, so changes can't be attributed
-    to it.
+  - **Injuries:** injury reports are archived only from the injury
+    archive's first scheduled run onward (evidence only, ESPN's status, at
+    observation times that differ from the quotes'). Changes can't be
+    attributed to injuries.

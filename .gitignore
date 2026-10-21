@@ -93,6 +93,8 @@ player_props/models/*_lgbm.txt
 # Ontario spread capture: per-slot lock files (local only)
 /data_files/ontario_spreads/captures/.*.lock
 /data_files/ontario_spreads/manual/.*.lock
+# Injury report capture: per-slot lock files (local only)
+/data_files/injury_reports/captures/.*.lock
 
 # Bet journal: personal wager records, kept local (see docs/BET_JOURNAL.md)
 /data_files/bet_journal/

@@ -17,6 +17,12 @@ name: Ontario Spread Capture
 # Opt-in: without the ODDS_API_KEY secret, no API calls are made.
 # A failed capture fails the run (no continue-on-error), and so does a capture
 # skipped to protect the shared credit reserve.
+#
+# After the sportsbook steps, the same run also archives ESPN's injury report
+# (injury_reports.py, evidence only; see docs/INJURY_REPORT_ARCHIVE.md). Those
+# steps are continue-on-error and can't change the sportsbook capture or the
+# run's conclusion; an injury failure shows as an error annotation and in the
+# run summary.
 
 permissions:
   contents: write
@@ -160,6 +166,90 @@ jobs:
             echo "- not uploaded either ❌" >> "$GITHUB_STEP_SUMMARY"
           fi
           exit 1
+
+      # ---- Injury report archive (injury_reports.py): evidence only --------
+      # Runs after every sportsbook step above has finished, so it cannot change
+      # the sportsbook capture, its commit, eligibility, idempotency, retries or
+      # Odds API credit use (it never sees ODDS_API_KEY and calls only ESPN's
+      # public injuries feed). Every injury step is continue-on-error: an
+      # injury failure is shown as an error annotation and in the summary but
+      # never changes the run's conclusion, which the Windows dispatcher reads.
+      # Same slot rules as the sportsbook capture, judged at the time the
+      # injury response actually arrived; skipped (like the capture) when the
+      # run couldn't move to the latest main.
+      - name: Capture injury report
+        id: injury
+        if: always() && steps.refresh.outcome != 'failure'
+        continue-on-error: true
+        env:
+          SLOT: ${{ github.event.inputs.slot || 'auto' }}
+        run: |
+          set -o pipefail
+          python injury_reports.py capture --slot "$SLOT" | tee "$RUNNER_TEMP/injury_capture.txt"
+
+      # Commits only the one file this run's capture step wrote (its path comes
+      # from the step's output), and only when the sportsbook steps left
+      # nothing unpushed: it never pushes a sportsbook commit on their behalf.
+      - name: Commit injury report capture
+        id: injury_commit
+        if: always() && github.ref == 'refs/heads/main' && steps.injury.outputs.written == 'true'
+        continue-on-error: true
+        env:
+          FILE: ${{ steps.injury.outputs.file }}
+        run: |
+          if [ -n "$(git log --oneline '@{u}..HEAD' 2>/dev/null)" ]; then
+            echo "::error::unpushed sportsbook commits present; injury capture not committed (kept in the artifact)"
+            exit 1
+          fi
+          case "$FILE" in
+            data_files/injury_reports/captures/*.json) ;;
+            *) echo "::error::unexpected injury capture path '$FILE'; not committing"; exit 1 ;;
+          esac
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add -- "$FILE"
+          if [ "$(git diff --staged --name-only)" != "$FILE" ]; then
+            echo "::error::staged paths are not exactly this run's injury capture; not committing"
+            exit 1
+          fi
+          git commit -m "Injury report capture [skip ci]"
+          for attempt in 1 2 3; do
+            git pull --rebase --quiet && git push && exit 0
+            sleep $((attempt * 10))
+          done
+          echo "::error::could not push the injury capture (committed locally only)"
+          exit 1
+
+      # if-no-files-found: error, so "success" means this run's file is in the artifact.
+      - name: Upload injury report capture
+        id: injury_upload
+        if: always() && steps.injury.outputs.written == 'true'
+        continue-on-error: true
+        uses: actions/upload-artifact@v4
+        with:
+          name: injury-report-capture-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ steps.injury.outputs.file }}
+          if-no-files-found: error
+          retention-days: 90
+
+      # Verifies against a fresh fetch of remote main that this run's file is
+      # there with identical content (sha256). A clean working tree is not
+      # taken as proof: a local commit whose push failed is reported as such.
+      # Persisted remotely / committed locally only / never committed /
+      # remote unverified, each with whether the artifact holds a copy.
+      - name: Report injury capture persistence
+        if: always() && steps.injury.outcome != 'skipped'
+        continue-on-error: true
+        env:
+          STATUS: ${{ steps.injury.outputs.status }}
+          WRITTEN: ${{ steps.injury.outputs.written }}
+          FILE: ${{ steps.injury.outputs.file }}
+          SHA256: ${{ steps.injury.outputs.sha256 }}
+          UPLOAD: ${{ steps.injury_upload.outcome }}
+          ARTIFACT: injury-report-capture-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          python injury_reports.py persistence --status "$STATUS" --written "$WRITTEN" \
+            --file "$FILE" --sha256 "$SHA256" --upload "$UPLOAD" --artifact "$ARTIFACT"
 
       - name: Slot coverage (last 28 days)
         if: always() && steps.refresh.outcome != 'failure'
