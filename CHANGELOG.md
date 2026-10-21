@@ -8,6 +8,20 @@ bottom.
 
 ## October 2026
 
+- **Home page: "Predictions last generated" shows the real generation time**
+  (`prediction_provenance.py`).
+  - **Was:** the predictions CSV's file modification time, in the machine's local
+    zone. A git checkout or fast-forward resets that time, so the caption showed
+    09:42 EDT when the nightly had run at 04:12 EDT.
+  - **Now:** the pipeline run manifest's `generated_at` and run ID, used only when
+    the manifest validates (`pregame_snapshots.validate_manifest`) and its recorded
+    sha256 matches the predictions file on disk. It is shown in America/Toronto
+    with EDT or EST.
+  - **Otherwise:** "Generation time unavailable" with a short reason (missing,
+    malformed or mismatched manifest). File time, checkout time and the current
+    time are never substituted.
+  - **Display only:** the manifest, predictions and pipeline are unchanged.
+
 - **Reliability plot: nothing clipped** (`scripts/frozen_model_reliability.py`). The
   calibration SVG's footer note ran past the 560 px canvas. It now wraps onto two
   lines with the same wording, and the canvas is taller. A long title wraps

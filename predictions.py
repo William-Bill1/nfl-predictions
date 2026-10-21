@@ -814,14 +814,15 @@ def home_page():
     # Display header (logo lives in the sidebar navigation panel)
     st.header('NFL Game Outcome Predictor')
 
-    # Display when predictions CSV was last generated
+    # When the predictions were generated: the pipeline run manifest's
+    # generated_at, only if it verifiably describes this predictions file (never
+    # the file's modification time, which a git checkout resets).
     try:
-        preds_file = path.join(DATA_DIR, 'nfl_games_historical_with_predictions.csv')
-        if os.path.exists(preds_file):
-            mtime = datetime.fromtimestamp(os.path.getmtime(preds_file)).astimezone().strftime('%Y-%m-%d %H:%M %Z')
-            st.caption(f"Predictions last generated: {mtime}")
+        from prediction_provenance import generation_caption
+        st.caption(generation_caption(DATA_DIR))
     except Exception:
-        pass
+        st.caption("Predictions last generated: Generation time unavailable "
+                   "(provenance could not be checked).")
 
     # Honest, up-front reality check on the one live signal. The spread model's
     # EV threshold is fitted on a validation slice and scored on a later
