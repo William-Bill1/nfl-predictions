@@ -487,6 +487,48 @@ class TestOutputs:
         assert "perfect calibration" in svg and svg.count(">n=0<") == 3
         assert "n=1" in svg and "Wilson" in svg and "Not a reliability" in svg
 
+    def test_svg_footer_is_wrapped_and_inside_the_canvas(self):
+        # Regression: the one-line footer ran past the 560 px canvas and was clipped.
+        assert " ".join(rel.PLOT_FOOTER) == (
+            "Dashed: perfect calibration. Red: fewer than 10 games (descriptive only). "
+            "Wilson bars ignore dependence. Not a reliability claim.")       # wording kept
+        svg = rel.calibration_svg(rel.calibration_table([(0.55, 1)]), "t")
+        root = ET.fromstring(svg)
+        ns = "{http://www.w3.org/2000/svg}"
+        width, height = (float(v) for v in root.get("viewBox").split()[2:])
+        footer = [t for t in root.iter(f"{ns}text") if t.get("class") == "footer"]
+        assert [t.text for t in footer] == list(rel.PLOT_FOOTER)
+        # 11 px sans-serif averages well under 0.6 em per character, so each
+        # line fits with margin; the browser check measures the real boxes.
+        assert all(len(t.text) * 11 * 0.6 < width - 20 for t in footer)
+        ys = [float(t.get("y")) for t in root.iter(f"{ns}text") if t.get("y")]
+        assert max(ys) < height and len(set(float(t.get("y")) for t in footer)) == 2
+
+    def test_long_title_wraps_without_changing_words(self):
+        title = ("Frozen model calibration: all eligible predictions (n=1234, latest snapshot, "
+                 "as of 2026-12-31)")
+        lines = rel.title_lines(title)
+        assert len(lines) == 2 and " ".join(lines) == title and lines[1].startswith("(n=1234")
+        assert rel.title_lines("short title") == ["short title"]
+        svg = rel.calibration_svg(rel.calibration_table([]), title)
+        ns = "{http://www.w3.org/2000/svg}"
+        shown = [t.text for t in ET.fromstring(svg).iter(f"{ns}text") if t.get("class") == "title"]
+        assert shown == lines
+
+    def test_count_label_stays_inside_near_the_right_edge(self):
+        svg = rel.calibration_svg(rel.calibration_table([(0.98, 1), (0.05, 0)]), "t")
+        ns = "{http://www.w3.org/2000/svg}"
+        anchors = sorted(t.get("text-anchor") for t in ET.fromstring(svg).iter(f"{ns}text")
+                         if t.text == "n=1")
+        assert anchors == ["end", "start"]                  # right-edge point labelled leftwards
+
+    def test_empty_plot_renders(self):
+        svg = rel.calibration_svg(rel.calibration_table([]), "empty")
+        root = ET.fromstring(svg)
+        ns = "{http://www.w3.org/2000/svg}"
+        assert root.findall(f"{ns}circle") == [] and svg.count(">n=0<") == 5
+        assert all(rel.PLOT_FOOTER[i] in svg for i in range(2))
+
     def test_sources_unchanged(self, w, tmp_path):
         w.snapshot(S2, [("2026_05_CHI_GB", 3.0, 0.62, True)])
         w.game("2026_05_CHI_GB", 24, 20)

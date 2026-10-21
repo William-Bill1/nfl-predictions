@@ -525,8 +525,22 @@ def calibration_rows(report: dict) -> list[dict]:
 # Plot (standalone SVG, no plotting dependency)
 # --------------------------------------------------------------------------
 
+# The plot's footer note, one string per line so nothing runs past the canvas.
+PLOT_FOOTER = (f"Dashed: perfect calibration. Red: fewer than {SPARSE_BELOW} games (descriptive only).",
+               "Wilson bars ignore dependence. Not a reliability claim.")
+
+
+def title_lines(title: str, limit: int = 60) -> list[str]:
+    """The title as at most two lines, split before its parenthesised details
+    when it is too long for one line; the words are unchanged."""
+    if len(title) <= limit or " (" not in title:
+        return [title]
+    head, tail = title.split(" (", 1)
+    return [head, "(" + tail]
+
+
 def calibration_svg(table: list[dict], title: str) -> str:
-    W, H, L, R, T, B = 560, 560, 70, 20, 50, 70
+    W, H, L, R, T, B = 560, 614, 70, 20, 64, 110
     pw, ph = W - L - R, H - T - B
 
     def x(v):
@@ -536,9 +550,11 @@ def calibration_svg(table: list[dict], title: str) -> str:
         return T + (1 - v) * ph
     out = [f'<svg xmlns="http://www.w3.org/2000/svg" width="{W}" height="{H}" '
            f'viewBox="0 0 {W} {H}" font-family="sans-serif" font-size="12">',
-           f'<rect width="{W}" height="{H}" fill="white"/>',
-           f'<text x="{W / 2}" y="22" text-anchor="middle" font-size="14">{_esc(title)}</text>',
-           f'<rect x="{L}" y="{T}" width="{pw}" height="{ph}" fill="none" stroke="#999"/>']
+           f'<rect width="{W}" height="{H}" fill="white"/>']
+    for i, line in enumerate(title_lines(title)):
+        out.append(f'<text class="title" x="{W / 2}" y="{22 + 18 * i}" text-anchor="middle" '
+                   f'font-size="14">{_esc(line)}</text>')
+    out.append(f'<rect x="{L}" y="{T}" width="{pw}" height="{ph}" fill="none" stroke="#999"/>')
     for e in BIN_EDGES:
         out.append(f'<line x1="{x(e):.1f}" y1="{T}" x2="{x(e):.1f}" y2="{T + ph}" '
                    f'stroke="#eee"/>')
@@ -562,15 +578,18 @@ def calibration_svg(table: list[dict], title: str) -> str:
                    f'<title>{r["bin"]}: n={r["n"]}, mean predicted {r["mean_predicted"]}, '
                    f'observed {r["observed_cover_rate"]}, Wilson 95% '
                    f'[{r["wilson_low"]}, {r["wilson_high"]}]</title></circle>')
-        out.append(f'<text x="{px + 8:.1f}" y="{py - 8:.1f}" fill="{colour}">n={r["n"]}</text>')
-    out += [f'<text x="{L + pw / 2}" y="{H - 30}" text-anchor="middle">mean predicted '
+        # count label to the right of the point, or to its left near the right edge
+        right = r["mean_predicted"] <= 0.9
+        out.append(f'<text x="{px + 8 if right else px - 8:.1f}" y="{py - 8:.1f}" '
+                   f'text-anchor="{"start" if right else "end"}" fill="{colour}">n={r["n"]}</text>')
+    out += [f'<text x="{L + pw / 2}" y="{T + ph + 40}" text-anchor="middle">mean predicted '
             f'underdog cover probability (fixed bins)</text>',
             f'<text transform="translate(18,{T + ph / 2}) rotate(-90)" text-anchor="middle">'
-            f'observed cover rate (95% Wilson)</text>',
-            f'<text x="{L}" y="{H - 10}" fill="#555" font-size="11">Dashed: perfect calibration. '
-            f'Red: fewer than {SPARSE_BELOW} games (descriptive only). Wilson bars ignore '
-            f'dependence. Not a reliability claim.</text>',
-            "</svg>"]
+            f'observed cover rate (95% Wilson)</text>']
+    for i, line in enumerate(PLOT_FOOTER):
+        out.append(f'<text class="footer" x="{W / 2}" y="{H - 30 + 16 * i}" text-anchor="middle" '
+                   f'fill="#555" font-size="11">{_esc(line)}</text>')
+    out.append("</svg>")
     return "\n".join(out) + "\n"
 
 
