@@ -1,0 +1,314 @@
+{
+ "capture_id": "20261021T160613Z-7f3ba4ec92b5",
+ "code_dirty": false,
+ "code_revision": "8d69b78d4c7ed77c0642db67797afe91e23cc018",
+ "coverage": {
+  "in_scope_teams": {
+   "ARI": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "ATL": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "BAL": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "CAR": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "CHI": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "CIN": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "CLE": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "DAL": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "DEN": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "DET": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "GB": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "HOU": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "IND": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "KC": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "LA": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "LV": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "MIA": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "MIN": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "NE": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "NO": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "NYG": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "NYJ": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "PHI": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "PIT": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "SEA": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "SF": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "TB": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   },
+   "TEN": {
+    "rows": 0,
+    "state": "absent_from_feed"
+   }
+  },
+  "malformed_entries": [],
+  "note": "no rows for a team never means the team has no injuries",
+  "player_rows": 0,
+  "rows_for_teams_without_game_in_scope": 0,
+  "teams_in_feed": 0,
+  "unmatched_source_teams": []
+ },
+ "kind": "injury_report_capture",
+ "observed_at": "2026-10-21T16:06:13.555463Z",
+ "outcome": "unavailable",
+ "payload_sha256": "5def67d180c7e0861226a310d73059a37edf066b338555e0eb5ce26640941e24",
+ "players": [],
+ "received_at": "2026-10-21T16:06:13.555463Z",
+ "request_started_at": "2026-10-21T16:06:13.314895Z",
+ "response": {
+  "bytes": 8726788,
+  "error": {
+   "message": "response over 8388608 bytes",
+   "type": "too_large"
+  },
+  "http_date": "Wed, 21 Oct 2026 16:06:13 GMT",
+  "http_last_modified": null,
+  "http_status": 200
+ },
+ "schedule": {
+  "path": "nfl_games_historical.csv",
+  "sha256": "8737c4f22c1d8a98756552ff82f58689c4f66ca84e97d6c09bb13864c40a428f"
+ },
+ "schema_version": 1,
+ "scope": {
+  "games": [
+   {
+    "away_team": "CIN",
+    "game_id": "2026_07_CIN_BAL",
+    "home_team": "BAL",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "CLE",
+    "game_id": "2026_07_CLE_TEN",
+    "home_team": "TEN",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "DAL",
+    "game_id": "2026_07_DAL_PHI",
+    "home_team": "PHI",
+    "kickoff_utc": "2026-10-27T00:15:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "DEN",
+    "game_id": "2026_07_DEN_ARI",
+    "home_team": "ARI",
+    "kickoff_utc": "2026-10-25T20:05:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "GB",
+    "game_id": "2026_07_GB_DET",
+    "home_team": "DET",
+    "kickoff_utc": "2026-10-25T20:25:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "IND",
+    "game_id": "2026_07_IND_MIN",
+    "home_team": "MIN",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "KC",
+    "game_id": "2026_07_KC_SEA",
+    "home_team": "SEA",
+    "kickoff_utc": "2026-10-26T00:20:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "LA",
+    "game_id": "2026_07_LA_LV",
+    "home_team": "LV",
+    "kickoff_utc": "2026-10-25T20:25:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "MIA",
+    "game_id": "2026_07_MIA_NYJ",
+    "home_team": "NYJ",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "NE",
+    "game_id": "2026_07_NE_CHI",
+    "home_team": "CHI",
+    "kickoff_utc": "2026-10-23T00:15:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "NYG",
+    "game_id": "2026_07_NYG_HOU",
+    "home_team": "HOU",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "PIT",
+    "game_id": "2026_07_PIT_NO",
+    "home_team": "NO",
+    "kickoff_utc": "2026-10-25T13:30:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "SF",
+    "game_id": "2026_07_SF_ATL",
+    "home_team": "ATL",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   },
+   {
+    "away_team": "TB",
+    "game_id": "2026_07_TB_CAR",
+    "home_team": "CAR",
+    "kickoff_utc": "2026-10-25T17:00:00Z",
+    "season": 2026,
+    "state": "pregame",
+    "week": 7
+   }
+  ],
+  "season": 2026,
+  "week": 7
+ },
+ "slot": {
+  "delay_minutes": 6.2,
+  "fills_slot": true,
+  "intended_local": "2026-10-21T12:00:00-04:00",
+  "intended_utc": "2026-10-21T16:00:00Z",
+  "judged_at": "received_at",
+  "name": "wednesday_noon",
+  "slot_id": "2026-10-21_wednesday_noon",
+  "status": "on_time",
+  "timezone": "America/Toronto"
+ },
+ "source": {
+  "entry_date": "per-entry 'date' as supplied (raw, plus UTC when parseable); its meaning is unverified - not treated as a status-update time or as evidence of freshness",
+  "http_headers": "HTTP Date / Last-Modified describe the response, not player-status updates",
+  "name": "espn_injuries_json",
+  "official_nfl_report": false,
+  "practice_participation": "not supplied by this source",
+  "publisher": "ESPN",
+  "status_meaning": "ESPN's general injury status as supplied: a mixture of game-designation words, roster statuses and 'Active'; not the official NFL game-status report",
+  "url": "https://site.api.espn.com/apis/site/v2/sports/football/nfl/injuries"
+ },
+ "source_entry_dates": {
+  "earliest_utc": null,
+  "latest_utc": null,
+  "meaning": "unverified",
+  "note": null,
+  "rows_with_date": 0,
+  "rows_with_unparseable_date": 0,
+  "rows_without_date": 0
+ },
+ "status_counts": {},
+ "teams": [],
+ "usable": false
+}
