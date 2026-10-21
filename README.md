@@ -225,6 +225,22 @@ per game, read-only. Schema, eligibility and selection rules, failure behavior
 and limitations: [`docs/PREGAME_SNAPSHOTS.md`](docs/PREGAME_SNAPSHOTS.md). This
 records predictions; it doesn't show an edge.
 
+### Frozen-model reliability report
+
+`python scripts/frozen_model_reliability.py [--season S] [--as-of YYYY-MM-DD]
+[--earliest-sensitivity]` is a read-only, evidence-only view built on the
+frozen-pregame spread report:
+
+- fixed calibration bins with Wilson intervals;
+- model vs 50% on every evaluated game;
+- model vs Ontario market vs 50% on the matched games;
+- paired week-cluster bootstrap intervals, reported as unavailable with
+  fewer than 5 weeks.
+
+It writes to the git-ignored `reports/frozen_reliability/`. See
+`docs/FROZEN_MODEL_RELIABILITY.md`. Frozen tracking began 2026-10-05, so the
+sample is short, and this report must not be used to tune thresholds.
+
 ### Frozen-pregame spread report
 
 `python scripts/frozen_spread_report.py [--which latest|earliest] [--season S]
