@@ -8,6 +8,34 @@ bottom.
 
 ## October 2026
 
+- **Player Props: upcoming games keep their game day** (`player_props/game_dates.py`,
+  `pages/2_Player_Props.py`).
+  - **The bug:** `get_upcoming_games` read the schedule's calendar `date` as UTC
+    midnight and compared it with the current instant. A game dropped out of
+    the "upcoming games" count at 8 PM Toronto (EDT) the evening before it
+    was played, and was missing all of game day.
+  - **Now:** a calendar date counts as upcoming through that whole day in
+    America/Toronto. Only an offset-aware `commence_time` is a kickoff instant,
+    converted to America/Toronto. A time with no zone keeps its date and is
+    never assumed UTC. Missing or invalid dates are excluded.
+  - **Reviewed and left unchanged:**
+    - `predict.load_schedule`: its UTC-midnight cutoff never shifts a date. It
+      selects a week until 08:00 Toronto on the game day, which fits the
+      nightly run.
+    - `predict.calculate_days_rest`: the timezone cannot change its result.
+  - **Unchanged:** prop predictions, week selection and stored data.
+  - **Limitation:** the page still loads the hard-coded
+    `nfl_schedule_2025.csv`, so in the 2026 season it finds no upcoming games
+    and the real banner does not appear. This fix has no visible effect
+    until the page loads the current season's schedule.
+  - **Follow-ups:**
+    - Load the current season's schedule, and make the banner wording
+      accurate: it says "this week" but counts all remaining games.
+    - Investigate `days_rest`: prediction always passes 1, while training
+      uses the real gap between games. Keeping it unchanged here does not
+      mean it is correct.
+  - **Tests:** `tests/test_player_props_dates.py`.
+
 - **Alert header: correct game date** (`betting_log.game_time_text`, alert view,
   Betting Log note).
   - **The bug:** the alert view read the logged game day as UTC midnight and
