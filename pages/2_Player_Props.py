@@ -244,32 +244,23 @@ def get_dataframe_height(df, row_height=35, header_height=38, padding=2, max_hei
 # HELPER FUNCTIONS
 # ============================================================================
 
-def get_upcoming_games(schedule_df):
-    """Filter schedule to upcoming games only."""
+def get_upcoming_games(schedule_df, now=None):
+    """Filter schedule to upcoming games only.
+
+    Schedule `date` is a calendar game date: it counts as upcoming through that
+    whole day in America/Toronto, never read as UTC midnight. A `commence_time`
+    with an explicit offset is a kickoff instant (see player_props.game_dates)."""
     if schedule_df is None:
         return None
-    
-    today = pd.Timestamp.now(tz='UTC')
-    
+
+    from player_props.game_dates import upcoming
+
     # Handle different schedule formats (date vs commence_time)
     if 'date' in schedule_df.columns:
-        date_col = pd.to_datetime(schedule_df['date'])
-        # Check if already timezone-aware
-        if date_col.dt.tz is None:
-            schedule_df['game_date_utc'] = date_col.dt.tz_localize('UTC')
-        else:
-            schedule_df['game_date_utc'] = date_col.dt.tz_convert('UTC')
-    elif 'commence_time' in schedule_df.columns:
-        date_col = pd.to_datetime(schedule_df['commence_time'])
-        if date_col.dt.tz is None:
-            schedule_df['game_date_utc'] = date_col.dt.tz_localize('UTC')
-        else:
-            schedule_df['game_date_utc'] = date_col.dt.tz_convert('UTC')
-    else:
-        return None
-    
-    upcoming = schedule_df[schedule_df['game_date_utc'] >= today].copy()
-    return upcoming.sort_values('game_date_utc')
+        return upcoming(schedule_df, 'date', now)
+    if 'commence_time' in schedule_df.columns:
+        return upcoming(schedule_df, 'commence_time', now)
+    return None
 
 
 def filter_stats_by_season(stats_df, season=2025):
