@@ -77,6 +77,64 @@ def _underdog_team(row) -> str:
     return "Pick"
 
 
+# --------------------------------------------------------------------------
+# Display helpers (read-only; the CSV schema and its values are unchanged)
+# --------------------------------------------------------------------------
+
+RAW_SPREAD_LABEL = "Raw source spread"
+RAW_SPREAD_HELP = ("nflverse spread_line as logged, home-favourite positive: +3 means the home "
+                   "team was favoured by 3; -4.5 means the away team was favoured by 4.5. It is "
+                   "not the recommended team's handicap; see Recommendation.")
+RECOMMENDATION_UNAVAILABLE = "Recommendation unavailable"
+ODDS_HELP = ("Price used to grade the recommendation. Rows marked assumed use -110; that is "
+             "an assumption, not a verified sportsbook offer.")
+
+
+def format_handicap(value) -> str | None:
+    """'+4.5', '-3', 'PK' for a team's own signed handicap; None when the value
+    isn't a usable spread (missing, non-finite, not a half-point, over 60)."""
+    try:
+        h = float(value)
+    except (TypeError, ValueError):
+        return None
+    if not math.isfinite(h) or abs(h) > 60 or not float(h * 2).is_integer():
+        return None
+    if h == 0:
+        return "PK"
+    return f"{h:+.0f}" if h.is_integer() else f"{h:+.1f}"
+
+
+def recommendation_text(row) -> str:
+    """The recommended team at its RECORDED handicap, e.g. 'PHI +4.5'.
+
+    Uses recommended_team and bet_spread only, never spread_line: the raw
+    source line is home-favourite positive, so pairing it with the team would
+    show PHI -4.5 for a PHI +4.5 recommendation. Rows without one of the two
+    teams or without a usable recorded handicap (legacy rows) show
+    RECOMMENDATION_UNAVAILABLE rather than a derived value."""
+    team, home, away = row.get("recommended_team"), row.get("home_team"), row.get("away_team")
+    if not isinstance(team, str) or team not in (home, away):
+        return RECOMMENDATION_UNAVAILABLE
+    handicap = format_handicap(row.get("bet_spread"))
+    return RECOMMENDATION_UNAVAILABLE if handicap is None else f"{team} {handicap}"
+
+
+def odds_text(row) -> str:
+    """The grading price, labelled: '-110 (assumed; not a sportsbook offer)'.
+    A missing price is the -110 grading assumes (see _settle)."""
+    source = row.get("odds_source")
+    try:
+        odds = float(row.get("bet_odds"))
+    except (TypeError, ValueError):
+        odds = float("nan")
+    if not math.isfinite(odds) or abs(odds) < 100:
+        return "-110 (assumed; no price recorded; not a sportsbook offer)"
+    shown = f"{odds:+.0f}"
+    if not isinstance(source, str) or source.strip().lower().startswith("assumed"):
+        return f"{shown} (assumed; not a sportsbook offer)"
+    return f"{shown} ({source.strip()})"
+
+
 def append_recommendations(preds_df: pd.DataFrame, log_path: str = LOG_PATH) -> int:
     """Append rows for upcoming games with a spread signal. Returns rows added."""
     if preds_df is None or "pred_spreadCovered_optimal" not in preds_df.columns:
