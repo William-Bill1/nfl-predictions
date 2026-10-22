@@ -113,15 +113,6 @@ def load_player_receiving_stats():
 
 
 @st.cache_data(ttl=3600)
-def load_nfl_schedule():
-    """Load NFL schedule for upcoming games."""
-    file_path = Path('data_files/nfl_schedule_2025.csv')
-    if not file_path.exists():
-        return None
-    return pd.read_csv(file_path)
-
-
-@st.cache_data(ttl=3600)
 def load_players():
     """Load player metadata with full names."""
     file_path = Path('data_files/players.csv')
@@ -143,9 +134,10 @@ def load_player_props_predictions():
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
     
-    # Parse game_date
+    # Parse game_date. An unparseable value becomes NaT instead of raising, so
+    # the predictions stay visible and the remaining-games banner flags it.
     if 'game_date' in df.columns:
-        df['game_date'] = pd.to_datetime(df['game_date'])
+        df['game_date'] = pd.to_datetime(df['game_date'], errors='coerce')
     
     # Add position and display_name information by joining with players data (only if not already present)
     if 'display_name' not in df.columns or 'position' not in df.columns:
@@ -175,9 +167,10 @@ def load_player_props_predictions():
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
     
-    # Parse game_date
+    # Parse game_date. An unparseable value becomes NaT instead of raising, so
+    # the predictions stay visible and the remaining-games banner flags it.
     if 'game_date' in df.columns:
-        df['game_date'] = pd.to_datetime(df['game_date'])
+        df['game_date'] = pd.to_datetime(df['game_date'], errors='coerce')
     
     # Add position and display_name information by joining with players data (only if not already present)
     if 'display_name' not in df.columns or 'position' not in df.columns:
@@ -292,7 +285,6 @@ def main():
     passing_stats = load_player_passing_stats()
     rushing_stats = load_player_rushing_stats()
     receiving_stats = load_player_receiving_stats()
-    schedule = load_nfl_schedule()
     players = load_players()
     
     # Check if stats are available
@@ -329,12 +321,13 @@ def main():
         
         return
     
-    # Upcoming games section
-    upcoming = get_upcoming_games(schedule)
-    
-    if upcoming is not None and len(upcoming) > 0:
-        st.info(f"📅 **{len(upcoming)} upcoming games** this week")
-    
+    # Remaining games: the schedule of the season the predictions belong to
+    # (never the calendar year, never another season's file). On a problem the
+    # count is omitted with a message; the predictions below stay visible.
+    from player_props.season_schedule import remaining_games_banner
+    level, banner = remaining_games_banner(predictions, Path('data_files'))
+    (st.info if level == 'info' else st.warning)(banner)
+
     # Main tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
         "⭐ Top Picks",
