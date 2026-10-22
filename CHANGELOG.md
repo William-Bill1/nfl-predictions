@@ -8,6 +8,25 @@ bottom.
 
 ## October 2026
 
+- **Alert header: correct game date** (`betting_log.game_time_text`, alert view,
+  Betting Log note).
+  - **The bug:** the alert view read the logged game day as UTC midnight and
+    converted it to Eastern time, so every alert showed the previous day:
+    `2026-10-26 00:00:00` (a Monday game) showed "Sun, Oct 25 2026 08:00 PM",
+    and `2026-09-13` showed "Sat, Sep 12 2026".
+  - **Now:** date-only values, including the log's midnight form, show that
+    calendar date with "(date only; kickoff time not recorded)". Only a
+    timestamp with an explicit offset is shown as a kickoff time, in
+    America/Toronto with EDT/EST. Missing or invalid values show "Game date
+    unavailable". The alert's detail table uses the same text.
+  - **Betting Log note:** the outdated "Automatic Updates" note (ESPN scores,
+    Nov 16, 2025) now describes current grading: nflverse final scores, after
+    the game date, in the nightly update and on page load, with no promised
+    run times.
+  - **Unchanged:** the log's records, schema, recommendation text and
+    settlement.
+  - **Tests:** `tests/test_alert_game_date.py`.
+
 - **Recommendation log: clearer display** (`betting_log.py` display helpers, Betting
   Log tab, alert view, RSS).
   - **The confusion:** a row stored `spread_line=-4.5`, `recommended_team=PHI`
