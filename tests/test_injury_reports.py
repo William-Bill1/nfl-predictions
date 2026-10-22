@@ -6,7 +6,10 @@ Nothing here reads or writes data_files/.
 
 import json
 import os
+import socket
 import subprocess
+import threading
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -90,10 +93,31 @@ def _payload(teams=WEEK5_TEAMS, extra=()):
 
 
 class Resp:
-    def __init__(self, payload=None, status=200, body=None, headers=None):
+    """A streamed response: iter_content yields the body in chunks (or a
+    custom chunk sequence, which may raise mid-stream); close() is recorded."""
+
+    def __init__(self, payload=None, status=200, body=None, headers=None, chunks=None):
         self.status_code = status
         self.content = body if body is not None else json.dumps(payload).encode()
         self.headers = headers or {"Date": "Wed, 07 Oct 2026 16:00:01 GMT"}
+        self.chunks, self.closed, self.read_bytes = chunks, False, 0
+
+    def iter_content(self, chunk_size=1, decode_unicode=False):
+        assert not self.closed, "read after close"
+        if self.chunks is not None:
+            for c in self.chunks:
+                if isinstance(c, Exception):
+                    raise c
+                self.read_bytes += len(c)
+                yield c
+            return
+        for i in range(0, len(self.content), chunk_size):
+            piece = self.content[i:i + chunk_size]
+            self.read_bytes += len(piece)
+            yield piece
+
+    def close(self):
+        self.closed = True
 
 
 class Source:
@@ -102,8 +126,8 @@ class Source:
     def __init__(self, *responses):
         self.responses, self.calls = list(responses), []
 
-    def __call__(self, url, headers=None, timeout=None):
-        self.calls.append({"url": url, "headers": headers, "timeout": timeout})
+    def __call__(self, url, headers=None, timeout=None, stream=False):
+        self.calls.append({"url": url, "headers": headers, "timeout": timeout, "stream": stream})
         r = self.responses.pop(0) if len(self.responses) > 1 else self.responses[0]
         if isinstance(r, Exception):
             raise r
@@ -532,6 +556,362 @@ class TestFailClosed:
         with pytest.raises(ir.ValidationError):
             run(schedule_path, cdir, src, WED_SLOT + timedelta(minutes=5), slot=slot)
         assert src.calls == []
+
+
+# ------------------------------------------- streamed, bounded responses --
+
+OBSERVED_BYTES = 8_726_788          # the first live response, 2026-10-21 (archived too_large)
+
+
+def json_of_size(n: int, teams=()) -> bytes:
+    """A valid JSON body of exactly n bytes: the given team blocks plus padding."""
+    head = json.dumps({"injuries": list(teams)})[:-1].encode() + b', "pad": "'
+    tail = b'"}'
+    assert n >= len(head) + len(tail)
+    return head + b"x" * (n - len(head) - len(tail)) + tail
+
+
+def gzip_response(raw: bytes, status=200, headers=None):
+    """A real requests.Response over a gzip-encoded urllib3 stream, so requests'
+    own decoding runs (iter_content yields DECODED bytes)."""
+    import gzip
+    import io
+    import urllib3
+    body = gzip.compress(raw)
+    hdrs = {"Content-Encoding": "gzip", "Content-Length": str(len(body)), **(headers or {})}
+    r = requests.Response()
+    r.status_code = status
+    r.raw = urllib3.response.HTTPResponse(body=io.BytesIO(body), headers=hdrs, status=status,
+                                          preload_content=False, decode_content=True)
+    r.headers = requests.structures.CaseInsensitiveDict(hdrs)
+    r.url = ir.ESPN_INJURIES_URL
+    return r, len(body)
+
+
+def stepping_clock(step):
+    t = [0.0]
+
+    def mono():
+        t[0] += step
+        return t[0]
+    return mono
+
+
+class TestStreamedLimit:
+    def test_limit_and_bounds(self):
+        assert ir.MAX_RESPONSE_BYTES == 32 * 1024 * 1024 > OBSERVED_BYTES
+        assert ir.READ_CHUNK <= 64 * 1024 and 0 < ir.READ_DEADLINE <= 120
+        assert ir.REQUEST_TIMEOUT == (5, 20)
+
+    def test_request_is_streamed_with_bounded_timeouts(self):
+        src = Source(Resp({"injuries": []}))
+        ir.fetch(src)
+        assert src.calls[0]["stream"] is True and src.calls[0]["timeout"] == ir.REQUEST_TIMEOUT
+
+    def test_observed_size_is_now_accepted(self, schedule_path, cdir):
+        # Regression: 8,726,788 bytes was rejected by the old 8 MiB cap.
+        body = json_of_size(OBSERVED_BYTES, [_team(t) for t in WEEK5_TEAMS])
+        r = run(schedule_path, cdir, Source(Resp(body=body)), WED_SLOT)
+        assert r.status == "captured" and r.doc["response"]["bytes"] == OBSERVED_BYTES
+        assert r.doc["response"]["error"] is None and r.doc["coverage"]["player_rows"] == 20
+
+    def test_exactly_at_the_limit_is_accepted(self):
+        resp = Resp(body=json_of_size(ir.MAX_RESPONSE_BYTES))
+        payload, meta = ir.fetch(Source(resp))
+        assert payload is not None and meta["error"] is None
+        assert meta["bytes"] == ir.MAX_RESPONSE_BYTES and resp.closed
+
+    def test_one_byte_over_stops_reading_early(self):
+        resp = Resp(body=json_of_size(ir.MAX_RESPONSE_BYTES + 1))
+        payload, meta = ir.fetch(Source(resp))
+        assert payload is None and meta["error"]["type"] == "too_large" and resp.closed
+        assert meta["bytes"] == ir.MAX_RESPONSE_BYTES + 1
+        assert "stopped reading" in meta["error"]["message"]
+
+    def test_far_oversized_stream_is_cut_off(self):
+        # 100 MiB body, no Content-Length: reading stops just past the limit.
+        big = Resp(chunks=(b"x" * ir.READ_CHUNK for _ in range(1600)))
+        payload, meta = ir.fetch(Source(big))
+        assert meta["error"]["type"] == "too_large" and big.closed
+        assert big.read_bytes <= ir.MAX_RESPONSE_BYTES + ir.READ_CHUNK
+
+    @pytest.mark.parametrize("declared,ok", [
+        (None, True),                     # missing
+        ("12", True),                     # incorrect (too small): actual size is counted
+        ("not-a-number", True),           # unusable: ignored, size counted
+        (str(32 * 1024 * 1024 + 1), False),  # declared oversized: rejected unread
+    ])
+    def test_content_length(self, declared, ok):
+        hdr = {"Date": "x"} if declared is None else {"Date": "x", "Content-Length": declared}
+        resp = Resp({"injuries": []}, headers=hdr)
+        payload, meta = ir.fetch(Source(resp))
+        assert (payload is not None) is ok and resp.closed
+        if not ok:
+            assert meta["error"]["type"] == "too_large" and resp.read_bytes == 0
+            assert "declared Content-Length" in meta["error"]["message"]
+
+    def test_small_content_length_does_not_hide_an_oversized_body(self):
+        resp = Resp(body=b"x" * (ir.MAX_RESPONSE_BYTES + 10), headers={"Content-Length": "100"})
+        _, meta = ir.fetch(Source(resp))
+        assert meta["error"]["type"] == "too_large" and resp.closed
+
+    def test_compressed_body_counted_after_decoding(self):
+        # ~5 KB on the wire, 2 MiB decoded: rejected against a 1 MiB limit.
+        r, wire = gzip_response(json_of_size(2 * 1024 * 1024))
+        assert wire < 50_000
+        payload, meta = ir.fetch(lambda *a, **k: r, limit=1024 * 1024)
+        assert payload is None and meta["error"]["type"] == "too_large"
+        assert 1024 * 1024 < meta["bytes"] <= 1024 * 1024 + ir.READ_CHUNK
+
+    def test_compressed_body_within_limit_parses(self):
+        body = json_of_size(300_000, [_team("TB")])
+        r, _ = gzip_response(body)
+        payload, meta = ir.fetch(lambda *a, **k: r)
+        assert meta["error"] is None and meta["bytes"] == 300_000
+        assert payload["injuries"][0]["displayName"] == "Tampa Bay Buccaneers"
+
+    def test_slow_stream_hits_the_total_deadline(self):
+        # Each chunk arrives inside the per-read timeout, but the whole body
+        # takes too long: a 10 s step per chunk passes 90 s after ~9 chunks.
+        resp = Resp(chunks=(b"x" * 10 for _ in range(10_000)))
+        payload, meta = ir.fetch(Source(resp), monotonic=stepping_clock(10.0))
+        assert payload is None and meta["error"]["type"] == "timeout" and resp.closed
+        assert "not complete within 90 s" in meta["error"]["message"]
+        assert resp.read_bytes < 200                       # stopped early
+
+    @pytest.mark.parametrize("exc,kind", [
+        (requests.exceptions.ChunkedEncodingError("connection broken mid-body"), "request_error"),
+        (requests.exceptions.ConnectionError("read timed out mid-body"), "request_error"),
+        (requests.exceptions.ContentDecodingError("bad gzip"), "request_error"),
+    ])
+    def test_interrupted_stream(self, exc, kind):
+        resp = Resp(chunks=[b'{"injuries": [', exc])
+        payload, meta = ir.fetch(Source(resp))
+        assert payload is None and meta["error"]["type"] == kind and resp.closed
+
+    def test_timeout_before_response(self):
+        payload, meta = ir.fetch(Source(requests.Timeout("connect timed out")))
+        assert payload is None and meta["error"]["type"] == "timeout"
+
+    def test_malformed_json(self):
+        resp = Resp(body=b'{"injuries": [ oops')
+        payload, meta = ir.fetch(Source(resp))
+        assert meta["error"]["type"] == "invalid_json" and resp.closed and meta["bytes"] == 19
+
+    @pytest.mark.parametrize("make", [
+        lambda: Resp({"injuries": []}),                                         # success
+        lambda: Resp(status=503, body=b"busy"),                                 # HTTP error
+        lambda: Resp({"injuries": []}, headers={"Content-Length": str(10**9)}),  # rejected unread
+        lambda: Resp(body=b"x" * (ir.MAX_RESPONSE_BYTES + 1)),                  # too large
+        lambda: Resp(body=b"not json"),                                         # malformed
+        lambda: Resp(chunks=[b"{", requests.exceptions.ChunkedEncodingError("x")]),
+    ])
+    def test_response_closed_on_every_path(self, make):
+        resp = make()
+        ir.fetch(Source(resp))
+        assert resp.closed
+
+    def test_close_failure_never_masks_the_outcome(self):
+        class BadClose(Resp):
+            def close(self):
+                raise OSError("close failed")
+        payload, meta = ir.fetch(Source(BadClose({"injuries": []})))
+        assert payload == {"injuries": []} and meta["error"] is None
+
+    def test_http_error_keeps_its_evidence(self):
+        resp = Resp(status=503, body=b"busy")
+        _, meta = ir.fetch(Source(resp))
+        assert meta["error"] == {"type": "http_status", "message": "HTTP 503"}
+        assert meta["bytes"] == 4 and meta["http_status"] == 503
+
+    def test_receipt_time_is_after_the_whole_body(self, schedule_path, cdir):
+        # The clock is read after fetch() returns, i.e. after streaming finished.
+        start, done = WED_SLOT + timedelta(minutes=5), WED_SLOT + timedelta(minutes=5, seconds=40)
+        d = run(schedule_path, cdir, Source(Resp(_payload())), start, received=done).doc
+        assert d["received_at"] == "2026-10-07T16:05:40.000000Z"
+
+    def test_no_request_or_stream_outside_the_window(self, schedule_path, cdir):
+        resp = Resp(_payload())
+        src = Source(resp)
+        r = run(schedule_path, cdir, src, WED_SLOT + timedelta(hours=3, seconds=1))
+        assert r.status == "not_due" and src.calls == [] and resp.read_bytes == 0
+
+    def test_oversized_stream_is_isolated_from_sportsbooks(self, schedule_path, tmp_path,
+                                                            monkeypatch):
+        import test_ontario_spreads as tos
+        run(schedule_path, tmp_path / "inj",
+            Source(Resp(chunks=(b"x" * ir.READ_CHUNK for _ in range(1000)))), WED_SLOT)
+        dirs = {"capture_dir": tmp_path / "cap", "snapshot_dir": tmp_path / "snap"}
+        result = tos._capture(monkeypatch, tos.FakeAPI(tos._wed_events()), schedule_path, dirs,
+                              WED_SLOT)
+        assert result.status == "captured"
+
+
+# --------------------------------- deadline over the real streaming transport --
+
+class LocalServer:
+    """A synthetic HTTP server on 127.0.0.1 (no external network). `mode`:
+    'trickle' - headers promising 10 MB, then one byte every `interval` s for
+                at most `max_seconds` (fast enough to never trip the 20 s
+                inactivity timeout, far too slow to fill a 64 KiB chunk);
+    'json'    - a small complete JSON body at once."""
+
+    def __init__(self, mode, interval=0.05, max_seconds=8.0):
+        import http.server
+        import time as _t
+        self.client_gone = threading.Event()
+        self.sent = 0
+        outer = self
+
+        class Handler(http.server.BaseHTTPRequestHandler):
+            protocol_version = "HTTP/1.1"
+
+            def do_GET(self):
+                body = json.dumps({"injuries": [_team("TB")]}).encode()
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", "10000000" if mode == "trickle" else str(len(body)))
+                self.end_headers()
+                try:
+                    if mode == "json":
+                        self.wfile.write(body)
+                        return
+                    end = _t.monotonic() + max_seconds
+                    while _t.monotonic() < end:
+                        self.wfile.write(b" ")
+                        self.wfile.flush()
+                        outer.sent += 1
+                        _t.sleep(interval)
+                except OSError:
+                    outer.client_gone.set()           # the client tore the connection down
+                self.close_connection = True
+
+            def log_message(self, *a):
+                pass
+
+        self.server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        self.server.daemon_threads = True
+        self.url = f"http://127.0.0.1:{self.server.server_address[1]}/injuries"
+        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
+        self.thread.start()
+
+    def close(self):
+        self.server.shutdown()
+        self.server.server_close()
+        self.thread.join(5)
+
+
+@pytest.fixture
+def allow_localhost(monkeypatch):
+    """Only 127.0.0.1 connections are allowed (this module never blocks the
+    network, but make that explicit for these transport tests)."""
+    real = socket.socket.connect
+
+    def connect(self, addr):
+        assert addr[0] in ("127.0.0.1", "::1"), f"non-local connection to {addr!r}"
+        return real(self, addr)
+    monkeypatch.setattr(socket.socket, "connect", connect)
+
+
+def _watchdogs():
+    return [t for t in threading.enumerate() if t.name == "injury-read-deadline"]
+
+
+class TestDeadlineOverRealTransport:
+    def _get(self, server, opened):
+        def get(url, **kw):
+            assert url == ir.ESPN_INJURIES_URL               # fetch asked for the feed...
+            r = requests.get(server.url, **kw)               # ...served locally instead
+            opened.append(r)
+            return r
+        return get
+
+    def test_trickle_is_cut_off_at_the_deadline(self, allow_localhost):
+        # Regression: the elapsed-time check ran only after a 64 KiB chunk
+        # arrived, so a 20 byte/s trickle (never idle 20 s) held the read for
+        # as long as the server liked (~55 min per chunk at this rate).
+        server, opened = LocalServer("trickle"), []
+        try:
+            t0 = time.monotonic()
+            payload, meta = ir.fetch(self._get(server, opened), deadline=1.0)
+            elapsed = time.monotonic() - t0
+        finally:
+            server.close()
+        assert payload is None and meta["error"]["type"] == "timeout"
+        assert "not complete within 1 s" in meta["error"]["message"]
+        assert elapsed < 4.0, f"took {elapsed:.1f} s"            # not the server's 8 s
+        assert server.sent >= 5                                  # bytes really were trickling
+        assert meta["bytes"] is not None and meta["bytes"] < ir.READ_CHUNK
+        resp = opened[0]
+        assert resp.raw.closed                                   # cleaned up
+        assert _watchdogs() == []                                # no lingering timer/reader
+        assert server.client_gone.wait(5)                        # transport really torn down
+
+    def test_trickle_cannot_hold_a_blocking_chunk_read(self, allow_localhost):
+        # Regression for standard urllib3 2.x semantics: its body read wraps
+        # http.client, whose read(64 KiB) blocks until the whole chunk arrives.
+        # Here the response streams over a real socket through the standard
+        # library's http.client (no urllib3 at all), so the old after-chunk
+        # check never ran until the server stopped (8 s).
+        import http.client
+        import urllib.parse
+        server, opened = LocalServer("trickle"), []
+
+        def get(url, headers=None, timeout=None, stream=False):
+            u = urllib.parse.urlsplit(server.url)
+            conn = http.client.HTTPConnection(u.hostname, u.port, timeout=timeout[1])
+            conn.request("GET", u.path, headers=headers or {})
+            raw = conn.getresponse()                       # blocking read(amt) semantics
+            r = requests.Response()
+            r.status_code, r.raw, r.url = raw.status, raw, url
+            r.headers = requests.structures.CaseInsensitiveDict(raw.getheaders())
+            opened.append((r, conn))
+            return r
+        try:
+            t0 = time.monotonic()
+            payload, meta = ir.fetch(get, deadline=1.0)
+            elapsed = time.monotonic() - t0
+        finally:
+            server.close()
+        assert payload is None and meta["error"]["type"] == "timeout"
+        assert elapsed < 4.0, f"took {elapsed:.1f} s"
+        assert server.sent >= 5 and meta["bytes"] < ir.READ_CHUNK
+        r, conn = opened[0]
+        assert r.raw.isclosed() and _watchdogs() == []
+        assert server.client_gone.wait(5)
+        conn.close()
+
+    def test_complete_response_over_the_same_transport(self, allow_localhost):
+        server, opened = LocalServer("json"), []
+        try:
+            payload, meta = ir.fetch(self._get(server, opened), deadline=5.0)
+        finally:
+            server.close()
+        assert meta["error"] is None and payload["injuries"][0]["displayName"] == \
+            "Tampa Bay Buccaneers"
+        assert opened[0].raw.closed and _watchdogs() == []
+
+    def test_deadline_unblocks_a_read_stuck_inside_one_chunk(self):
+        # The same guarantee without a socket: a chunk read that blocks until
+        # the transport is aborted (as a socket recv would) is released by the
+        # watchdog, and the truncated stream is reported as the deadline.
+        released = threading.Event()
+
+        class Blocking(Resp):
+            def iter_content(self, chunk_size=1, decode_unicode=False):
+                yield b'{"inj'
+                released.wait(10)                                # blocked mid-chunk
+                return                                           # then looks like EOF
+
+            def close(self):
+                super().close()
+                released.set()                                   # abort unblocks the read
+
+        resp = Blocking({"injuries": []})
+        t0 = time.monotonic()
+        payload, meta = ir.fetch(Source(resp), deadline=0.5)
+        assert time.monotonic() - t0 < 3 and meta["error"]["type"] == "timeout"
+        assert payload is None and resp.closed and _watchdogs() == []
 
 
 # ------------------------------------------------------- secrets --

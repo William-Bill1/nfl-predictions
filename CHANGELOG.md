@@ -8,6 +8,31 @@ bottom.
 
 ## October 2026
 
+- **Injury archive: streamed, bounded ESPN response** (`injury_reports.py`).
+  - **What happened:** the first live capture (2026-10-21) received HTTP 200
+    with 8,726,788 bytes. That was over the 8 MiB cap, so it was archived as
+    `unavailable` / `too_large`. It is unchanged, and the slot is not
+    backfilled.
+  - **New size limit:** 32 MiB of decoded body, about 3.8x the observed size.
+  - **Streaming:** the response is streamed and counted in 64 KiB chunks,
+    stopping as soon as the limit is passed. Compressed bodies are counted
+    after decoding. A declared Content-Length over the limit is rejected
+    unread; otherwise the header isn't trusted.
+  - **Time limits:** a 90 s body-read deadline is added to the existing 5 s
+    connect and 20 s per-read (inactivity) timeouts. A watchdog timer shuts
+    the connection's socket down when the deadline fires, so a trickling
+    server can't hold a chunk read open. Reading stays in the calling thread,
+    and the timer is joined before returning.
+  - **Memory wording:** the limit bounds the accumulated body bytes (at most
+    the limit plus one chunk), not total process memory.
+  - **Clean-up and evidence:** the response is closed on every path. Error
+    evidence and the observation time (receipt, after the body is read) are
+    unchanged.
+  - **Unchanged:** sportsbook collection, persistence, retries and credit
+    use.
+  - **Still pending:** compatibility with the real payload, since no raw
+    response has been parsed or archived yet.
+
 - **Home page: "Predictions last generated" shows the real generation time**
   (`prediction_provenance.py`).
   - **Was:** the predictions CSV's file modification time, in the machine's local

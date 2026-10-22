@@ -86,13 +86,61 @@ team has no injuries:**
 | `full_team_coverage` | every in-scope team is in the feed, every feed team name matched, and no entry was malformed | yes | yes (when on time or late) |
 | `partial_team_coverage` | an in-scope team is absent, a feed team name didn't match, or an entry was malformed | yes | yes (when on time or late) |
 | `empty` | valid response with no player rows | no | no: kept as evidence; a later run inside the window retries |
-| `unavailable` | timeout, connection error, non-200, response over 8 MB, invalid JSON or unexpected shape | no | no: kept as evidence with its error; retried like `empty` |
+| `unavailable` | timeout (including the total read deadline), connection error or interrupted stream, non-200, response over 32 MiB (declared or counted), invalid JSON or unexpected shape | no | no: kept as evidence with its error; retried like `empty` |
 
 **Failure handling:**
 - **Recorded, not dropped:** malformed entries (for example, no player name)
   are listed in `coverage.malformed_entries`, as are unmatched feed team
   names. Rows for teams without an in-scope game (bye weeks) are counted.
-- **Bounded requests:** 5 s to connect, 20 s to read, at most 8 MB.
+- **Bounded requests:** see *Response limits* below.
+
+## Response limits
+
+The response is **streamed** (`stream=True`) and read in 64 KiB chunks. It
+is bounded four ways, and closed on every path (success, error, early
+rejection):
+
+| Bound | Value | Enforced how |
+|---|---|---|
+| Connect timeout | 5 s | `requests` |
+| Per-read timeout | 20 s between chunks | `requests` |
+| Total read deadline | 90 s to read the whole body | a watchdog timer shuts the connection's socket down when it fires, so even a read blocked inside one chunk returns; also checked after every chunk |
+| Body size | 32 MiB (33,554,432 bytes) of **decoded** body | counted chunk by chunk; reading stops as soon as the limit is passed |
+
+- **Content-Length:** a declared length over the limit is rejected before
+  the body is read. Otherwise the header is never trusted; whether it's
+  missing, wrong or unparseable, the bytes actually received are counted.
+- **Compression:** with gzip or deflate, `requests` decodes as it streams.
+  `urllib3` 2.x returns at most one chunk of decoded bytes per read, so the
+  count is of decompressed bytes.
+- **What the limit bounds:** the accumulated body bytes, at most the limit
+  plus one chunk. It does **not** bound total process memory: converting to
+  `bytes`, decompression buffers and the parsed JSON all need memory on top
+  of that.
+- **Why a watchdog:** the 20 s socket timeout only measures inactivity. A
+  server trickling a byte every few seconds never trips it. With standard
+  `urllib3` (which wraps `http.client`), one 64 KiB chunk read then blocks
+  until the whole chunk arrives, so a check after each chunk never runs.
+  - **How it works:** the watchdog shuts the socket down at the deadline,
+    which makes the blocked read return in the reading thread itself. The
+    capture records a `timeout` ("body not complete within 90 s"), and a
+    truncated body is never parsed as if complete.
+  - **Clean-up:** the timer is cancelled and joined before `fetch` returns, so
+    no background thread or reader remains.
+  - **Transports:** the socket is found under `urllib3` 2.x, urllib3-future
+    (whose `HTTPResponse.shutdown()` is a no-op) and a bare `http.client`
+    response.
+- **Worst-case wall time** for one request: 5 s to connect, up to 20 s for
+  the headers, then at most 90 s for the body (plus JSON parsing).
+- **Why 32 MiB:** the first live response (2026-10-21) was **8,726,788
+  bytes**, over the original 8 MiB cap, and was correctly archived as
+  `unavailable` / `too_large`. 32 MiB gives about 3.8x headroom for a feed
+  that grows during the season, while still bounding a misbehaving server.
+  That historical capture is unchanged, and its Wednesday slot is not
+  backfilled.
+- **Evidence kept:** `response.bytes` is the decoded byte count read, up to
+  the point reading stopped. A declared-length rejection leaves it `null`
+  and puts the declared length in the error message.
 - **No credentials stored:** error messages are capped at 500 characters and
   redacted the same way as the sportsbook capture, so no key or `apiKey=`
   value is ever stored or printed.
@@ -217,6 +265,18 @@ document. It detects accidental changes and corruption. It does **not**
 detect a deliberate edit followed by recomputing the checksum. Git history
 and the workflow artifacts are the record of what was originally written.
 
+**Two different hashes:**
+- **The workflow's file sha256:** a hash of the file's exact bytes as
+  committed (LF line endings). The persistence check compares it with the
+  blob on remote `main`.
+- **`payload_sha256`:** a hash of the canonical JSON content. It doesn't
+  depend on line endings or formatting.
+- **On Windows:** a checkout with `core.autocrlf=true` converts the file to
+  CRLF, so its raw-file hash differs from the committed blob, while the JSON,
+  `payload_sha256` and validation are identical. Compare against the
+  committed blob (`git show origin/main:<path> | sha256sum`), not the
+  working-tree file.
+
 ## How later analysis could use this, and its limits
 
 A later phase could pair each Wednesday and Sunday Ontario sportsbook capture
@@ -232,6 +292,13 @@ spreads moved.
   NFL report, and it has no practice data. Missing rows aren't "healthy".
 - **No verified update times:** the meaning of ESPN's entry `date` is
   unverified, so the archive can't say how fresh any status was.
+- **Payload compatibility still pending:** as of the first live run, no
+  capture has parsed a real response. That run was rejected as too large
+  before parsing, and no raw ESPN response is archived anywhere in the
+  repository. So the field handling (status words, athlete ids, comments,
+  entry dates) is tested only against hand-written fixtures, until a live
+  capture with rows exists. The nightly `espn_injuries.csv` is a flattened
+  extract, not evidence of the raw JSON schema.
 - **No history before deployment:** slots before this phase have no injury
   capture, and nothing is reconstructed from a later feed. Until the archive
   covers both decision times of a week,
