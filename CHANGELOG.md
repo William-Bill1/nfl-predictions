@@ -8,6 +8,22 @@ bottom.
 
 ## October 2026
 
+- **Recommendation log: clearer display** (`betting_log.py` display helpers, Betting
+  Log tab, alert view, RSS).
+  - **The confusion:** a row stored `spread_line=-4.5`, `recommended_team=PHI`
+    and `bet_spread=4.5`. Shown together, the raw nflverse line
+    (home-favourite positive) read as "PHI -4.5" for a PHI +4.5
+    recommendation.
+  - **Now:** a **Recommendation** column or badge shows `PHI +4.5`, built from
+    `recommended_team` and `bet_spread` only. `spread_line` is labelled
+    **Raw source spread**, with its sign convention explained. Odds read
+    `-110 (assumed; not a sportsbook offer)`.
+  - **Legacy rows:** rows without a team or a recorded handicap show
+    "Recommendation unavailable". No handicap is derived for display.
+  - **Unchanged:** the CSV schema, records, append and dedup, grading and
+    settlement.
+  - **Tests:** `tests/test_recommendation_display.py`.
+
 - **Injury archive: streamed, bounded ESPN response** (`injury_reports.py`).
   - **What happened:** the first live capture (2026-10-21) received HTTP 200
     with 8,726,788 bytes. That was over the 8 MiB cap, so it was archived as

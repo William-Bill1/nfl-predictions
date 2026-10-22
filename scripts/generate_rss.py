@@ -25,6 +25,10 @@ except Exception as e:
     raise
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if ROOT not in sys.path:
+    sys.path.insert(0, ROOT)
+from betting_log import (RAW_SPREAD_LABEL, RECOMMENDATION_UNAVAILABLE, odds_text,  # noqa: E402
+                         recommendation_text)
 DATA_DIR = os.path.join(ROOT, "data_files")
 LOG_PATH = os.path.join(DATA_DIR, "betting_recommendations_log.csv")
 OUT_PATH = os.path.join(DATA_DIR, "alerts_feed.xml")
@@ -138,8 +142,14 @@ def build_rss_items(df, max_items=100):
         confidence = _choose_confidence(r)
         conf_text = f"Confidence: {_format_confidence(confidence)}" if confidence is not None else ""
         extra = []
+        if str(bet_type) == "spread":
+            # The team at its recorded handicap (bet_spread), not the raw line.
+            rec = recommendation_text(r)
+            extra.append(rec if rec == RECOMMENDATION_UNAVAILABLE else f"Recommendation: {rec}")
         if "spread_line" in r and pd.notna(r.get("spread_line")):
-            extra.append(f"Spread: {r.get('spread_line')}")
+            extra.append(f"{RAW_SPREAD_LABEL}: {r.get('spread_line')} (home-favourite positive)")
+        if str(bet_type) == "spread":
+            extra.append(f"Odds: {odds_text(r)}")
         if "total_line" in r and pd.notna(r.get("total_line")):
             extra.append(f"Total: {r.get('total_line')}")
         if "edge" in r and pd.notna(r.get("edge")):

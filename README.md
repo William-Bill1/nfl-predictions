@@ -53,7 +53,7 @@ The dashboard opens with a standing reality-check banner: the spread signal is
 | Probabilities & Edges | upcoming-game probabilities (spread / market-implied moneyline & totals) and edges (model % − implied %) |
 | Betting Performance | win-rate / ROI on the spread signal, out-of-sample test slice only |
 | Spread Bets | confidence-tiered upcoming spread picks (the only live bet signal) |
-| Betting Log | spread recommendations + graded outcomes (`betting_recommendations_log.csv`) |
+| Betting Log | spread recommendations + graded outcomes (`betting_recommendations_log.csv`): **Recommendation** (team at its recorded handicap, e.g. `PHI +4.5`), **Odds** (assumed -110 labelled as such), **Raw source spread** |
 | Model Performance | accuracy, calibration, the out-of-sample spread warning, weekly tracking from the betting log |
 | Bankroll Management | Kelly-style position sizing for the higher-confidence spread bets |
 
@@ -326,7 +326,23 @@ The betting log stores `bet_spread` (the recommended team's signed handicap),
 `bet_odds`, and `odds_source`. Model signals assume -110 and $100 risk;
 these are simulated recommendations, not records of placed sportsbook bets.
 Legacy records retain their original `spread_line`; settlement converts that
-line for the recorded team and assumes -110 (`odds_source` says so). To
+line for the recorded team and assumes -110 (`odds_source` says so).
+
+**How the log is displayed:**
+- **Recommendation:** the Betting Log tab, the alert view and the RSS feed
+  show the recommended team at its recorded handicap, for example
+  `PHI +4.5` (`betting_log.recommendation_text`, from `recommended_team` and
+  `bet_spread`).
+- **Raw source spread:** `spread_line` is nflverse's line as logged,
+  home-favourite positive. So `-4.5` with PHI at home means DAL was favoured,
+  and PHI's handicap is `+4.5`. It is never attached to the team.
+- **Unavailable:** a row without one of the two teams or without a usable
+  `bet_spread` (legacy rows, `Pick` rows) shows **Recommendation
+  unavailable**. The display never derives a handicap; grading still
+  converts the line as described above.
+- **Odds:** shown as, for example, `-110 (assumed; not a sportsbook offer)`.
+- **Unchanged:** the CSV download is the raw file, with its schema and
+  values as stored. To
 correct existing settled records after refreshing final scores, run
 `python betting_log.py --regrade`, then `python scripts/weekly_spread_report.py`.
 Every changed result is appended to `data_files/settlement_corrections_YYYYMMDD.csv`

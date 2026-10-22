@@ -1636,8 +1636,16 @@ def home_page():
 
                     st.markdown(f"**Game Time:** {gameday_text}")
 
-                    # Recommendation and quick stats
+                    # Recommendation and quick stats. For spread rows the badge is the
+                    # team at its RECORDED handicap (e.g. "PHI +4.5"), never the raw line.
+                    from betting_log import (RAW_SPREAD_LABEL, RAW_SPREAD_HELP,
+                                             recommendation_text, odds_text)
                     recommended_text = row.get('recommended_team','')
+                    row = row.copy()
+                    row['recommendation'] = recommendation_text(row)
+                    row['odds_shown'] = odds_text(row)
+                    badge_text = row['recommendation'] if str(row.get('bet_type', '')) == 'spread' \
+                        else recommended_text
 
                     # Map of team primary colors (hex) for subtle tinting
                     team_colors = {
@@ -1680,12 +1688,12 @@ def home_page():
 
                     badge_html = (
                         f"<div style='display:inline-block;background:{bg_rgba};color:{text_color};"
-                        f"padding:6px 10px;border-radius:6px;border:1px solid {border_rgba};font-weight:600;font-size:14px;'>{recommended_text}</div>"
+                        f"padding:6px 10px;border-radius:6px;border:1px solid {border_rgba};font-weight:600;font-size:14px;'>{badge_text}</div>"
                     )
                     try:
                         st.markdown(badge_html, unsafe_allow_html=True)
                     except Exception:
-                        st.markdown(f"**Recommended:** {recommended_text}")
+                        st.markdown(f"**Recommended:** {badge_text}")
 
                     # Format confidence and edge like the app
                     try:
@@ -1709,14 +1717,16 @@ def home_page():
                     cols = st.columns(3)
                     cols[0].metric('Confidence', prob_text)
                     cols[1].metric('Edge', edge_text)
-                    cols[2].metric('Spread', row.get('spread_line', 'N/A'))
+                    cols[2].metric(RAW_SPREAD_LABEL, row.get('spread_line', 'N/A'), help=RAW_SPREAD_HELP)
+                    st.caption(f"{RAW_SPREAD_LABEL}: {RAW_SPREAD_HELP} Odds: {row['odds_shown']}.")
 
                     st.write('---')
 
                     # Present the full log entry as a readable table (no numeric index)
                     display_fields = [
                         'log_date', 'season', 'week', 'gameday', 'home_team', 'away_team',
-                        'bet_type', 'recommended_team', 'spread_line', 'total_line', 'moneyline_odds',
+                        'bet_type', 'recommendation', 'odds_shown', 'recommended_team', 'spread_line',
+                        'total_line', 'moneyline_odds',
                         'model_probability', 'edge', 'confidence_tier', 'bet_result', 'bet_profit'
                     ]
 
@@ -1724,7 +1734,9 @@ def home_page():
                     field_labels = {
                         'log_date': 'Logged At', 'season': 'Season', 'week': 'Week', 'gameday': 'Game Time',
                         'home_team': 'Home Team', 'away_team': 'Away Team', 'bet_type': 'Bet Type',
-                        'recommended_team': 'Recommended', 'spread_line': 'Spread', 'total_line': 'Total',
+                        'recommendation': 'Recommendation', 'odds_shown': 'Odds',
+                        'recommended_team': 'Recommended Team', 'spread_line': RAW_SPREAD_LABEL,
+                        'total_line': 'Total',
                         'moneyline_odds': 'Moneyline Odds', 'model_probability': 'Model Confidence',
                         'edge': 'Edge', 'confidence_tier': 'Confidence Tier', 'bet_result': 'Result',
                         'bet_profit': 'Profit'
@@ -3563,10 +3575,17 @@ def home_page():
                 if 'edge' in display_log.columns:
                     display_log['edge'] = display_log['edge'].apply(lambda x: f"{x:.2%}" if pd.notna(x) else "")
 
+                # The recommendation is the team at its RECORDED handicap
+                # (recommended_team + bet_spread), never the raw source line.
+                from betting_log import (RAW_SPREAD_LABEL, RAW_SPREAD_HELP, ODDS_HELP,
+                                         recommendation_text, odds_text)
+                display_log['recommendation'] = display_log.apply(recommendation_text, axis=1)
+                display_log['odds_shown'] = display_log.apply(odds_text, axis=1)
+
                 # Select columns to display
                 display_cols = [
-                    'log_date', 'gameday', 'week', 'home_team', 'away_team', 
-                    'bet_type', 'recommended_team', 'spread_line', 'model_probability',
+                    'log_date', 'gameday', 'week', 'home_team', 'away_team',
+                    'bet_type', 'recommendation', 'odds_shown', 'spread_line', 'model_probability',
                     'edge', 'confidence_tier', 'bet_result', 'bet_profit'
                 ]
                 display_cols = [col for col in display_cols if col in display_log.columns]
@@ -3574,6 +3593,12 @@ def home_page():
                 # Sort by game date (most recent first)
                 display_log = display_log.sort_values('gameday', ascending=False)
 
+                st.caption(
+                    f"**Recommendation** is the recommended team at its recorded handicap. "
+                    f"**{RAW_SPREAD_LABEL}** is nflverse's line as logged: positive means the "
+                    f"home team was favoured, negative the away team; it is not the "
+                    f"recommended team's handicap. **Odds** marked assumed are -110 used for "
+                    f"grading, not a verified sportsbook offer.")
                 st.dataframe(
                     display_log[display_cols],
                     column_config={
@@ -3583,8 +3608,15 @@ def home_page():
                         'home_team': st.column_config.TextColumn('Home', width='medium'),
                         'away_team': st.column_config.TextColumn('Away', width='medium'),
                         'bet_type': st.column_config.TextColumn('Bet Type', width='medium'),
-                        'recommended_team': st.column_config.TextColumn('Bet On', width='medium'),
-                        'spread_line': st.column_config.NumberColumn('Spread', format='%.1f'),
+                        'recommendation': st.column_config.TextColumn(
+                            'Recommendation', width='medium',
+                            help='Recommended team at its recorded handicap (bet_spread). '
+                                 '"Recommendation unavailable" = legacy row without a recorded '
+                                 'team or handicap.'),
+                        'odds_shown': st.column_config.TextColumn('Odds', width='medium',
+                                                                  help=ODDS_HELP),
+                        'spread_line': st.column_config.NumberColumn(RAW_SPREAD_LABEL, format='%.1f',
+                                                                     help=RAW_SPREAD_HELP),
                         'model_probability': st.column_config.TextColumn('Model Prob', width='small', help='Model\'s predicted probability'),
                         'edge': st.column_config.TextColumn('Edge', width='small', help='Model\'s edge over sportsbook'),
                         'confidence_tier': st.column_config.TextColumn('Tier', width='small'),
