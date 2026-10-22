@@ -382,3 +382,137 @@ season,week,game_id,home_team,away_team,player_name,prop_type,book,line,over_odd
 2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,CeeDee Lamb,receptions,fanduel,7.5,114,-152
 2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Jake Ferguson,receptions,fanduel,2.5,-114,-114
 2026,7,2026_07_DAL_PHI,Philadelphia Eagles,Dallas Cowboys,Javonte Williams,rushing_yards,fanduel,66.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bryce Young,passing_yards,draftkings,253.5,-111,-113
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Baker Mayfield,passing_yards,draftkings,214.5,-112,-112
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tetairoa McMillan,receiving_yards,draftkings,71.5,-112,-112
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Jalen Coker,receiving_yards,draftkings,67.5,-113,-111
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Darren Waller,receiving_yards,draftkings,21.5,-111,-113
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tommy Tremble,receiving_yards,draftkings,16.5,-111,-113
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,receiving_yards,draftkings,12.5,-110,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Jalen Coker,receptions,draftkings,5.5,106,-135
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tetairoa McMillan,receptions,draftkings,5.5,116,-148
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,receptions,draftkings,2.5,122,-155
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Darren Waller,receptions,draftkings,2.5,133,-170
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tommy Tremble,receptions,draftkings,2.5,146,-188
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,rushing_yards,draftkings,70.5,-112,-112
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bucky Irving,rushing_yards,draftkings,64.5,-110,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Baker Mayfield,rushing_yards,draftkings,16.5,-112,-112
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bryce Young,rushing_yards,draftkings,11.5,-107,-118
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bryce Young,passing_yards,fanduel,253.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Baker Mayfield,passing_yards,fanduel,215.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tommy Tremble,receiving_yards,fanduel,16.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,receiving_yards,fanduel,14.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Jalen Coker,receiving_yards,fanduel,67.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tetairoa McMillan,receiving_yards,fanduel,69.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Darren Waller,receiving_yards,fanduel,22.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tommy Tremble,receptions,fanduel,1.5,-205,152
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Jalen Coker,receptions,fanduel,5.5,-108,-122
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Darren Waller,receptions,fanduel,2.5,120,-160
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Tetairoa McMillan,receptions,fanduel,5.5,110,-146
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,receptions,fanduel,2.5,112,-148
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Chuba Hubbard,rushing_yards,fanduel,70.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bryce Young,rushing_yards,fanduel,10.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Bucky Irving,rushing_yards,fanduel,65.5,-114,-114
+2026,7,2026_07_TB_CAR,Carolina Panthers,Tampa Bay Buccaneers,Baker Mayfield,rushing_yards,fanduel,16.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,C.J. Stroud,passing_yards,draftkings,256.5,-110,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,J.J. McCarthy,passing_yards,draftkings,204.5,-113,-111
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malik Nabers,receiving_yards,draftkings,71.5,-110,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Nico Collins,receiving_yards,draftkings,66.5,-114,-110
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Isaiah Likely,receiving_yards,draftkings,49.5,-112,-112
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Marvin Harrison Jr.,receiving_yards,draftkings,29.5,-115,-110
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Jaylin Noel,receiving_yards,draftkings,29.5,-111,-113
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malachi Fields,receiving_yards,draftkings,21.5,-109,-115
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Xavier Hutchinson,receiving_yards,draftkings,13.5,-112,-112
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Kayshon Boutte,receiving_yards,draftkings,11.5,-117,-107
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,receiving_yards,draftkings,9.5,-108,-116
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tank Dell,receiving_yards,draftkings,8.5,-117,-107
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Devin Singletary,receiving_yards,draftkings,7.5,-115,-109
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malik Nabers,receptions,draftkings,5.5,-124,-103
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Isaiah Likely,receptions,draftkings,5.5,-102,-124
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Nico Collins,receptions,draftkings,4.5,-143,112
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Marvin Harrison Jr.,receptions,draftkings,2.5,-124,-102
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Jaylin Noel,receptions,draftkings,2.5,-102,-125
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malachi Fields,receptions,draftkings,1.5,-192,149
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,receptions,draftkings,1.5,-108,-118
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Devin Singletary,receptions,draftkings,1.5,102,-130
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Kayshon Boutte,receptions,draftkings,1.5,135,-173
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tank Dell,receptions,draftkings,1.5,164,-211
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Xavier Hutchinson,receptions,draftkings,1.5,166,-214
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Woody Marks,rushing_yards,draftkings,56.5,-112,-112
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Cam Skattebo,rushing_yards,draftkings,31.5,-113,-111
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,J.J. McCarthy,rushing_yards,draftkings,23.5,-115,-109
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,rushing_yards,draftkings,23.5,-108,-116
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,C.J. Stroud,rushing_yards,draftkings,9.5,-113,-111
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,J.J. McCarthy,passing_yards,fanduel,200.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,C.J. Stroud,passing_yards,fanduel,255.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Devin Singletary,receiving_yards,fanduel,7.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Isaiah Likely,receiving_yards,fanduel,47.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Kayshon Boutte,receiving_yards,fanduel,12.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Marvin Harrison Jr.,receiving_yards,fanduel,29.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malik Nabers,receiving_yards,fanduel,68.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Xavier Hutchinson,receiving_yards,fanduel,13.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tank Dell,receiving_yards,fanduel,8.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,receiving_yards,fanduel,9.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Jaylin Noel,receiving_yards,fanduel,27.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Nico Collins,receiving_yards,fanduel,68.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malachi Fields,receiving_yards,fanduel,23.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Jaylin Noel,receptions,fanduel,2.5,106,-140
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Kayshon Boutte,receptions,fanduel,1.5,130,-174
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Devin Singletary,receptions,fanduel,1.5,104,-138
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Marvin Harrison Jr.,receptions,fanduel,2.5,-118,-112
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malachi Fields,receptions,fanduel,2.5,144,-194
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Isaiah Likely,receptions,fanduel,5.5,102,-136
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Malik Nabers,receptions,fanduel,5.5,-128,-104
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tank Dell,receptions,fanduel,1.5,154,-210
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,receptions,fanduel,1.5,-108,-122
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Xavier Hutchinson,receptions,fanduel,1.5,154,-210
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Nico Collins,receptions,fanduel,4.5,-138,104
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,J.J. McCarthy,rushing_yards,fanduel,23.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Cam Skattebo,rushing_yards,fanduel,31.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Tyrone Tracy Jr.,rushing_yards,fanduel,23.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,C.J. Stroud,rushing_yards,fanduel,9.5,-114,-114
+2026,7,2026_07_NYG_HOU,Houston Texans,New York Giants,Woody Marks,rushing_yards,fanduel,52.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Geno Smith,passing_yards,draftkings,221.5,-113,-111
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Willis,passing_yards,draftkings,182.5,-113,-111
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Garrett Wilson,receiving_yards,draftkings,62.5,-114,-110
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Washington,receiving_yards,draftkings,41.5,-111,-113
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Caleb Douglas,receiving_yards,draftkings,35.5,-114,-110
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Mason Taylor,receiving_yards,draftkings,22.5,-115,-109
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Chris Bell,receiving_yards,draftkings,21.5,-113,-111
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Greg Dulcich,receiving_yards,draftkings,20.5,-114,-110
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Kenyon Sadiq,receiving_yards,draftkings,20.5,-111,-113
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,receiving_yards,draftkings,7.5,-103,-121
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Garrett Wilson,receptions,draftkings,5.5,-102,-125
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Washington,receptions,draftkings,4.5,120,-154
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Mason Taylor,receptions,draftkings,3.5,135,-173
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Caleb Douglas,receptions,draftkings,2.5,-133,104
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Greg Dulcich,receptions,draftkings,2.5,124,-158
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Kenyon Sadiq,receptions,draftkings,2.5,129,-165
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Chris Bell,receptions,draftkings,1.5,-136,106
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,receptions,draftkings,1.5,100,-128
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,rushing_yards,draftkings,48.5,-109,-115
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Willis,rushing_yards,draftkings,29.5,-110,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Jaylen Wright,rushing_yards,draftkings,14.5,-116,-108
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Geno Smith,rushing_yards,draftkings,6.5,-112,-112
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Geno Smith,passing_yards,fanduel,223.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Willis,passing_yards,fanduel,183.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Chris Bell,receiving_yards,fanduel,21.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Caleb Douglas,receiving_yards,fanduel,36.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Garrett Wilson,receiving_yards,fanduel,61.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,receiving_yards,fanduel,6.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Greg Dulcich,receiving_yards,fanduel,21.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Washington,receiving_yards,fanduel,41.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Mason Taylor,receiving_yards,fanduel,22.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Kenyon Sadiq,receiving_yards,fanduel,21.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Caleb Douglas,receptions,fanduel,2.5,-148,112
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,receptions,fanduel,1.5,-102,-130
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Washington,receptions,fanduel,4.5,124,-166
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Greg Dulcich,receptions,fanduel,2.5,124,-166
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Garrett Wilson,receptions,fanduel,5.5,-102,-130
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Mason Taylor,receptions,fanduel,3.5,134,-180
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Kenyon Sadiq,receptions,fanduel,2.5,116,-154
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Chris Bell,receptions,fanduel,1.5,-122,-106
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Geno Smith,rushing_yards,fanduel,5.5,-128,-102
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Jaylen Wright,rushing_yards,fanduel,15.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Ollie Gordon II,rushing_yards,fanduel,48.5,-114,-114
+2026,7,2026_07_MIA_NYJ,New York Jets,Miami Dolphins,Malik Willis,rushing_yards,fanduel,30.5,-114,-114
