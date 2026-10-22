@@ -56,8 +56,11 @@ import hashlib
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
+import threading
+import time
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -81,8 +84,16 @@ CAPTURE_KIND = "injury_report_capture"
 CHECKSUM_FIELD = ps.CHECKSUM_FIELD
 TORONTO = on.TORONTO
 
-REQUEST_TIMEOUT = (5, 20)             # (connect, read) seconds
-MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+REQUEST_TIMEOUT = (5, 20)             # (connect, per-read) seconds
+# Decoded (decompressed) body limit. The first live response (2026-10-21) was
+# 8,726,788 bytes, over the original 8 MiB; 32 MiB leaves ~3.8x headroom for a
+# growing in-season feed. It bounds the accumulated body bytes (at most the
+# limit plus one chunk), not total process memory: the bytes copy,
+# decompression buffers and the parsed JSON need memory on top of that.
+MAX_RESPONSE_BYTES = 32 * 1024 * 1024
+READ_CHUNK = 64 * 1024                # decoded bytes per read (urllib3 2.x returns at most this)
+READ_DEADLINE = 90.0                  # seconds to read the body, enforced by a watchdog that
+                                      # shuts the transport down (see _read_bounded)
 MAX_TEXT = 500                        # per stored free-text field / error message
 
 SOURCE = {
@@ -348,32 +359,151 @@ def slot_record(resolved: dict, received_at: datetime) -> dict:
 # Fetch
 # --------------------------------------------------------------------------
 
-def fetch(get: Callable = requests.get) -> tuple[dict | None, dict]:
+class _TooLarge(Exception):
+    pass
+
+
+class _Deadline(Exception):
+    pass
+
+
+_SOCKET_PATHS = (
+    ("_connection", "sock"),            # urllib3 2.x and urllib3-future HTTPResponse
+    ("_fp", "fp", "raw", "_sock"),      # urllib3 2.x wrapping http.client.HTTPResponse
+    ("fp", "raw", "_sock"),             # a bare http.client.HTTPResponse
+)
+
+
+def _socket_of(resp) -> socket.socket | None:
+    raw = getattr(resp, "raw", None)
+    for path in _SOCKET_PATHS:
+        obj = raw
+        for name in path:
+            obj = getattr(obj, name, None)
+        if isinstance(obj, socket.socket):
+            return obj
+    return None
+
+
+def _abort_transport(resp) -> None:
+    """Unblock a body read in progress on `resp`, from another thread.
+
+    The per-read socket timeout only measures inactivity, so a server that
+    trickles bytes can keep a chunk read blocked indefinitely (standard
+    urllib3 / http.client block until the whole chunk arrives). Shutting the
+    connection's socket down makes that blocked recv return (or fail) in the
+    reading thread itself. urllib3-future's HTTPResponse.shutdown() is a
+    no-op, so the socket is reached directly; without one, close() is the
+    best effort."""
+    sock = _socket_of(resp)
+    try:
+        if sock is not None:
+            sock.shutdown(socket.SHUT_RDWR)
+        else:
+            resp.close()
+    except Exception:                            # already closed or never connected
+        pass
+
+
+def _read_bounded(resp, limit: int, deadline: float, monotonic: Callable) -> bytes:
+    """The decoded body, read in chunks: stops as soon as more than `limit`
+    decoded bytes have arrived (_TooLarge) or `deadline` seconds have passed
+    (_Deadline). Content-Length is never trusted for the size actually read;
+    compressed bodies are counted after decoding.
+
+    The deadline is enforced by a watchdog timer that shuts the transport down
+    if it fires, so it holds even while a chunk read is blocked on a slow
+    trickle. Reading stays in this thread; the timer is cancelled and joined
+    before returning, so nothing keeps running afterwards."""
+    started = monotonic()
+    body = bytearray()
+    expired = threading.Event()
+
+    def on_deadline():
+        expired.set()
+        _abort_transport(resp)
+
+    watchdog = threading.Timer(deadline, on_deadline)
+    watchdog.name = "injury-read-deadline"
+    watchdog.daemon = True
+    watchdog.start()
+    try:
+        try:
+            for chunk in resp.iter_content(chunk_size=READ_CHUNK):
+                if chunk:
+                    body += chunk
+                    if len(body) > limit:
+                        raise _TooLarge(len(body))
+                if expired.is_set() or monotonic() - started > deadline:
+                    raise _Deadline(len(body))
+        except (_TooLarge, _Deadline):
+            raise
+        except Exception:
+            if expired.is_set():             # the abort broke the read: report the deadline
+                raise _Deadline(len(body)) from None
+            raise
+        if expired.is_set():                 # the abort ended the stream early: not a body
+            raise _Deadline(len(body))
+        return bytes(body)
+    finally:
+        watchdog.cancel()
+        watchdog.join()
+
+
+def fetch(get: Callable = requests.get, *, limit: int = MAX_RESPONSE_BYTES,
+          deadline: float = READ_DEADLINE, monotonic: Callable = time.monotonic
+          ) -> tuple[dict | None, dict]:
     """(payload or None, response/error metadata). Never raises for network,
-    HTTP or JSON problems; they become an 'error' entry."""
+    HTTP or JSON problems; they become an 'error' entry. The body is streamed
+    and bounded (`limit` decoded bytes, `deadline` seconds in total, on top of
+    the per-read timeout), and the response is always closed."""
     meta = {"http_status": None, "http_last_modified": None, "http_date": None,
             "bytes": None, "error": None}
+    resp = None
     try:
-        resp = get(ESPN_INJURIES_URL, headers=HEADERS, timeout=REQUEST_TIMEOUT)
+        resp = get(ESPN_INJURIES_URL, headers=HEADERS, timeout=REQUEST_TIMEOUT, stream=True)
         meta["http_status"] = resp.status_code
         headers = getattr(resp, "headers", {}) or {}
         meta["http_last_modified"] = _text(headers.get("Last-Modified"))
         meta["http_date"] = _text(headers.get("Date"))
-        body = resp.content
+        declared = headers.get("Content-Length")
+        try:
+            declared = int(declared) if declared is not None else None
+        except (TypeError, ValueError):
+            declared = None                       # unusable header: rely on counting
+        if resp.status_code == 200 and declared is not None and declared > limit:
+            meta["error"] = {"type": "too_large",
+                             "message": f"declared Content-Length {declared} is over {limit} "
+                                        "bytes; body not read"}
+            return None, meta
+        body = _read_bounded(resp, limit, deadline, monotonic)
         meta["bytes"] = len(body)
         if resp.status_code != 200:
             meta["error"] = {"type": "http_status", "message": f"HTTP {resp.status_code}"}
             return None, meta
-        if len(body) > MAX_RESPONSE_BYTES:
-            meta["error"] = {"type": "too_large", "message": f"response over {MAX_RESPONSE_BYTES} bytes"}
-            return None, meta
         return json.loads(body), meta
+    except _TooLarge as exc:
+        meta["bytes"] = exc.args[0]
+        meta["error"] = {"type": "too_large",
+                         "message": f"response over {limit} bytes (stopped reading at "
+                                    f"{exc.args[0]} decoded bytes)"}
+    except _Deadline as exc:
+        meta["bytes"] = exc.args[0]
+        meta["error"] = {"type": "timeout",
+                         "message": f"body not complete within {deadline:g} s "
+                                    f"({exc.args[0]} bytes read)"}
     except requests.Timeout as exc:
         meta["error"] = {"type": "timeout", "message": on.redact(exc)[:MAX_TEXT]}
     except requests.RequestException as exc:
         meta["error"] = {"type": "request_error", "message": on.redact(exc)[:MAX_TEXT]}
     except ValueError as exc:
         meta["error"] = {"type": "invalid_json", "message": on.redact(exc)[:MAX_TEXT]}
+    finally:
+        if resp is not None:
+            try:
+                resp.close()
+            except Exception:                     # closing must never mask the outcome
+                pass
     return None, meta
 
 
