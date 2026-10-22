@@ -138,7 +138,23 @@ market lines — the weekly hit rate reflects line placement, not betting edge.
 
 **Schedule dates.** `nfl_schedule_<season>.csv` `date` is nflverse `gameday`
 as `YYYY-MM-DD`: a calendar date with no kickoff time. The Player Props page's
-upcoming-games count uses `player_props/game_dates.py`: a calendar date counts
+remaining-games banner (`player_props/season_schedule.py`) takes the season
+from the displayed predictions, never the calendar year: every prediction must
+record the same whole-number season (a missing value is an error, not
+skipped), and every prediction's complete game date must be a recorded
+calendar date (`YYYY-MM-DD`, or that date at midnight with no offset or UTC)
+inside that season's window (1 August to the end of February, so January
+playoff games belong to the previous year's season). It then loads only
+`nfl_schedule_<season>.csv`, which must be readable and have
+`update_schedule.py`'s columns (`week`, `date`, `home_team`, `away_team`,
+`venue`, `status`). Every row needs a `YYYY-MM-DD` date inside the same window,
+a whole-number week from 1 to 22, and two distinct 2-3 letter team
+abbreviations, and no team may appear twice on one date (a duplicate game).
+The page parses prediction game dates with `errors='coerce'`, so a bad stored
+value shows the warning instead of breaking the page.
+Otherwise the page shows a warning and omits the count, with no fallback to
+another season; the predictions stay visible. The count covers the rest of the
+season and uses `player_props/game_dates.py`: a calendar date counts
 through that whole day in America/Toronto, and only an offset-aware
 `commence_time` is treated as a kickoff instant (a zone-less time is never
 assumed UTC). `predict.load_schedule` keeps its own rule: a game dated D stays
@@ -146,12 +162,11 @@ selectable until 12:00 UTC on D (08:00 EDT / 07:00 EST), so the nightly run the
 evening before still targets that week, and the Monday-evening run moves on to
 the next week. Its `game_date` column stores the calendar date as UTC midnight
 (`2026-10-26 00:00:00+00:00`); use its date part and never convert it to local
-time. **Known gap:** the page loads the hard-coded `nfl_schedule_2025.csv`, so
-in 2026 its upcoming-games banner never appears until it loads the current
-season's schedule. Separately, inference passes `days_rest = 1`
+time. **Known gap:** inference passes `days_rest = 1`
 (`calculate_days_rest` is given the player's previous game date) while
 training uses the real gap between games; this is unresolved and needs its own
 investigation before any model input changes.
+
 **Real market lines** (`player_props/market_odds.py`, live since `ODDS_API_KEY`
 was added 2026-09-16): pulls DK/FanDuel lines for the four reliable prop
 types from The Odds API and adds `market_line`/`market_book`/

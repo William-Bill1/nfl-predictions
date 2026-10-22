@@ -8,6 +8,36 @@ bottom.
 
 ## October 2026
 
+- **Player Props: remaining-games banner uses the predictions' season**
+  (`player_props/season_schedule.py`, `pages/2_Player_Props.py`).
+  - **Before:** the page loaded the hard-coded `nfl_schedule_2025.csv`, so in
+    2026 it found no games and the banner never appeared. It also said
+    "upcoming games this week" while counting every remaining game.
+  - **Season:** taken from the displayed predictions' `season` column, never
+    the calendar year. Every prediction must record the same whole-number
+    season (a missing value is an error, not skipped). Every prediction's
+    complete game date must be a recorded calendar date (`YYYY-MM-DD`, or that
+    date at midnight with no offset or UTC) between 1 August and the end of
+    February, so January playoff games belong to the previous season.
+  - **Schedule:** only `nfl_schedule_<season>.csv`. If it is missing,
+    unreadable or malformed, or the season is ambiguous or invalid, the page
+    shows a warning and omits the count. Malformed means any of:
+    - missing any of `update_schedule.py`'s six columns;
+    - no games;
+    - a date that isn't `YYYY-MM-DD` or is outside the season;
+    - a week that isn't a whole number from 1 to 22;
+    - a missing, malformed or identical home/away team;
+    - a team listed twice on one date (a duplicate game).
+    There is no fallback to another season, and the predictions stay visible:
+    the page now parses prediction game dates with `errors='coerce'`, so a bad
+    stored value no longer breaks the page.
+  - **Wording:** "N remaining scheduled games this season (2026)", counted
+    from today's date in Toronto. Today's games stay included because the
+    schedule records dates, not kickoff times.
+  - **Unchanged:** prediction calculations, week selection, stored data and
+    `days_rest`, which remains a separate investigation.
+  - **Tests:** `tests/test_player_props_season.py`.
+
 - **Player Props: upcoming games keep their game day** (`player_props/game_dates.py`,
   `pages/2_Player_Props.py`).
   - **The bug:** `get_upcoming_games` read the schedule's calendar `date` as UTC
