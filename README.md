@@ -341,9 +341,17 @@ line for the recorded team and assumes -110 (`odds_source` says so).
   unavailable**. The display never derives a handicap; grading still
   converts the line as described above.
 - **Odds:** shown as, for example, `-110 (assumed; not a sportsbook offer)`.
+- **Game date:** alert headers show the logged game day as that calendar
+  date, for example `Mon, Oct 26 2026 (date only; kickoff time not
+  recorded)`. The log stores date-only values (`2026-09-13`, or midnight
+  `2026-10-26 00:00:00`); they are never read as UTC midnight. Only a
+  timestamp with an explicit offset is shown as a kickoff time, in
+  America/Toronto with EDT/EST. Missing or invalid values show **Game date
+  unavailable** (`betting_log.game_time_text`).
 - **Unchanged:** the CSV download is the raw file, with its schema and
-  values as stored. To
-correct existing settled records after refreshing final scores, run
+  values as stored.
+
+To correct existing settled records after refreshing final scores, run
 `python betting_log.py --regrade`, then `python scripts/weekly_spread_report.py`.
 Every changed result is appended to `data_files/settlement_corrections_YYYYMMDD.csv`
 (previous and corrected result/profit, timestamp, reason). `grade_pending(regrade=True)`

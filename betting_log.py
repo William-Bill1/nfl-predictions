@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import os
 import math
+import re
 import shutil
 import tempfile
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
+from zoneinfo import ZoneInfo
 
 import pandas as pd
 
@@ -133,6 +135,50 @@ def odds_text(row) -> str:
     if not isinstance(source, str) or source.strip().lower().startswith("assumed"):
         return f"{shown} (assumed; not a sportsbook offer)"
     return f"{shown} ({source.strip()})"
+
+
+TORONTO = ZoneInfo("America/Toronto")
+GAME_DATE_UNAVAILABLE = "Game date unavailable"
+DATE_ONLY_NOTE = "(date only; kickoff time not recorded)"
+NAIVE_TIME_NOTE = "(date as recorded; kickoff time zone not recorded)"
+_DATE_ONLY = re.compile(r"\d{4}-\d{2}-\d{2}")
+_MIDNIGHT = re.compile(r"\d{4}-\d{2}-\d{2}[ T]00:00(:00(\.0+)?)?")
+
+
+def game_time_text(value) -> str:
+    """Alert header date for a log `gameday` value.
+
+    The log stores date-only game days, as 'YYYY-MM-DD' or as midnight
+    ('YYYY-MM-DD 00:00:00', written by append_recommendations). These show
+    that calendar date with no time: treating midnight as UTC and converting
+    to Eastern time shows the previous day at 8 PM. Only a timestamp with an
+    explicit offset is a kickoff time; it is converted to America/Toronto with
+    EDT/EST. A naive time has no known zone, so only its date is shown.
+    Missing or invalid values show GAME_DATE_UNAVAILABLE."""
+    try:
+        if value is None or pd.isna(value):
+            return GAME_DATE_UNAVAILABLE
+    except (TypeError, ValueError):
+        pass
+    if isinstance(value, datetime):
+        dt, midnight = value, None
+    elif isinstance(value, date):
+        return f"{value:%a, %b %d %Y} {DATE_ONLY_NOTE}"
+    else:
+        s = str(value).strip()
+        try:
+            if _DATE_ONLY.fullmatch(s):
+                return f"{date.fromisoformat(s):%a, %b %d %Y} {DATE_ONLY_NOTE}"
+            dt = datetime.fromisoformat(s)
+        except ValueError:
+            return GAME_DATE_UNAVAILABLE
+        midnight = bool(_MIDNIGHT.fullmatch(s))
+    if dt.tzinfo is not None and dt.utcoffset() is not None:
+        local = dt.astimezone(TORONTO)
+        return f"{local:%a, %b %d %Y %I:%M %p} {local.tzname()}"
+    if midnight is None:
+        midnight = dt.time() == datetime.min.time()
+    return f"{dt:%a, %b %d %Y} {DATE_ONLY_NOTE if midnight else NAIVE_TIME_NOTE}"
 
 
 def append_recommendations(preds_df: pd.DataFrame, log_path: str = LOG_PATH) -> int:

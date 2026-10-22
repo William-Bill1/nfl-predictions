@@ -1605,34 +1605,10 @@ def home_page():
                     )
                     st.markdown(fallback_inline, unsafe_allow_html=True)
 
-                    # Game datetime
-                    gameday_raw = row.get('gameday', '')
-                    gameday_text = ''
-                    try:
-                        raw_str = str(gameday_raw)
-                        # Detect if original value includes a time component
-                        has_time = bool(re.search(r"\d{1,2}:\d{2}", raw_str) or ('T' in raw_str and ':' in raw_str))
-
-                        gd = pd.to_datetime(gameday_raw, errors='coerce')
-                        if pd.isna(gd):
-                            gameday_text = raw_str
-                        else:
-                            try:
-                                # If naive, assume UTC then convert to Eastern Time; if tz-aware, convert to ET
-                                if gd.tzinfo is None:
-                                    gd = gd.tz_localize('UTC').tz_convert('America/New_York')
-                                else:
-                                    gd = gd.tz_convert('America/New_York')
-                            except Exception:
-                                # If tz localization/conversion fails, leave as-is
-                                pass
-
-                            if has_time:
-                                gameday_text = gd.strftime('%a, %b %d %Y %I:%M %p')
-                            else:
-                                gameday_text = gd.strftime('%a, %b %d %Y')
-                    except Exception:
-                        gameday_text = str(gameday_raw)
+                    # Game date. Log game days are date-only (midnight included); they keep
+                    # their calendar date and are never shifted through UTC.
+                    from betting_log import game_time_text
+                    gameday_text = game_time_text(row.get('gameday', ''))
 
                     st.markdown(f"**Game Time:** {gameday_text}")
 
@@ -1755,6 +1731,8 @@ def home_page():
                                 val = team_map.get(abb, val)
                             except Exception:
                                 pass
+                        if f == 'gameday':
+                            val = gameday_text
                         # Format bet type, model probability and edge for readability
                         if f == 'bet_type':
                             try:
@@ -3629,14 +3607,14 @@ def home_page():
 
                 # Instructions for automatic updates
                 st.info("""
-                **🔄 Automatic Updates:**
-                - Results are automatically updated when games are completed
-                - The system checks ESPN for scores after game day
-                - Future games will show "pending" until they're played
-                - Refresh the app after games complete to see updated results
-
-                **Note**: All games in the current log are scheduled for the future (Nov 16, 2025), 
-                so no results have been updated yet. Results will appear automatically after games are played.
+                **🔄 How results are updated:**
+                - A bet is graded once its game date has passed and a final score (not 0-0)
+                  is in the nflverse game data behind the predictions.
+                - Grading runs during the scheduled nightly data update and when this page
+                  loads. Scheduled runs can start late, so a result may take more than a
+                  day to appear.
+                - Until then the bet shows "pending". Reload the app after an update to see
+                  new results.
                 """)
 
             else:

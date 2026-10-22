@@ -155,7 +155,7 @@ class TestRss:
 
 def test_app_displays_use_the_helpers():
     src = (ROOT / "predictions.py").read_text(encoding="utf-8")
-    tab = src[src.index("#### 📋 Detailed Betting Log"):src.index("**🔄 Automatic Updates:**")]
+    tab = src[src.index("#### 📋 Detailed Betting Log"):src.index("**🔄 How results are updated:**")]
     assert "recommendation_text" in tab and "RAW_SPREAD_LABEL" in tab and "odds_text" in tab
     assert "'Bet On'" not in tab and "NumberColumn('Spread'" not in tab
     alert = src[src.index("# Recommendation and quick stats"):src.index("# Present the full log")]
