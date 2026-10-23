@@ -5,10 +5,12 @@ Usage:
     python player_props/train_models.py
 
 Workflow:
-    1. Load play-by-play data (historical CSV from data_files/)
+    1. Load play-by-play data (historical CSV from data_files/), recording its
+       content hash and actual coverage
     2. Aggregate to game-level player stats (passing, rushing, receiving)
     3. Calculate exponentially-weighted rolling averages
     4. Add matchup features (is_home, days_rest) and save the validated stats
+       with their provenance manifest
     5. Train XGBoost + LightGBM ensemble for each prop category
     6. Save models to player_props/models/ and metrics to player_props/models/model_metrics.json
 """
@@ -27,6 +29,7 @@ from player_props.aggregators import (
     write_player_stats,
 )
 from player_props.models import train_all_models
+from player_props.provenance import read_source, stats_manifest
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -49,15 +52,16 @@ REQUIRED_PBP_COLS = [
 ]
 
 
-def _load_pbp() -> pd.DataFrame:
-    """Load play-by-play data from data_files/."""
+def _load_pbp() -> tuple[pd.DataFrame, dict]:
+    """Load play-by-play data from data_files/, with an observation of the
+    exact bytes read (provenance.read_source)."""
     # The PBP file is tab-separated (see create-play-by-play.py / update_pbp_smart.py).
     if PBP_FILE.exists():
         print(f"Loading PBP from {PBP_FILE} ...")
-        pbp = pd.read_csv(PBP_FILE, compression='gzip', sep='\t', low_memory=False)
+        pbp, source = read_source(PBP_FILE)
     elif PBP_FILE_UNCOMPRESSED.exists():
         print(f"Loading PBP from {PBP_FILE_UNCOMPRESSED} ...")
-        pbp = pd.read_csv(PBP_FILE_UNCOMPRESSED, sep='\t', low_memory=False)
+        pbp, source = read_source(PBP_FILE_UNCOMPRESSED)
     else:
         raise FileNotFoundError(
             f"Play-by-play file not found. Expected one of:\n"
@@ -72,26 +76,33 @@ def _load_pbp() -> pd.DataFrame:
     if missing:
         print(f"Warning: {len(missing)} expected PBP columns are absent: {missing}")
 
-    return pbp
+    return pbp, source
 
 
-def _aggregate_and_roll(pbp: pd.DataFrame) -> dict:
+def _aggregate_and_roll(pbp: pd.DataFrame, source: dict | None = None) -> dict:
     """
     Aggregate PBP to game-level stats with rolling averages and matchup
     features, then validate and atomically save them to data_files/.
 
     The features are added BEFORE saving (models.py trains from the saved
     CSVs), using aggregators.build_player_stats; a validation failure raises
-    and leaves the existing CSVs untouched.
+    and leaves the existing CSVs untouched. With ``source`` (from _load_pbp)
+    the provenance manifest is written in the same set.
 
     Returns a dict with keys 'passing', 'rushing', 'receiving', each containing
     a fully-featured DataFrame ready for model training.
     """
     tables, reports = build_player_stats(pbp, load_matchup_schedule(DATA_DIR), ROLLING_WINDOWS)
-    for stat_type, path in write_player_stats(tables, DATA_DIR, ROLLING_WINDOWS).items():
-        print(f"Saved {len(tables[stat_type]):,} {stat_type} records -> {path} "
+    manifest_for = stats_manifest(source, ROLLING_WINDOWS) if source is not None else None
+    written = write_player_stats(tables, DATA_DIR, ROLLING_WINDOWS, manifest_for)
+    for stat_type in tables:
+        print(f"Saved {len(tables[stat_type]):,} {stat_type} records -> {written[stat_type]} "
               f"({reports[stat_type]['excluded_plays']} plays excluded, "
               f"{reports[stat_type]['name_merges']} name merges)")
+    if 'manifest' in written:
+        print(f"Saved provenance manifest -> {written['manifest']}")
+    else:
+        print("Warning: no provenance manifest written; these stats are unverified")
     return tables
 
 
@@ -111,8 +122,8 @@ def run(skip_aggregation: bool = False) -> None:
         print("Skipping PBP aggregation - loading pre-built stat CSVs ...")
         # The train_all_models function (in models.py) handles loading from CSV
     else:
-        pbp = _load_pbp()
-        stats = _aggregate_and_roll(pbp)
+        pbp, source = _load_pbp()
+        stats = _aggregate_and_roll(pbp, source)
         print(f"\nAggregation complete:")
         for stat_type, df in stats.items():
             print(f"  {stat_type}: {len(df):,} player-game records")

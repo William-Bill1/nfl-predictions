@@ -661,6 +661,24 @@ def load_accuracy_results_for_week(week: int, season: int = 2025) -> Optional[Di
 
 
 # Example usage and testing functions
+def prediction_week_problem(predictions_df: pd.DataFrame, week: int, season: int) -> Optional[str]:
+    """Why these predictions can't be shown to be exactly (season, week)'s,
+    or None. Every row needs a numeric week and season equal to the request."""
+    missing = [c for c in ('week', 'season') if c not in predictions_df.columns]
+    if missing:
+        return f"has no {'/'.join(missing)} column, so its rows can't be tied to a week"
+    if predictions_df.empty:
+        return "has no rows"
+    rows = predictions_df[['week', 'season']].apply(pd.to_numeric, errors='coerce')
+    if rows.isna().any(axis=None):
+        return "has rows with a missing or non-numeric week/season"
+    if not ((rows['week'] == week) & (rows['season'] == season)).all():
+        seen = rows.drop_duplicates().sort_values(['season', 'week'])
+        return ("holds predictions for " + ", ".join(f"Week {w:g} {s:g}" for w, s in seen.head(5).itertuples(index=False))
+                + (" and more" if len(seen) > 5 else ""))
+    return None
+
+
 def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
     """
     Complete workflow to check accuracy for a given week.
@@ -691,6 +709,13 @@ def run_weekly_accuracy_check(week: int, season: int = 2025) -> Dict:
              f"results are not a clean prospective test")
 
     predictions_df = pd.read_csv(predictions_file)
+    # Results are matched by player name only, so every row must be shown to
+    # belong to this week; a file name is not proof (a fallback feed can hold
+    # another week's predictions when that week was never frozen).
+    problem = prediction_week_problem(predictions_df, week, season)
+    if problem:
+        _say(f"ERROR: {predictions_file} {problem}; not scoring it as Week {week} {season}")
+        return {}
     _say(f"Loaded {len(predictions_df)} predictions")
 
     # Collect actual results
