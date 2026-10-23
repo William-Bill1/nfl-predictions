@@ -190,27 +190,88 @@ committed models in `player_props/models/`. Models retrained during nightly
 runs are not saved and are unverified. The game spread model is a separate
 pipeline.
 
-**Staged repair plan (not yet implemented):**
-1. **Aggregation persistence.** Add the matchup features before the stats
-   CSVs are saved (`train_models.py` currently saves them first), rebuild the
-   stats from PBP, and refresh them in the nightly job.
-2. **Freshness checks.** Before predicting, fail or warn when the latest stats
-   date is before the target week's previous games. Record the stats date and
-   checksums in the prediction output.
-3. **Real home/away.** Build `is_home` from the schedule, and test that it
-   matches `home_team` on every row.
-4. **Train/serve parity.** Build training and prediction features with one
-   function. Compute `days_rest` from the upcoming game date and the player's
-   latest appearance (calendar days, capped), or drop it. Add a test that the
-   prediction path reproduces the training row for past games.
-5. **Model provenance.** Save or commit the models the nightly run actually
-   uses, with a manifest: data checksums, feature list, code SHA, training
-   window and metrics. Refuse to predict on a mismatch.
-6. **Leakage-safe evaluation.** Add a leakage test (changing later rows must
-   not change earlier features). Retrain on earlier seasons and score the
-   held-out season, comparing with and without `days_rest` and real `is_home`.
-   Then require prospective frozen weeks before removing the containment
-   notice.
+**Stage 1 feature generation (code done; not deployed).**
+`aggregators.build_player_stats` builds all three stat tables, and
+`write_player_stats` validates and writes them. Both the standalone
+aggregator and `train_models.py`'s full-aggregation path now use them, so the
+matchup features exist before anything is saved.
+- **Column contract:** the output is exactly `output_columns(stat_type)`, the
+  columns the stats CSVs already carry minus the removed `opponent_def_rank`.
+  Receiving `target_share` is still computed but not written, so a retrain
+  can't pick it up silently. A test checks that every committed model's
+  features are in the contract.
+- **`is_home`:** comes from the row's unique schedule game in
+  `nfl_games_historical.csv`. The season and week must agree, the team must be
+  exactly one side, and the opponent must be the other side. A missing,
+  duplicate or conflicting schedule row, or an unreadable schedule file,
+  raises `FeatureValidationError`; there is no default and nothing random.
+- **Rolling L3/L5/L10:** an exponentially weighted mean of the player's
+  appearances strictly before the game. Rows are ordered by calendar date,
+  across seasons and teams. A player in two games on one date is a failure.
+- **`days_rest`:** calendar days since the player's previous appearance *in
+  that stat table*, capped at 21, with 7 for a first-ever appearance; history
+  carries across seasons and teams. This measures appearance gaps, not
+  physiological rest: a game with no row in that table (no targets, no
+  carries) lengthens the gap. Prediction-time `days_rest` (always 1) is
+  unchanged until the parity stage.
+- **Duplicates:** a player's plays in one game always become one row. Name
+  spellings that differ within a game are unified, and every play is summed.
+  A player listed for two teams, opponents or dates in one game is a failure.
+  Plays missing a grouping label are excluded and counted.
+- **Ratios:** `completion_pct`, `ypc`, `ypr` and `catch_rate` are NaN rather
+  than infinite on a zero denominator.
+- **Validation before writing:** the exact columns, numeric types, no
+  infinities, no missing identities or counts, unique player/game rows, valid
+  dates, `is_home` of 0 or 1, and `days_rest` of 1-21. A rolling value may be
+  missing only when the player has no earlier value of that stat. A
+  validation failure writes nothing.
+- **Writing the three files:** each table is written to a temporary file,
+  and each existing destination is copied to a `.bak` file beside it. Then
+  each file is replaced atomically with `os.replace`, one at a time.
+  - If a replacement raises, the previous set is restored: replaced files
+    get their backup back, and files that didn't exist before are removed.
+    The original error is then re-raised.
+  - If the restore fails too, `PersistenceRollbackError` names the files it
+    couldn't restore and keeps every `.bak` file, which may be the only copy
+    of the old data.
+  - This covers errors Python can catch; it is **not** a transaction across
+    the three files. A crash or power loss between two replacements can
+    still leave a mixed set, with the `.bak` files left for manual recovery.
+- **Offline rebuild (October 2026):** built from the local play-by-play file
+  into a temporary directory. It passed validation, and `is_home` matched the
+  schedule on 100% of rows (production: about 50%). Row counts were 4,181 /
+  14,042 / 26,984: 27 player-games from 2026-01-04 that the January CSVs
+  missed, plus 2 receiving duplicates merged.
+- **Not current:** the local play-by-play file ends on 2026-01-04 and lacks
+  the 2025 playoffs and every 2026 game (`pbp_metadata.json` overstates it as
+  "2020-2026").
+
+**These rebuilt stats must not replace the production CSVs yet.** The
+committed models were trained on the January features (simple rolling means,
+random `is_home`, constant `days_rest`), and the rebuilt rolling values differ
+on roughly 84-88% of rows.
+
+**Remaining stages (not implemented):**
+2. **Source refresh and freshness checks.** Persist or refresh the
+   play-by-play data the nightly job fetches (today it isn't committed and
+   the metadata overstates coverage). Rebuild the stats nightly, and before
+   predicting, warn or fail when the latest stats date is behind the target
+   week; record that date and the checksums with each prediction.
+3. **Train/serve parity.** One feature builder for training and prediction:
+   - compute prediction-time `days_rest` from the upcoming game date and the
+     player's latest appearance, or drop the feature;
+   - match the rolling definition the models are trained on;
+   - decide on `target_share` explicitly;
+   - add a test that the prediction path reproduces the training row for past
+     games.
+4. **Model provenance.** Save or commit the models the nightly run actually
+   uses, with a manifest (data checksums, feature list, code SHA, training
+   window, metrics), and refuse to predict on a mismatch.
+5. **Retraining.** Retrain on the rebuilt features only after stages 2-4.
+6. **Leakage-safe evaluation.** Score the held-out season, comparing with and
+   without `days_rest` and the real `is_home`, then require prospective frozen
+   weeks before removing the containment notice. No accuracy improvement is
+   claimed until then.
 
 **Real market lines** (`player_props/market_odds.py`, live since `ODDS_API_KEY`
 was added 2026-09-16): pulls DK/FanDuel lines for the four reliable prop

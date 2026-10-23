@@ -8,7 +8,7 @@ Workflow:
     1. Load play-by-play data (historical CSV from data_files/)
     2. Aggregate to game-level player stats (passing, rushing, receiving)
     3. Calculate exponentially-weighted rolling averages
-    4. Add matchup features (is_home, days_rest)
+    4. Add matchup features (is_home, days_rest) and save the validated stats
     5. Train XGBoost + LightGBM ensemble for each prop category
     6. Save models to player_props/models/ and metrics to player_props/models/model_metrics.json
 """
@@ -22,11 +22,9 @@ sys.path.insert(0, str(ROOT))
 import pandas as pd
 
 from player_props.aggregators import (
-    aggregate_passing_stats,
-    aggregate_rushing_stats,
-    aggregate_receiving_stats,
-    calculate_rolling_averages,
-    add_matchup_features,
+    build_player_stats,
+    load_matchup_schedule,
+    write_player_stats,
 )
 from player_props.models import train_all_models
 
@@ -79,83 +77,22 @@ def _load_pbp() -> pd.DataFrame:
 
 def _aggregate_and_roll(pbp: pd.DataFrame) -> dict:
     """
-    Aggregate PBP to game-level stats and apply rolling averages.
+    Aggregate PBP to game-level stats with rolling averages and matchup
+    features, then validate and atomically save them to data_files/.
+
+    The features are added BEFORE saving (models.py trains from the saved
+    CSVs), using aggregators.build_player_stats; a validation failure raises
+    and leaves the existing CSVs untouched.
 
     Returns a dict with keys 'passing', 'rushing', 'receiving', each containing
     a fully-featured DataFrame ready for model training.
     """
-    # ------------------------------------------------------------------ #
-    # 1. Aggregate raw stats
-    # ------------------------------------------------------------------ #
-    passing_df = aggregate_passing_stats(pbp)
-    rushing_df = aggregate_rushing_stats(pbp)
-    receiving_df = aggregate_receiving_stats(pbp)
-
-    all_stats = {
-        'passing': passing_df,
-        'rushing': rushing_df,
-        'receiving': receiving_df,
-    }
-
-    # ------------------------------------------------------------------ #
-    # 2. Rolling averages per stat type
-    # ------------------------------------------------------------------ #
-    if not passing_df.empty:
-        pass_stat_cols = [
-            'passing_yards', 'pass_tds', 'completions', 'attempts', 'interceptions'
-        ]
-        passing_df = calculate_rolling_averages(
-            passing_df, pass_stat_cols, windows=ROLLING_WINDOWS
-        )
-
-    if not rushing_df.empty:
-        rush_stat_cols = ['rushing_yards', 'rush_tds', 'rush_attempts']
-        rushing_df = calculate_rolling_averages(
-            rushing_df, rush_stat_cols, windows=ROLLING_WINDOWS
-        )
-
-    if not receiving_df.empty:
-        rec_stat_cols = [
-            'receiving_yards', 'rec_tds', 'receptions', 'targets', 'target_share'
-        ]
-        rec_stat_cols = [c for c in rec_stat_cols if c in receiving_df.columns]
-        receiving_df = calculate_rolling_averages(
-            receiving_df, rec_stat_cols, windows=ROLLING_WINDOWS
-        )
-
-    # ------------------------------------------------------------------ #
-    # 3. Persist aggregated stats so predict.py / UI can reload them
-    # ------------------------------------------------------------------ #
-    if not passing_df.empty:
-        out = DATA_DIR / 'player_passing_stats.csv'
-        passing_df.to_csv(out, index=False)
-        print(f"Saved {len(passing_df):,} passing records -> {out}")
-
-    if not rushing_df.empty:
-        out = DATA_DIR / 'player_rushing_stats.csv'
-        rushing_df.to_csv(out, index=False)
-        print(f"Saved {len(rushing_df):,} rushing records -> {out}")
-
-    if not receiving_df.empty:
-        out = DATA_DIR / 'player_receiving_stats.csv'
-        receiving_df.to_csv(out, index=False)
-        print(f"Saved {len(receiving_df):,} receiving records -> {out}")
-
-    # ------------------------------------------------------------------ #
-    # 4. Matchup features (is_home, days_rest)
-    # ------------------------------------------------------------------ #
-    if not passing_df.empty:
-        passing_df = add_matchup_features(passing_df, 'passing', all_stats)
-    if not rushing_df.empty:
-        rushing_df = add_matchup_features(rushing_df, 'rushing', all_stats)
-    if not receiving_df.empty:
-        receiving_df = add_matchup_features(receiving_df, 'receiving', all_stats)
-
-    return {
-        'passing': passing_df,
-        'rushing': rushing_df,
-        'receiving': receiving_df,
-    }
+    tables, reports = build_player_stats(pbp, load_matchup_schedule(DATA_DIR), ROLLING_WINDOWS)
+    for stat_type, path in write_player_stats(tables, DATA_DIR, ROLLING_WINDOWS).items():
+        print(f"Saved {len(tables[stat_type]):,} {stat_type} records -> {path} "
+              f"({reports[stat_type]['excluded_plays']} plays excluded, "
+              f"{reports[stat_type]['name_merges']} name merges)")
+    return tables
 
 
 def run(skip_aggregation: bool = False) -> None:

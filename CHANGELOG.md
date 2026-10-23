@@ -8,6 +8,46 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 1 feature generation** (`player_props/aggregators.py`,
+  `player_props/train_models.py`). Code only: no stats were rebuilt in
+  production, no model was retrained, and the containment notice stays.
+  - **Root causes fixed in code:**
+    - The full-aggregation training path saved the stats CSVs before adding
+      `is_home`/`days_rest`.
+    - The committed CSVs came from a January version with random `is_home`
+      and constant `days_rest`.
+    - Name-spelling variants split one player-game into two rows (2 in
+      receiving).
+    - Rolling stats were ordered by season/week, not by date.
+  - **Now:** `build_player_stats` adds every feature before
+    `write_player_stats` validates the exact column contract.
+    - A validation failure writes nothing.
+    - Each file is replaced atomically. If a later replacement fails, the
+      earlier ones are rolled back from `.bak` copies, and files that didn't
+      exist before are removed.
+    - If that rollback fails, `PersistenceRollbackError` keeps the backups
+      and names them.
+    - A crash or power loss between replacements can still leave a mixed
+      set; this is not a transaction across the three files.
+    - `is_home` comes from the unique matching schedule game; missing,
+      duplicate or conflicting evidence fails.
+    - Rolling stats use only earlier appearances, by date.
+    - `days_rest` = days since the previous appearance in that stat table,
+      capped at 21 (7 for a first appearance), across seasons and teams. It
+      measures appearance gaps, not physiological rest.
+    - Duplicates are merged with every play summed, and ratios are never
+      infinite.
+  - **Offline check:** a rebuild from local sources into a temporary
+    directory validated, with `is_home` matching the schedule on 100% of
+    rows (production: about 50%). The local play-by-play ends 2026-01-04, so
+    the output is **not current**.
+  - **Unchanged:** prediction-time `days_rest`, production stats, models and
+    predictions.
+  - **Remaining stages:** source refresh, train/serve parity, model
+    provenance, retraining and leakage-safe evaluation (see
+    `docs/architecture.md`).
+  - **Tests:** `tests/test_player_props_stage1.py`.
+
 - **Player props: containment notice** (`player_props/containment.py`, Player
   Props, Parlay Builder, Model Performance).
   - **Why:** a read-only audit of the committed artifacts found two problems.
