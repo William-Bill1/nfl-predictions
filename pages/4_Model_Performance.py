@@ -40,9 +40,15 @@ except ImportError:
 
 st.title("📈 Model Performance Dashboard")
 
+# Containment notice (player_props/containment.py): this page scores player-prop
+# outputs, so the same warning applies to every figure below.
+from player_props.containment import latest_stats_date, notice_markdown
+st.warning(notice_markdown(latest_stats_date(Path('data_files')), upcoming_or_current_season()))
+
 st.markdown("""
-Track prediction accuracy, ROI analysis, and model calibration over time.
-Validate that our model improvements are actually working!
+Track how past **player prop** outputs scored: accuracy, ROI and calibration by week.
+These are historical results of models with the input problems described above, not
+evidence that the props are reliable for betting. (The game spread model is separate.)
 """)
 
 
@@ -505,7 +511,8 @@ def display_roi_analysis(week: int, season: int):
         best_threshold = roi_table['roi'].idxmax()
         best_roi = roi_table.loc[best_threshold, 'roi']
 
-        st.success(f"🎯 **Best Strategy**: Bet on {best_threshold:.0%}+ confidence props (ROI: {best_roi:.1f}%)")
+        st.info(f"Highest past ROI in this table: {best_threshold:.0%}+ model-output props "
+                f"({best_roi:.1f}%). A historical figure for these outputs, not a betting strategy.")
 
     # ROI vs Confidence Threshold Chart
     st.subheader("📊 ROI vs Confidence Threshold")
@@ -537,16 +544,16 @@ def display_roi_analysis(week: int, season: int):
     st.plotly_chart(fig, width='stretch')
 
     # Betting strategy recommendations
-    st.subheader("🎲 Betting Strategy Insights")
+    st.subheader("🎲 Past Results by Threshold (not betting advice)")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.markdown("**✅ Profitable Thresholds:**")
+        st.markdown("**Thresholds with positive past ROI:**")
         profitable = roi_table[roi_table['roi'] > 0]
         if not profitable.empty:
             for threshold, row in profitable.iterrows():
-                st.write(f"• {threshold:.0%}+ confidence: {row['roi']:.1f}% ROI")
+                st.write(f"• {threshold:.0%}+ model output: {row['roi']:.1f}% past ROI")
         else:
             st.write("• None found - model needs improvement")
 

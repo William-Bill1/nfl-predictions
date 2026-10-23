@@ -145,6 +145,17 @@ def _season_and_week(at):
 
 
 class TestModelPerformancePage:
+    def test_prop_containment_notice_comes_first(self, render_page, tmp_path):
+        (tmp_path / "data_files").mkdir(exist_ok=True)
+        pd.DataFrame({"game_date": ["2026-01-04"]}).to_csv(
+            tmp_path / "data_files" / "player_passing_stats.csv", index=False)
+        at = render_page({2025: FULL_SEASON, 2026: IN_PROGRESS}, 2026)
+        first = at.warning[0].value
+        assert "Do not use them to guide wagers" in first
+        assert "end on 2026-01-04, before the 2026 season began" in first
+        assert "Random home/away training values" in first
+        assert not any("Best Strategy" in s.value for s in at.success)
+
     def test_current_season_defaults_to_completed_week(self, render_page):
         at = render_page({2024: FULL_SEASON, 2025: FULL_SEASON, 2026: IN_PROGRESS}, 2026)
         season, week_box = _season_and_week(at)

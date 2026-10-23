@@ -129,15 +129,19 @@ def calculate_parlay_metrics(selected_props):
 # Load predictions
 predictions_df = load_player_props_predictions()
 
+# Containment notice (player_props/containment.py), before any prop output.
+from player_props.containment import latest_stats_date, notice_markdown, single_season
+st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions_df)))
+
 if predictions_df is None or predictions_df.empty:
     st.error("❌ No player prop predictions found. Please generate predictions first.")
     st.stop()
 
-# Filter to high-confidence predictions only
+# Props with a model output of at least 55% (a filter, not validated confidence)
 high_conf_predictions = predictions_df[predictions_df['confidence'] >= 0.55].copy()
 
 if high_conf_predictions.empty:
-    st.warning("⚠️ No high-confidence predictions available (≥55%).")
+    st.warning("⚠️ No props with a model output of 55% or more.")
     st.stop()
 
 # Create options for multiselect
@@ -156,13 +160,14 @@ for idx, row in high_conf_predictions.iterrows():
 
 # Multiselect for parlay legs
 st.subheader("Build Your Parlay")
-st.markdown("Select 2-6 high-confidence props to combine into a parlay. Higher confidence = better value!")
+st.markdown("Select 2-6 props to see their combined model probability. These outputs are not "
+            "validated for betting; see the notice above.")
 
 selected_options = st.multiselect(
     "Select props to combine (2-6 legs recommended)",
     options=prop_options,
     max_selections=8,  # Allow up to 8 for flexibility
-    help="Choose props with confidence ≥55%. Correlation warnings will appear for risky combinations."
+    help="Props with a model output of 55% or more. Correlation warnings appear for linked legs."
 )
 
 if len(selected_options) >= 2:
@@ -179,17 +184,17 @@ if len(selected_options) >= 2:
     # Display parlay summary
     st.subheader("📊 Parlay Summary")
 
-    col1, col2, col3, col4 = st.columns(4)
+    # No "Edge": it compared the combined probability with odds derived from that
+    # same probability, so it was always 0% and implied a value that doesn't exist.
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.metric("Combined Probability", f"{metrics['combined_prob']:.1%}")
+        st.metric("Combined model probability", f"{metrics['combined_prob']:.1%}")
     with col2:
-        st.metric("Fair Odds", metrics['odds_str'])
+        st.metric("Model-implied odds", metrics['odds_str'])
     with col3:
         st.metric("Legs", metrics['num_legs'])
-    with col4:
-        # Show edge (difference between our prob and implied prob)
-        edge = metrics['combined_prob'] - metrics['implied_prob']
-        st.metric("Edge", f"{edge:.1%}", delta=f"{edge:.1%}" if edge > 0 else None)
+    st.caption("The combined probability multiplies the legs' model outputs and assumes they are "
+               "independent. It is not validated, and the odds are not a sportsbook price.")
 
     # Show correlation warnings
     if correlations:
@@ -197,7 +202,8 @@ if len(selected_options) >= 2:
         st.markdown("**These combinations may not be truly independent:**")
         for corr in correlations:
             st.write(f"• {corr['warning']}")
-        st.info("💡 Consider removing correlated legs or reducing parlay size for better value.")
+        st.info("💡 Correlated legs make the combined probability (which assumes independence) "
+                "less meaningful.")
 
     # Parlay legs table
     st.subheader("🎯 Selected Legs")
@@ -224,9 +230,9 @@ if len(selected_options) >= 2:
             'team': st.column_config.TextColumn('Team', width='small'),
             'opponent': st.column_config.TextColumn('Opp', width='small'),
             'prop_type': st.column_config.TextColumn('Prop Type', width='medium'),
-            'recommendation': st.column_config.TextColumn('Bet', width='small'),
+            'recommendation': st.column_config.TextColumn('Side', width='small'),
             'line_value': st.column_config.NumberColumn('Line', width='small'),
-            'confidence': st.column_config.TextColumn('Conf', width='small'),
+            'confidence': st.column_config.TextColumn('Model prob', width='small'),
             'trend': st.column_config.TextColumn('Trend', width='small'),
             'avg_L3': st.column_config.NumberColumn('L3 Avg', width='small'),
             'avg_L5': st.column_config.NumberColumn('L5 Avg', width='small'),
@@ -236,33 +242,22 @@ if len(selected_options) >= 2:
         hide_index=True
     )
 
-    # Betting strategy tips
-    st.subheader("💡 Betting Strategy Tips")
-
-    tips_col1, tips_col2 = st.columns(2)
-
-    with tips_col1:
-        st.markdown("**🎲 Parlay Best Practices:**")
-        st.markdown("- Aim for 3-5 legs maximum")
-        st.markdown("- Mix different prop types")
-        st.markdown("- Avoid same-game correlations")
-        st.markdown("- Higher confidence = better value")
-
-    with tips_col2:
-        st.markdown("**📈 Odds Explanation:**")
-        st.markdown(f"- **Fair Odds**: {metrics['odds_str']} (what you'd get if betting our probability)")
-        st.markdown(f"- **Implied Win Rate**: {metrics['implied_prob']:.1%} (what sportsbook expects)")
-        st.markdown(f"- **Our Edge**: {edge:.1%} (positive = good value)")
+    # How to read the summary (no betting advice: the outputs are not validated)
+    st.subheader("📖 Reading This Summary")
+    st.markdown(f"- **Model-implied odds**: {metrics['odds_str']}, the odds that match the combined "
+                "model probability. They are not a sportsbook price or a validated edge.")
+    st.markdown("- Same-game, opposing-team and same-player legs are correlated, so the "
+                "independence assumption overstates or understates the combined probability.")
 
     # Export option
     if st.button("📄 Export Parlay Summary"):
         # Create summary text
         summary = f"""
 NFL Player Props Parlay - {len(selected_props)} Legs
+NOT VALIDATED FOR BETTING: player prop outputs have unresolved data and training problems.
 
-Combined Probability: {metrics['combined_prob']:.1%}
-Fair Odds: {metrics['odds_str']}
-Edge: {edge:.1%}
+Combined model probability (assumes independent legs): {metrics['combined_prob']:.1%}
+Model-implied odds: {metrics['odds_str']}
 
 Selected Props:
 """
@@ -285,17 +280,15 @@ elif len(selected_options) == 1:
     st.info("💡 Add at least one more prop to create a parlay!")
 
 else:
-    st.info("🎯 **How to Build a Winning Parlay:**")
+    st.info("🎯 **How to Use This Page:**")
     st.markdown("""
-    1. **Start with High Confidence**: Look for props with ≥65% confidence (Elite tier)
-    2. **Mix Prop Types**: Combine passing, rushing, and receiving props
-    3. **Avoid Correlations**: Don't bet multiple props from the same game or player
-    4. **Balance Risk**: 3-5 legs typically offer the best risk/reward ratio
-    5. **Check Trends**: 🔥 hot players and ➡️ stable performers are good picks
+    1. **Select 2-6 props** to see their combined model probability
+    2. **Check the correlation warnings**: legs from the same game or player are linked
+    3. **Treat every figure as an unvalidated model output** (see the notice above)
     """)
 
-    # Show top recommendations
-    st.subheader("🔥 Top Recommendations")
+    # Highest model outputs, for inspection only
+    st.subheader("📋 Highest Model Outputs (not validated)")
     top_picks = high_conf_predictions.nlargest(10, 'confidence')
 
     for _, row in top_picks.iterrows():
