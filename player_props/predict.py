@@ -28,9 +28,10 @@ try:
     from .market_odds import fetch_market_odds, find_market_line, attach_market_odds
     from .provenance import check_inputs, format_report, load_games
     from .aggregators import FeatureValidationError
+    from .model_bundle import BundleError, load_bundle, score_probabilities
     from .features import (
-        PROP_STAT, TARGET_COLUMNS, FeatureContractError, contract_problems, has_history,
-        inference_rows, model_features, model_matrix, resolve_game,
+        PROP_LINES, PROP_STAT, TARGET_COLUMNS, FeatureContractError, has_history,
+        inference_rows, model_matrix, resolve_game,
     )
 except ImportError:
     # Fallback for direct execution
@@ -42,9 +43,10 @@ except ImportError:
     from market_odds import fetch_market_odds, find_market_line, attach_market_odds
     from provenance import check_inputs, format_report, load_games
     from aggregators import FeatureValidationError
+    from model_bundle import BundleError, load_bundle, score_probabilities
     from features import (
-        PROP_STAT, TARGET_COLUMNS, FeatureContractError, contract_problems, has_history,
-        inference_rows, model_features, model_matrix, resolve_game,
+        PROP_LINES, PROP_STAT, TARGET_COLUMNS, FeatureContractError, has_history,
+        inference_rows, model_matrix, resolve_game,
     )
 
 # ============================================================================
@@ -58,51 +60,6 @@ MODELS_DIR = Path(__file__).parent / 'models'
 class _SkipWeather(Exception):
     """Internal sentinel to bypass the weather-adjustment block."""
 
-# Prop lines matching training configuration - UPDATED TO REALISTIC VALUES
-PROP_LINES = {
-    'passing_yards': {
-        'elite_qb': 275.0,   # For QBs averaging 280+ ypg (Stafford, Jones, Goff)
-        'star_qb': 250.0,    # For QBs averaging 250-280 ypg (Prescott, Mahomes)
-        'good_qb': 225.0,    # For QBs averaging 220-250 ypg (Lawrence, Herbert)
-        'starter': 200.0     # For QBs averaging <220 ypg
-    },
-    'rushing_yards': {
-        'elite_rb': 75.0,    # For RBs averaging 80+ ypg
-        'star_rb': 55.0,     # For RBs averaging 60-80 ypg
-        'good_rb': 40.0,     # For RBs averaging 45-60 ypg
-        'starter': 24.0      # For RBs averaging <45 ypg
-    },
-    'receiving_yards': {
-        'elite_wr': 70.0,    # For WRs averaging 75+ ypg
-        'star_wr': 50.0,     # For WRs averaging 55-75 ypg
-        'good_wr': 35.0,     # For WRs averaging 40-55 ypg
-        'starter': 27.0      # For WRs averaging <40 ypg
-    },
-    'passing_tds': {
-        'elite_qb': 2.5,     # Elite QBs: Over 2.5 TDs (will they throw 3+?)
-        'star_qb': 1.5,      # Star QBs: Over 1.5 TDs (will they throw 2+?)
-        'good_qb': 1.5,      # Good QBs: Over 1.5 TDs (will they throw 2+?)
-        'starter': 0.5       # Starter QBs: Over 0.5 TDs (will they throw at least 1?)
-    },
-    'rushing_tds': {
-        'elite_rb': 1.5,     # Elite RBs: Over 1.5 TDs (will they score 2+?)
-        'star_rb': 0.5,      # Star RBs: Over 0.5 TDs (will they score at least 1?)
-        'good_rb': 0.5,      # Good RBs: Over 0.5 TDs (will they score at least 1?)
-        'anytime': 0.5       # Backup RBs: Over 0.5 TDs (will they score at least 1?)
-    },
-    'receiving_tds': {
-        'elite_wr': 1.5,     # Elite WRs: Over 1.5 TDs (will they score 2+?)
-        'star_wr': 0.5,      # Star WRs: Over 0.5 TDs (will they score at least 1?)
-        'good_wr': 0.5,      # Good WRs: Over 0.5 TDs (will they score at least 1?)
-        'anytime': 0.5       # Role WRs: Over 0.5 TDs (will they score at least 1?)
-    },
-    'receptions': {
-        'elite_wr': 7.5,     # Elite WRs: Over 7.5 receptions
-        'star_wr': 5.5,      # Star WRs: Over 5.5 receptions
-        'good_wr': 4.5,      # Good WRs: Over 4.5 receptions
-        'starter': 3.5       # Role players: Over 3.5 receptions
-    }
-}
 
 # Minimum confidence threshold for recommendations
 MIN_CONFIDENCE = 0.55  # 55% probability for a recommendation
@@ -193,171 +150,23 @@ def load_player_stats():
     return stats
 
 
-def _load_model_records():
-    """model_name -> its training metrics entry (model_metrics.json), or {}."""
-    import json
-    path = MODELS_DIR / 'model_metrics.json'
-    try:
-        with open(path) as f:
-            data = json.load(f)
-        return {m['model_name']: m for m in data.get('models', [])
-                if isinstance(m, dict) and 'model_name' in m}
-    except Exception:
-        return {}
-
-
-def _load_reliability():
-    """model_name -> bool, from the training metrics (temporal hold-out).
-
-    TD props and any model with no out-of-time edge come back False. Missing
-    file / key defaults to False so nothing is over-sold.
-    """
-    return {name: bool(m.get('reliable', False)) for name, m in _load_model_records().items()}
-
-
-def model_incompatibility(model_name, prop_type, record, model):
-    """Why a model can't be used with the current feature contract (empty =
-    usable). It must record the contract it was trained under and the exact
-    feature list, and the booster's own feature names must agree."""
-    problems = contract_problems((record or {}).get('feature_contract'),
-                                 (record or {}).get('features'), prop_type)
-    names = model.get_booster().feature_names
-    if names != model_features(prop_type):
-        problems.append(f"model feature names {names} != {model_features(prop_type)}")
-    return problems
+def load_model_bundle():
+    """The current verified model bundle (model_bundle.load_bundle): every
+    model file, the metrics and the manifest checked against each other and
+    against the feature contract and scorer. Raises BundleError otherwise -
+    including for the model files committed before Stage 4, which have no
+    manifest. No model is ever substituted for another."""
+    return load_bundle(MODELS_DIR, PROP_LINES)
 
 
 def load_models():
-    """Load trained XGBoost models that meet the current feature contract.
-
-    A model without a recorded contract (every model trained before Stage 3, or
-    on stats without a valid provenance manifest) or with a different feature
-    list is refused and reported, never fed the current features."""
-    models = {}
-    records = _load_model_records()
-    reliability = _load_reliability()
-    refused = {}
-    
-    # Map model names to their configurations
-    model_configs = [
-        # Passing Yards Models
-        ('passing_yards_elite_qb', 'passing_yards', 'elite_qb'),
-        ('passing_yards_star_qb', 'passing_yards', 'star_qb'),
-        ('passing_yards_good_qb', 'passing_yards', 'good_qb'),
-        ('passing_yards_starter', 'passing_yards', 'starter'),
-        
-        # Passing TDs Models
-        ('passing_tds_elite_qb', 'passing_tds', 'elite_qb'),
-        ('passing_tds_star_qb', 'passing_tds', 'star_qb'),
-        ('passing_tds_good_qb', 'passing_tds', 'good_qb'),
-        ('passing_tds_starter', 'passing_tds', 'starter'),
-        
-        # Rushing Yards Models
-        ('rushing_yards_elite_rb', 'rushing_yards', 'elite_rb'),
-        ('rushing_yards_star_rb', 'rushing_yards', 'star_rb'),
-        ('rushing_yards_good_rb', 'rushing_yards', 'good_rb'),
-        ('rushing_yards_starter', 'rushing_yards', 'starter'),
-        
-        # Rushing TDs Models
-        ('rushing_tds_elite_rb', 'rushing_tds', 'elite_rb'),
-        ('rushing_tds_star_rb', 'rushing_tds', 'star_rb'),
-        ('rushing_tds_good_rb', 'rushing_tds', 'good_rb'),
-        ('rushing_tds_anytime', 'rushing_tds', 'anytime'),
-        
-        # Receiving Yards Models
-        ('receiving_yards_elite_wr', 'receiving_yards', 'elite_wr'),
-        ('receiving_yards_star_wr', 'receiving_yards', 'star_wr'),
-        ('receiving_yards_good_wr', 'receiving_yards', 'good_wr'),
-        ('receiving_yards_starter', 'receiving_yards', 'starter'),
-        
-        # Receiving TDs Models
-        ('receiving_tds_elite_wr', 'receiving_tds', 'elite_wr'),
-        ('receiving_tds_star_wr', 'receiving_tds', 'star_wr'),
-        ('receiving_tds_good_wr', 'receiving_tds', 'good_wr'),
-        ('receiving_tds_anytime', 'receiving_tds', 'anytime'),
-        
-        # Receptions Models
-        ('receptions_elite_wr', 'receptions', 'elite_wr'),
-        ('receptions_star_wr', 'receptions', 'star_wr'),
-        ('receptions_good_wr', 'receptions', 'good_wr'),
-        ('receptions_starter', 'receptions', 'starter')
-    ]
-    
-    for model_name, prop_type, line_type in model_configs:
-        model_path = MODELS_DIR / f'{model_name}.json'
-        
-        if model_path.exists():
-            model = xgb.XGBClassifier()
-            model.load_model(model_path)
-            problems = model_incompatibility(model_name, prop_type, records.get(model_name), model)
-            if problems:
-                refused[model_name] = problems
-                continue
-            
-            # Derive stat type and stat column from prop_type
-            if prop_type in ['passing_yards', 'passing_tds']:
-                stat_type = 'passing'
-                stat_col = 'passing_yards' if prop_type == 'passing_yards' else 'pass_tds'
-            elif prop_type in ['rushing_yards', 'rushing_tds']:
-                stat_type = 'rushing'
-                stat_col = 'rushing_yards' if prop_type == 'rushing_yards' else 'rush_tds'
-            elif prop_type in ['receiving_yards', 'receiving_tds', 'receptions']:
-                stat_type = 'receiving'
-                if prop_type == 'receiving_yards':
-                    stat_col = 'receiving_yards'
-                elif prop_type == 'receiving_tds':
-                    stat_col = 'rec_tds'
-                elif prop_type == 'receptions':
-                    stat_col = 'receptions'
-                else:
-                    continue
-            else:
-                continue
-            
-            models[model_name] = {
-                'model': model,
-                'prop_type': prop_type,
-                'stat_type': stat_type,
-                'stat_col': stat_col,
-                'line_type': line_type,
-                'line_value': PROP_LINES[prop_type][line_type],
-                'reliable': reliability.get(model_name, False),
-            }
-        else:
-            print(f"⚠️  Model {model_name} not found, skipping")
-
-    if refused:
-        first = next(iter(refused.values()))
-        print(f"⛔ {len(refused)} model(s) refused - not trained under the current feature "
-              f"contract ({'; '.join(first)})")
-
-    # Handle missing models with fallbacks
-    if 'receiving_yards_elite_wr' not in models and 'receiving_yards_star_wr' in models:
-        print("🔄 Using star_wr model as fallback for elite_wr")
-        star_model = models['receiving_yards_star_wr']
-        models['receiving_yards_elite_wr'] = {
-            'model': star_model['model'],
-            'prop_type': star_model['prop_type'],
-            'stat_type': star_model['stat_type'],
-            'stat_col': star_model['stat_col'],
-            'line_type': 'elite_wr',
-            'line_value': PROP_LINES['receiving_yards']['elite_wr']
-        }
-    
-    # Add fallback for receptions elite_wr (use star_wr model)
-    if 'receptions_elite_wr' not in models and 'receptions_star_wr' in models:
-        print("🔄 Using star_wr model as fallback for receptions elite_wr")
-        star_model = models['receptions_star_wr']
-        models['receptions_elite_wr'] = {
-            'model': star_model['model'],
-            'prop_type': star_model['prop_type'],
-            'stat_type': star_model['stat_type'],
-            'stat_col': star_model['stat_col'],
-            'line_type': 'elite_wr',
-            'line_value': PROP_LINES['receptions']['elite_wr']
-        }
-    
-    return models
+    """{model_name: info} from the current verified bundle, or {} (with the
+    reason printed) when there is none."""
+    try:
+        return load_model_bundle()['models']
+    except BundleError as exc:
+        print("⛔ No verified model bundle - " + "; ".join(exc.problems[:5]))
+        return {}
 
 
 # ============================================================================
@@ -552,8 +361,20 @@ def candidate_players(all_stats, team, n_games=3, roster_ids=None):
     return names, {'team': team, 'candidates': len(keep), 'latest_elsewhere': moved}
 
 
+def injury_adjustment_label(injury_info):
+    """Which injuries.adjust_prediction_for_injury rule scaled the probability
+    (questionable 0.8, doubtful 0.7, limited practice 0.9), by the same
+    precedence. Only called when the probability actually changed."""
+    status = str(injury_info.get('status') or '').lower()
+    if status in ('questionable', 'doubtful'):
+        return f'injury_{status}'
+    if str(injury_info.get('practice_participation') or '').lower() == 'limited':
+        return 'injury_limited_practice'
+    return 'injury'
+
+
 def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, skip_weather=False,
-                            market_odds_df=None, games=None):
+                            market_odds_df=None, games=None, bundle_id=None):
     """
     Generate prop predictions for all players in a game.
 
@@ -645,8 +466,14 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                 features = X.iloc[0].to_dict()
                 player_stats_history = player_history(all_stats.get(stat_type), player_id)
 
-                line_value = PROP_LINES[prop_type].get(player_tier, 0.5)  # Default to 0.5 if tier not found
-                prob_over = float(model_info['model'].predict_proba(X)[0, 1])
+                # The model's own line: its probability is P(stat > this line).
+                line_value = model_info['line_value']
+                # Raw model output from the shared scorer (model_bundle.score_probabilities),
+                # the exact quantity the bundle's metrics evaluate. Everything after
+                # this adjusts it and is recorded in 'adjustments'.
+                raw_prob_over = float(score_probabilities(model_info['model'], X, prop_type)[0])
+                prob_over = raw_prob_over
+                adjustments = []
 
                 try:
                     # For star players with tier-appropriate lines, adjust recommendations
@@ -659,6 +486,9 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                     # If player averages much less than the line, force UNDER
                     elif recent_avg < line_value * 0.6:
                         prob_over = min(prob_over, 0.25)  # Ensure high confidence UNDER
+                    if prob_over != raw_prob_over:
+                        adjustments.append('clamp_star_floor_0.75' if prob_over > raw_prob_over
+                                           else 'clamp_low_average_cap_0.25')
                     
                     # Only include if meets minimum confidence
                     if prob_over >= MIN_CONFIDENCE or prob_over <= (1 - MIN_CONFIDENCE):
@@ -675,11 +505,16 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             'prop_type': prop_type,
                             'line_type': player_tier,  # Use performance-based tier
                             'line_value': line_value,  # Use tier-appropriate line
+                            'raw_model_prob_over': raw_prob_over,
                             'prob_over': prob_over,
                             'prob_under': 1 - prob_over,
                             'recommendation': 'OVER' if prob_over >= MIN_CONFIDENCE else 'UNDER',
                             'confidence': max(prob_over, 1 - prob_over),
+                            # The raw model's out-of-time check, not a check of the
+                            # adjusted probability shown.
                             'model_reliable': model_info.get('reliable', False),
+                            'model_name': model_name,
+                            'model_bundle': bundle_id,
                             'avg_L3': features.get(f"{model_info['stat_col']}_L3"),
                             'avg_L5': features.get(f"{model_info['stat_col']}_L5"),
                             'avg_L10': features.get(f"{model_info['stat_col']}_L10")
@@ -700,10 +535,15 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             injury_info = None
                         
                         if injury_info:
+                            # The helper scales prediction in place and returns the same
+                            # dict, so the value it starts from is captured first.
+                            prob_before_injury = prediction['prob_over']
                             adjusted_prediction = adjust_prediction_for_injury(prediction, injury_info)
                             if adjusted_prediction is None:
                                 # Player is out - skip this prediction
                                 continue
+                            if adjusted_prediction['prob_over'] != prob_before_injury:
+                                adjustments.append(injury_adjustment_label(injury_info))
                             prediction = adjusted_prediction
                         
                         # Apply weather adjustments for outdoor games. Skippable -
@@ -727,6 +567,8 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                                 prediction['confidence'] = max(adjusted_prob, 1 - adjusted_prob)
                                 prediction['recommendation'] = 'OVER' if adjusted_prob >= MIN_CONFIDENCE else 'UNDER'
                                 prediction['weather_adjusted'] = True
+                                if adjusted_prob != original_prob:
+                                    adjustments.append('weather')
                                 prediction['weather_conditions'] = f"{weather_data['temp_f']:.0f}°F, {weather_data['wind_mph']:.1f} mph wind"
                             else:
                                 prediction['weather_adjusted'] = False
@@ -745,6 +587,7 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             prediction['display_name'], team, prop_type, market_odds_df
                         )
                         prediction = attach_market_odds(prediction, market_info)
+                        prediction['adjustments'] = ';'.join(adjustments) or 'none'
 
                         predictions.append(prediction)
                     
@@ -815,13 +658,24 @@ def generate_predictions(season=None, week=None, freeze=True,
         return 1
     # Only rows from completed games before the target week.
     all_stats = check.feature_tables
-    models = load_models()
-
-    if not models:
-        print("❌ No model meets the current feature contract (features.FEATURE_CONTRACT) - "
-              "no predictions written; existing files are unchanged. Retrain on stats with a "
-              "valid provenance manifest.")
+    # Verified model bundle (Stage 4). Its training source is recorded
+    # separately from the feature source checked above; both meet the same
+    # feature contract, but a model trained on games from this week or later
+    # must not predict it.
+    try:
+        bundle = load_model_bundle()
+    except BundleError as exc:
+        print("❌ No verified model bundle (" + "; ".join(exc.problems[:5]) + ") - no "
+              "predictions written; existing files are unchanged.")
         return 1
+    trained_through = bundle['manifest']['training_source']['last_game_date']
+    if trained_through >= check.summary['feature_cutoff']:
+        print(f"❌ Model bundle {bundle['manifest']['bundle_id']} was trained on games through "
+              f"{trained_through}, on or after this week's first game "
+              f"({check.summary['feature_cutoff']}) - no predictions written; existing files "
+              f"are unchanged.")
+        return 1
+    models = bundle['models']
     games = load_games(DATA_DIR)
 
     # Real DK/FanDuel lines for the reliable prop types, fetched once for the
@@ -847,6 +701,7 @@ def generate_predictions(season=None, week=None, freeze=True,
                 game_row, all_stats, models,
                 skip_injuries=skip_injuries, skip_weather=skip_weather,
                 market_odds_df=market_odds_df, games=games,
+                bundle_id=bundle['manifest']['bundle_id'],
             )
         except (FeatureContractError, FeatureValidationError) as exc:
             # Nothing has been written yet; a feature that can't be built

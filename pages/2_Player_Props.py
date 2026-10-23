@@ -21,42 +21,6 @@ from footer import add_betting_oracle_footer
 # DATA LOADING (Lazy with Caching)
 # ============================================================================
 
-@st.cache_data(ttl=3600)
-def load_xgb_models():
-    """Load trained XGBoost models for player props."""
-    models = {}
-    models_dir = Path('player_props/models')
-    
-    if not models_dir.exists():
-        return None
-    
-    # Define which models we need for DK calculator
-    model_configs = {
-        'passing_yards': ['elite_qb', 'star_qb', 'good_qb', 'starter'],
-        'passing_tds': ['elite_qb', 'star_qb', 'good_qb', 'starter'],
-        'rushing_yards': ['elite_rb', 'star_rb', 'good_rb', 'starter'],
-        'rushing_tds': ['elite_rb', 'star_rb', 'good_rb', 'anytime'],
-        'receiving_yards': ['star_wr', 'good_wr', 'starter'],
-        'receiving_tds': ['star_wr', 'good_wr', 'anytime'],
-        'receptions': ['star_wr', 'good_wr', 'starter']
-    }
-    
-    for prop_type, tiers in model_configs.items():
-        models[prop_type] = {}
-        for tier in tiers:
-            model_name = f"{prop_type}_{tier}"
-            model_path = models_dir / f"{model_name}.json"
-            
-            if model_path.exists():
-                try:
-                    model = xgb.XGBClassifier()
-                    model.load_model(str(model_path))
-                    models[prop_type][tier] = model
-                except Exception:
-                    pass  # Silently skip failed models
-    
-    return models if models else None
-
 
 @st.cache_data(ttl=3600)
 def load_player_passing_stats():
@@ -590,8 +554,6 @@ def main():
         st.subheader("📊 DraftKings Pick 6 - Line Comparison")
         st.markdown("Enter a player and their DraftKings Pick 6 line to get the model's prediction")
         
-        # Load models
-        xgb_models = load_xgb_models()
         
         # Check if we have the necessary data
         if passing_stats is None or rushing_stats is None or receiving_stats is None:
@@ -777,115 +739,19 @@ def main():
                 last_10_avg = recent_games.head(10)[stat_col].mean()
                 season_avg = player_stats_df[stat_col].mean()
                 
-                # === MODEL-BASED PREDICTION ===
-                model_prob_over = None
-                model_confidence = None
+                # No model probability here (Stage 4): this calculator has no target
+                # game, so it can't build the Stage 3 feature contract (is_home,
+                # days_rest, eligible history), and each prop model is trained for its
+                # own tier line, not the line entered above. Only the historical hit
+                # rate below is shown.
                 
-                if xgb_models:
-                    prop_type = stat_category.replace(' ', '_').lower()
-                    
-                    # Select appropriate model tier based on season average
-                    tier = None
-                    if prop_type in ['passing_yards', 'passing_tds']:
-                        if season_avg >= 280:
-                            tier = 'elite_qb'
-                        elif season_avg >= 250:
-                            tier = 'star_qb'
-                        elif season_avg >= 220:
-                            tier = 'good_qb'
-                        else:
-                            tier = 'starter'
-                    elif prop_type in ['rushing_yards', 'rushing_tds']:
-                        if season_avg >= 80:
-                            tier = 'elite_rb'
-                        elif season_avg >= 60:
-                            tier = 'star_rb'
-                        elif season_avg >= 45:
-                            tier = 'good_rb'
-                        else:
-                            tier = 'starter' if prop_type == 'rushing_yards' else 'anytime'
-                    else:  # receiving
-                        if season_avg >= 75:
-                            tier = 'star_wr'
-                        elif season_avg >= 55:
-                            tier = 'star_wr'
-                        elif season_avg >= 40:
-                            tier = 'good_wr'
-                        else:
-                            tier = 'starter' if prop_type != 'receiving_tds' else 'anytime'
-                    
-                    # Get the model
-                    if tier and prop_type in xgb_models and tier in xgb_models[prop_type]:
-                        model = xgb_models[prop_type][tier]
-                        
-                        # Build features
-                        features = {}
-                        
-                        # Core rolling features
-                        features[f'{stat_col}_L3'] = last_3_avg
-                        features[f'{stat_col}_L5'] = last_5_avg
-                        features[f'{stat_col}_L10'] = last_10_avg
-                        
-                        # Add auxiliary features based on stat type
-                        if prop_type in ['passing_yards', 'passing_tds']:
-                            features['pass_tds_L3'] = recent_games.head(3)['pass_tds'].mean() if 'pass_tds' in recent_games.columns else 0
-                            features['pass_tds_L5'] = recent_games.head(5)['pass_tds'].mean() if 'pass_tds' in recent_games.columns else 0
-                            features['completions_L3'] = recent_games.head(3)['completions'].mean() if 'completions' in recent_games.columns else 0
-                            features['completions_L5'] = recent_games.head(5)['completions'].mean() if 'completions' in recent_games.columns else 0
-                            features['attempts_L3'] = recent_games.head(3)['attempts'].mean() if 'attempts' in recent_games.columns else 0
-                            features['attempts_L5'] = recent_games.head(5)['attempts'].mean() if 'attempts' in recent_games.columns else 0
-                            if prop_type == 'passing_tds':
-                                features['pass_tds_L10'] = last_10_avg
-                                features['completions_L10'] = recent_games.head(10)['completions'].mean() if 'completions' in recent_games.columns else 0
-                                features['attempts_L10'] = recent_games.head(10)['attempts'].mean() if 'attempts' in recent_games.columns else 0
-                        
-                        elif prop_type in ['rushing_yards', 'rushing_tds']:
-                            features['rush_tds_L3'] = recent_games.head(3)['rush_tds'].mean() if 'rush_tds' in recent_games.columns else 0
-                            features['rush_tds_L5'] = recent_games.head(5)['rush_tds'].mean() if 'rush_tds' in recent_games.columns else 0
-                            features['rush_attempts_L3'] = recent_games.head(3)['rush_attempts'].mean() if 'rush_attempts' in recent_games.columns else 0
-                            features['rush_attempts_L5'] = recent_games.head(5)['rush_attempts'].mean() if 'rush_attempts' in recent_games.columns else 0
-                            if prop_type == 'rushing_tds':
-                                features['rush_tds_L10'] = last_10_avg
-                                features['rush_attempts_L10'] = recent_games.head(10)['rush_attempts'].mean() if 'rush_attempts' in recent_games.columns else 0
-                        
-                        else:  # receiving
-                            features['rec_tds_L3'] = recent_games.head(3)['rec_tds'].mean() if 'rec_tds' in recent_games.columns else 0
-                            features['rec_tds_L5'] = recent_games.head(5)['rec_tds'].mean() if 'rec_tds' in recent_games.columns else 0
-                            features['receptions_L3'] = recent_games.head(3)['receptions'].mean() if 'receptions' in recent_games.columns else 0
-                            features['receptions_L5'] = recent_games.head(5)['receptions'].mean() if 'receptions' in recent_games.columns else 0
-                            features['targets_L3'] = recent_games.head(3)['targets'].mean() if 'targets' in recent_games.columns else 0
-                            features['targets_L5'] = recent_games.head(5)['targets'].mean() if 'targets' in recent_games.columns else 0
-                            if prop_type == 'receiving_tds':
-                                features['rec_tds_L10'] = last_10_avg
-                                features['receptions_L10'] = recent_games.head(10)['receptions'].mean() if 'receptions' in recent_games.columns else 0
-                                features['targets_L10'] = recent_games.head(10)['targets'].mean() if 'targets' in recent_games.columns else 0
-                        
-                        # Add matchup features (defaults)
-                        features['is_home'] = 1
-                        features['days_rest'] = 7
-                        
-                        # Create feature DataFrame and predict
-                        try:
-                            feature_df = pd.DataFrame([features])
-                            model_prob_over = model.predict_proba(feature_df)[0][1]
-                        except Exception:
-                            model_prob_over = None
-                
-                # === HISTORICAL HIT RATE (Fallback) ===
+                # === HISTORICAL HIT RATE ===
                 total_games = len(recent_games)
                 games_over = len(recent_games[recent_games[stat_col] > dk_line])
                 games_under = total_games - games_over
-                hist_prob_over = (games_over + 1) / (total_games + 2)
-                
-                # Use model prediction if available
-                if model_prob_over is not None:
-                    prob_over = model_prob_over
-                    prob_under = 1 - prob_over
-                    prediction_source = "🤖 Machine Learning Model"
-                else:
-                    prob_over = hist_prob_over
-                    prob_under = 1 - prob_over
-                    prediction_source = "📊 Historical"
+                prob_over = (games_over + 1) / (total_games + 2)
+                prob_under = 1 - prob_over
+                prediction_source = "📊 Historical hit rate; no model is scored for an entered line"
                 
                 # Determine recommendation
                 if prob_over >= 0.60:
@@ -1017,29 +883,15 @@ def main():
                 
                 # Explanation
                 with st.expander("ℹ️ How This Works"):
-                    if model_prob_over is not None:
-                        st.markdown(f"""
-                        **🤖 Machine Learning Model Prediction Method:**
-                        - Uses a saved XGBoost model (probability band: {tier})
-                        - Season average: {season_avg:.1f} → model tier selection
-                        - Analyzes rolling stats (L3, L5, L10 games)
-                        - Considers TDs, attempts/targets, matchup factors
-                        - Trained on 2020-2024 data with the input problems in the notice
-                          above; its 2025 check does not validate it for betting
-                        
-                        **Prediction Comparison:**
-                        - **Machine Learning Model**: {model_prob_over:.1%} probability OVER
-                        - **Historical**: {hist_prob_over:.1%} hit rate ({games_over}/{total_games} games)
-                        - **Model side**: {recommendation} at {confidence:.1%} (model output, not validated)
-                        """)
-                    else:
-                        st.markdown(f"""
-                        **📊 Historical Analysis Method:**
-                        - Analyzes {selected_player_full}'s {total_games} games in 2025
-                        - Compares actual performance to line ({dk_line})
-                        - Uses Laplace smoothing for reliability
-                        - Machine Learning model not available for this stat/tier
-                        """)
+                    st.markdown(f"""
+                    **📊 Historical Analysis Method:**
+                    - Analyzes {selected_player_full}'s {total_games} games in 2025
+                    - Compares actual performance to line ({dk_line})
+                    - Uses Laplace smoothing for reliability
+                    - No model probability is shown: this calculator has no target game, so
+                      it can't build the model features, and each model is trained for its
+                      own tier line, not the line entered here
+                    """)
                     
                     st.markdown("""
                     **Probability Bands:**

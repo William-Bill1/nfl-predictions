@@ -545,7 +545,9 @@ class TestPredictionGate:
         data = league(tmp_path, through=(2026, 3), completed=(2026, 3))
         _prediction_files(data)
         monkeypatch.setattr(predict, "DATA_DIR", data)
-        monkeypatch.setattr(predict, "load_models", lambda: {"m": object()})
+        monkeypatch.setattr(predict, "load_model_bundle", lambda: {
+            "manifest": {"bundle_id": "test", "training_source": {"last_game_date": "2000-01-01"}},
+            "models": {"m": object()}})
         seen = []
 
         def capture(game_row, all_stats, models, **kw):

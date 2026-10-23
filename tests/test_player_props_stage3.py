@@ -14,6 +14,7 @@ from player_props import features as fx
 from player_props import provenance as pv
 from test_player_props_stage1 import GAMES, play, qb_season, schedule
 from test_player_props_stage2 import _prediction_files, gid, league, snapshot
+from prop_bundle_helpers import publish_test_bundle
 
 
 @pytest.fixture(autouse=True)
@@ -398,44 +399,24 @@ def _metrics(models_dir, entries):
 
 
 class TestCompatibility:
-    @pytest.mark.parametrize("record,reason", [
-        ({}, "no feature contract recorded"),
-        ({"feature_contract": None}, "no feature contract recorded"),
-        ({"feature_contract": {**fx.FEATURE_CONTRACT, "schema_version": "props-features-0"}},
-         "schema_version"),
-        ({"feature_contract": {**fx.FEATURE_CONTRACT, "feature_definition": "stage0"}},
-         "feature_definition"),
-        ({"feature_contract": fx.FEATURE_CONTRACT,
-          "features": list(reversed(fx.model_features("passing_yards")))}, "features"),
+    """Flat model files are never loaded (Stage 4): whatever metadata sits in a
+    flat model_metrics.json, only a verified bundle is used."""
+
+    @pytest.mark.parametrize("record", [
+        {},
+        {"feature_contract": None},
+        {"feature_contract": {**fx.FEATURE_CONTRACT, "schema_version": "props-features-0"}},
+        {"feature_contract": fx.FEATURE_CONTRACT,
+         "features": list(reversed(fx.model_features("passing_yards")))},
+        {"feature_contract": fx.FEATURE_CONTRACT, "features": fx.model_features("passing_yards")},
     ])
-    def test_models_without_the_current_contract_are_refused(self, tmp_path, monkeypatch, capsys,
-                                                             record, reason):
+    def test_flat_files_are_refused_whatever_they_record(self, tmp_path, monkeypatch, capsys, record):
         from player_props import predict
         _tiny_model(tmp_path / "passing_yards_starter.json")
-        entry = {"model_name": "passing_yards_starter",
-                 "features": fx.model_features("passing_yards"), **record}
-        _metrics(tmp_path, [entry])
+        _metrics(tmp_path, [{"model_name": "passing_yards_starter", **record}])
         monkeypatch.setattr(predict, "MODELS_DIR", tmp_path)
         assert predict.load_models() == {}
-        assert reason in capsys.readouterr().out
-
-    def test_booster_feature_order_must_match(self, tmp_path, monkeypatch):
-        from player_props import predict
-        names = fx.model_features("passing_yards")
-        _tiny_model(tmp_path / "passing_yards_starter.json", order=names[1:] + names[:1])
-        _metrics(tmp_path, [{"model_name": "passing_yards_starter", "features": names,
-                             "feature_contract": fx.FEATURE_CONTRACT}])
-        monkeypatch.setattr(predict, "MODELS_DIR", tmp_path)
-        assert predict.load_models() == {}
-
-    def test_compatible_model_is_loaded(self, tmp_path, monkeypatch):
-        from player_props import predict
-        _tiny_model(tmp_path / "passing_yards_starter.json")
-        _metrics(tmp_path, [{"model_name": "passing_yards_starter",
-                             "features": fx.model_features("passing_yards"),
-                             "feature_contract": fx.FEATURE_CONTRACT}])
-        monkeypatch.setattr(predict, "MODELS_DIR", tmp_path)
-        assert list(predict.load_models()) == ["passing_yards_starter"]
+        assert "No verified model bundle" in capsys.readouterr().out
 
     def test_committed_models_are_all_refused(self):
         from player_props import predict
@@ -458,8 +439,8 @@ class TestCompatibility:
         from player_props import models
         p = stage1_tables()["passing"]
         with pytest.raises(fx.FeatureContractError, match="features"):
-            models.train_prop_model(p, fx.model_features("passing_yards")[:-1], "x",
-                                    "passing_yards_starter")
+            models.train_prop_model(p, fx.model_features("passing_yards")[:-1], "passing_yards",
+                                    "starter", 200.0)
 
 
 # ---------------------------------------------------------------------------
@@ -492,19 +473,17 @@ class TestPredictionPath:
 
     def test_incompatible_models_block_before_any_write(self, setup):
         predict, data, models_dir = setup
-        _tiny_model(models_dir / "passing_yards_starter.json")
+        _tiny_model(models_dir / "passing_yards_starter.json")     # flat file, no bundle
         _metrics(models_dir, [{"model_name": "passing_yards_starter",
-                               "features": fx.model_features("passing_yards")}])
+                               "features": fx.model_features("passing_yards"),
+                               "feature_contract": fx.FEATURE_CONTRACT}])
         before = snapshot(data)
         assert self._run(predict) == 1
         assert snapshot(data) == before
 
     def test_feature_error_blocks_before_any_write(self, setup, monkeypatch):
         predict, data, models_dir = setup
-        _tiny_model(models_dir / "passing_yards_starter.json")
-        _metrics(models_dir, [{"model_name": "passing_yards_starter",
-                               "features": fx.model_features("passing_yards"),
-                               "feature_contract": fx.FEATURE_CONTRACT}])
+        publish_test_bundle(models_dir, data)
         before = snapshot(data)
         monkeypatch.setattr(predict, "inference_rows",
                             lambda *a, **k: (_ for _ in ()).throw(fx.FeatureContractError("bad")))
@@ -513,10 +492,7 @@ class TestPredictionPath:
 
     def test_predictions_use_the_shared_feature_rows(self, setup, monkeypatch):
         predict, data, models_dir = setup
-        _tiny_model(models_dir / "passing_yards_starter.json")
-        _metrics(models_dir, [{"model_name": "passing_yards_starter",
-                               "features": fx.model_features("passing_yards"),
-                               "feature_contract": fx.FEATURE_CONTRACT}])
+        publish_test_bundle(models_dir, data)
         seen = []
         real = fx.model_matrix
 
@@ -643,10 +619,7 @@ class TestHistoryValidation:
         _players(data)
         models_dir = tmp_path / "models"
         models_dir.mkdir()
-        _tiny_model(models_dir / "passing_yards_starter.json")
-        _metrics(models_dir, [{"model_name": "passing_yards_starter",
-                               "features": fx.model_features("passing_yards"),
-                               "feature_contract": fx.FEATURE_CONTRACT}])
+        publish_test_bundle(models_dir, data)
         monkeypatch.setattr(predict, "DATA_DIR", data)
         monkeypatch.setattr(predict, "MODELS_DIR", models_dir)
         real = predict.check_inputs
@@ -691,30 +664,3 @@ class TestRecordedFeatureList:
 
     def test_exact_list_is_accepted(self):
         assert fx.contract_problems(fx.FEATURE_CONTRACT, list(NAMES), "passing_yards") == []
-
-    @pytest.mark.parametrize("record", [
-        {"feature_contract": fx.FEATURE_CONTRACT},                       # no "features" key
-        {"feature_contract": fx.FEATURE_CONTRACT, "features": None},
-        {"feature_contract": fx.FEATURE_CONTRACT, "features": "x"},
-        {"feature_contract": fx.FEATURE_CONTRACT, "features": NAMES + NAMES[:1]},
-    ])
-    def test_correct_booster_names_do_not_make_up_for_missing_metadata(self, tmp_path, monkeypatch,
-                                                                       record):
-        from player_props import predict
-        _tiny_model(tmp_path / "passing_yards_starter.json")      # booster names are exactly right
-        m = xgb.XGBClassifier()
-        m.load_model(tmp_path / "passing_yards_starter.json")
-        assert m.get_booster().feature_names == NAMES
-        assert predict.model_incompatibility("passing_yards_starter", "passing_yards", record, m)
-        _metrics(tmp_path, [{"model_name": "passing_yards_starter", **record}])
-        monkeypatch.setattr(predict, "MODELS_DIR", tmp_path)
-        assert predict.load_models() == {}
-
-    def test_no_record_at_all(self, tmp_path):
-        from player_props import predict
-        _tiny_model(tmp_path / "m.json")
-        m = xgb.XGBClassifier()
-        m.load_model(tmp_path / "m.json")
-        problems = predict.model_incompatibility("passing_yards_starter", "passing_yards", None, m)
-        assert any("no feature contract" in p for p in problems)
-        assert any("no feature list" in p for p in problems)

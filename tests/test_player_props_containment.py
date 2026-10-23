@@ -29,7 +29,10 @@ class TestNotice:
         assert "player props only" in text and "game spread model" in text
         assert "not covered by this notice" in text
         assert "committed model files in `player_props/models/`" in text
-        assert "nightly runs are not saved, so they remain unverified" in text
+        assert "no provenance bundle, so they are no longer used for new predictions" in text
+        # Stage 4: the stored outputs' labels and lines are described truthfully.
+        assert "measured on an XGBoost + LightGBM average" in text
+        assert "show a line other than the one their model was trained on" in text
 
     @pytest.mark.parametrize("stats_date,season,expect,absent", [
         (date(2026, 1, 4), 2025, "end on 2026-01-04. They are not refreshed", "Stale"),

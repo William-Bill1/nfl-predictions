@@ -463,7 +463,8 @@ features; prediction rebuilt them differently:
 - **Parsing:** stats are read with round-trip float parsing
   (`aggregators.read_stats_csv`) on both paths.
 
-*Compatibility boundary:*
+*Compatibility boundary (the flat `model_metrics.json` records below are superseded by
+Stage 4 bundles; the contract itself is unchanged):*
 - **The contract:** `FEATURE_CONTRACT` = `FEATURE_SCHEMA_VERSION`
   (`props-features-1`) plus Stage 1's `FEATURE_DEFINITION`.
 - **Training** records the contract, the exact feature list and the stats
@@ -521,17 +522,149 @@ the Stage 2 cutoff for each week's history.
 - **No accuracy claim:** parity makes the inputs consistent; it is not
   evidence that predictions are better.
 
+**Stage 4 model provenance and consistent scoring (code done; generation
+stays blocked).**
+
+*Findings (October 2026):*
+- **Ensemble vs served scorer:** training fitted XGBoost and, when
+  installed, LightGBM, and reported metrics (and the `reliable` flag) for
+  their average. Prediction loads only the XGBoost file, and the LightGBM
+  files are gitignored and were never committed. So the holdout labels
+  described a scorer that never served a prediction.
+- **How far off:** rescoring the committed XGBoost models on the 2025 rows
+  of the committed stats (read-only) moves AUC by at most 0.009, and none
+  of the 26 `reliable` flags changes. This is inspection on flawed January
+  data, not validation.
+- **Two `PROP_LINES` copies:** prediction's copy differed from training's
+  for 8 tiers. Rushing and receiving yards (3 tiers each) and the elite TD
+  tiers showed a line other than the one the model was trained on. About 1
+  in 12 rows in every stored snapshot (53-74 per file) carry a probability
+  for a different line than the one shown.
+- **Silent fallbacks:** `receiving_yards_elite_wr` and `receptions_elite_wr`
+  have no model file. `load_models` gave those names the `star_wr` model,
+  under the elite name and line.
+- **Persistence:** training wrote each model file, then the metrics, one at
+  a time into the committed `player_props/models/`, with no manifest. Nightly
+  retraining overwrote them on the runner.
+- **Page calculator:** the Player Props "DraftKings Pick 6" calculator
+  loaded the model files unverified, built its own features (simple means,
+  `is_home=1`, `days_rest=7`), and reported the model's probability for its
+  tier line as if it were the line entered. Failures fell back silently to
+  a historical rate.
+
+*Scorer choice: XGBoost only.* Production prediction has only ever loaded
+XGBoost. Nothing showed a reason to serve the ensemble, and serving it would
+mean committing and verifying a second artifact per model. LightGBM is no
+longer trained for props; the spread pipeline is unchanged.
+
+*Design (`player_props/model_bundle.py`):*
+- **One scorer:** `score_probabilities` is used in training evaluation and
+  in prediction. It requires the exact ordered feature matrix and a
+  `binary:logistic` XGBoost classifier with classes [0, 1] trained on those
+  names. It returns P(class 1) = P(stat > the model's line), and rejects
+  any output that isn't a finite (n, 2) probability summing to 1. Nothing is
+  clipped or substituted.
+- **Training (`models.train_prop_model`):** fits, serialises, reloads and
+  scores the reloaded model, so the metrics describe the exact stored bytes.
+  The protocol is a temporal hold-out: train on seasons before H, evaluate
+  on season H, raw model probability, OVER at P >= 0.5.
+- **Bundle:** `player_props/models/bundles/<bundle_id>/` holds the model
+  files, `model_metrics.json` and `manifest.json`. The manifest records:
+  - the scorer and its version, and the Stage 3 feature contract;
+  - per model: file hash and size, prop, line type and line value, target
+    (stat > line), ordered features, training and evaluation windows
+    (seasons, rows, positives, dates), the evaluation protocol, and metrics
+    computed for that scorer (accuracy, AUC, precision, recall, F1, and the
+    exact-probability Brier score and log loss);
+  - the training source: the stats manifest hash, stats file hashes, the
+    feature definition, the last game date and the play-by-play hash;
+  - the code (file hashes, git commit, uncommitted-changes flag) and the
+    library versions;
+  - `built_at`, the build time, separate from the data windows.
+
+  `player_props/models/current_bundle.json` names the bundle in use and its
+  manifest hash.
+- **Publication (`publish_bundle`):** the manifest is validated, everything
+  is written to `bundles/.<id>.partial` and verified from disk exactly as
+  prediction will load it, the directory is renamed, and then the pointer is
+  switched with one `os.replace`.
+  - Until then the previous bundle stays current. A catchable failure
+    removes the unfinished directory; if that fails, the error names what
+    was left.
+  - Bundles are immutable and old ones are kept.
+  - **Not handled:** a crash or power loss mid-publish (the pointer still
+    names the old bundle, and a leftover directory is ignored), durability
+    without fsync, and concurrent publishers (no lock: the last pointer
+    switch wins, and each bundle stays self-consistent).
+- **Loading (`load_bundle`):** verifies, before any model is used:
+  - the pointer, and the manifest hash, structure, version and scorer;
+  - the feature contract and the xgboost version;
+  - every model file's hash, name, prop and line identity, feature list,
+    booster feature names and objective;
+  - the metrics file's hash and its agreement with the manifest;
+  - training windows not overlapping evaluation, and evaluation within the
+    training source.
+
+  Anything wrong raises, and prediction exits 1 before writing.
+- **Existing models:** flat files have no bundle and are refused, the
+  committed ones included. No retrospective manifest was created.
+- **Training vs feature source:** these are recorded separately. Training
+  needs stats with a valid Stage 2 manifest and the current feature
+  definition, but not the latest feature source. Prediction requires the
+  bundle's training data to end before the target week's first game, so a
+  model trained on that week or later is refused. A maximum model age is
+  not enforced yet; that belongs to evaluation (stage 6).
+- **No fallbacks:** each bundle model has its own file, metrics and
+  identity. A tier without a model gets no prediction.
+- **One `PROP_LINES`:** the training lines, in `features.py`. Prediction
+  shows each model's own line.
+
+*Post-processing inventory (unchanged behaviour, now recorded):*
+- **Tier selection:** by the raw last-8 average.
+- **Clamps:** a P floor of 0.75 for elite/star RB/WR averaging over 1.3x the
+  line, and a P cap of 0.25 when L5 is under 0.6x the line.
+- **Confidence filter:** the 0.55 MIN_CONFIDENCE filter.
+- **Injuries:** Out is dropped; Questionable and Doubtful scale P by 0.8 and
+  0.7.
+- **Weather:** wind and cold penalties.
+- **Market:** the market edge is computed from the final P.
+- **Recorded in outputs:** `raw_model_prob_over` (the scorer's output,
+  untouched by every later step), `prob_over` (after adjustments),
+  `adjustments`, `model_name` and `model_bundle`.
+  - `adjustments` lists, in order, each step that changed the probability:
+    `clamp_star_floor_0.75` or `clamp_low_average_cap_0.25`, then
+    `injury_questionable`, `injury_doubtful` or `injury_limited_practice`
+    (by the injury helper's own precedence), then `weather`. It is `none`
+    when nothing changed it.
+  - The injury helper scales the prediction in place, so the probability is
+    captured before it runs. An injury entry that changes nothing is not
+    listed. `model_reliable` and the holdout labels
+  describe the raw model only, never the adjusted probability.
+- **Page calculator:** now shows only the historical hit rate. It can't
+  build contract features without a target game, and no model is trained
+  for an arbitrary entered line.
+
+*Effect on nightly retraining.* `train_models.py --skip-aggregation` now
+verifies the stats first. Today they have no manifest, so it trains nothing,
+writes nothing, and exits 1, and the step shows as failed (it has
+`continue-on-error`). It no longer overwrites `player_props/models/*.json`
+on the runner. With verified stats it would publish
+`player_props/models/bundles/<id>/` and `current_bundle.json` on the runner.
+The commit step adds only `data_files/`, so the bundle would not be
+committed; workflow uploads are unchanged. Prediction stays blocked by
+Stage 2 first, then by the missing bundle.
+
 **Remaining stages (not implemented):**
 2. **Complete source refresh.** Give the runner a complete source (it lacks
    2025 today), rebuild the stats with their manifest from it, and record
    the manifest's hashes with each prediction. The Stage 2 checks block
    predictions until this exists.
-4. **Model provenance.** Save or commit the models the nightly run actually
-   uses, with a manifest (data and stats-manifest hashes, the Stage 3
-   feature contract, code SHA, training window, metrics). Refuse to predict
-   on a mismatch, and settle the XGBoost-only vs ensemble difference.
-5. **Retraining.** Retrain on the rebuilt, manifested features only after
-   stages 2 and 4, so the models carry the Stage 3 contract.
+4. **Model bundle storage.** Model provenance and verified loading are done
+   (Stage 4). Still open: where bundles are kept (committed, or uploaded and
+   restored), retention of old bundles, and a lock if publishers can run
+   concurrently.
+5. **Retraining.** Retrain on rebuilt, manifested stats (after stage 2),
+   publishing a verified bundle.
 6. **Leakage-safe and prospective evaluation.** Score the held-out season,
    comparing with and without `days_rest` and the real `is_home`. Then
    require prospective frozen weeks before removing the containment notice.
