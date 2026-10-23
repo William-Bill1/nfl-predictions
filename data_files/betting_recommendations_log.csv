@@ -61,3 +61,4 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-10-22 08:14:31,2026,8,2026_08_LAC_LA,2026-11-01 00:00:00,LA,LAC,spread,LAC,7.5,46.5,,0.7517163633387368,0.2168326424085043,Elite,,,pending,,7.5,-110.0,assumed -110 model recommendation
 2026-10-22 08:14:31,2026,8,2026_08_KC_DEN,2026-11-01 00:00:00,DEN,KC,spread,DEN,-1.5,42.5,,0.5489581080159212,0.0251485842063973,Lean,,,pending,,1.5,-110.0,assumed -110 model recommendation
 2026-10-22 08:14:31,2026,8,2026_08_NE_MIA,2026-11-01 00:00:00,MIA,NE,spread,MIA,-7.5,44.5,,0.5685585819900668,0.0563634600388472,Good,,,pending,,7.5,-110.0,assumed -110 model recommendation
+2026-10-23 08:12:27,2026,8,2026_08_CHI_SEA,2026-11-02 00:00:00,SEA,CHI,spread,CHI,3.0,46.5,,0.5841564405737469,0.0603469167642231,Good,,,pending,,3.0,-110.0,assumed -110 model recommendation
