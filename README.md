@@ -122,6 +122,19 @@ column and the Player Props page defaults to showing only the reliable subset.
 Prop lines are still fixed tiers (275, 250, …), not market lines — the weekly
 hit rate measures line placement, not betting edge.
 
+> **Player prop outputs are contained: do not use them to guide wagers.**
+> A read-only audit (October 2026) found two input problems.
+> - **Stale stats:** the player stats
+>   (`data_files/player_*_stats.csv`) were last rebuilt in January 2026 and
+>   are not refreshed nightly, so 2026 props use no 2026 games.
+> - **Random home/away values:** the historical home/away values the
+>   committed models were trained on were assigned at random.
+>
+> Player Props, Parlay Builder and Model Performance show a warning, and
+> label tiers, the `reliable` flag and past ROI as unvalidated. The game
+> spread model is separate and not affected. The repair plan is in
+> [`docs/architecture.md`](docs/architecture.md#player-props-player_props).
+
 ### Feature engineering
 
 ~75 candidate features: rolling team win/scoring/differential/cover rates,

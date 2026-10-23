@@ -162,10 +162,55 @@ selectable until 12:00 UTC on D (08:00 EDT / 07:00 EST), so the nightly run the
 evening before still targets that week, and the Monday-evening run moves on to
 the next week. Its `game_date` column stores the calendar date as UTC midnight
 (`2026-10-26 00:00:00+00:00`); use its date part and never convert it to local
-time. **Known gap:** inference passes `days_rest = 1`
-(`calculate_days_rest` is given the player's previous game date) while
-training uses the real gap between games; this is unresolved and needs its own
-investigation before any model input changes.
+time.
+
+**Containment (October 2026).** A read-only audit of the committed artifacts
+found that player-prop outputs rest on bad inputs, so they must not guide
+wagers until the pipeline is repaired and the models retrained.
+
+The audit found:
+- **Stale stats.** `data_files/player_*_stats.csv` were last written on
+  2026-01-07 by the January aggregator and end on 2026-01-04. The nightly job
+  trains with `--skip-aggregation` and never rebuilds them, so 2026 props use
+  no 2026 games.
+- **Random `is_home`.** That January aggregator set `is_home` with
+  `np.random.choice`, which matches the schedule on about 50% of rows. All 26
+  committed models split on it.
+- **Constant `days_rest`.** It is 7 in every training row and 1 at
+  prediction time (`predict.calculate_days_rest` measures previous game to
+  now). It has 0 splits in every committed model, so it has no effect today;
+  it becomes a train/serve mismatch once the stats are rebuilt.
+
+`player_props/containment.py` supplies the warning shown first on Player
+Props, Parlay Builder and Model Performance, plus neutral probability bands
+and "holdout check" labels in place of Elite/Strong/Good and "tested".
+No probability, filter, stored output or historical figure changes; Parlay
+Builder's "Edge" (always 0%) is no longer shown. The claims cover only the
+committed models in `player_props/models/`. Models retrained during nightly
+runs are not saved and are unverified. The game spread model is a separate
+pipeline.
+
+**Staged repair plan (not yet implemented):**
+1. **Aggregation persistence.** Add the matchup features before the stats
+   CSVs are saved (`train_models.py` currently saves them first), rebuild the
+   stats from PBP, and refresh them in the nightly job.
+2. **Freshness checks.** Before predicting, fail or warn when the latest stats
+   date is before the target week's previous games. Record the stats date and
+   checksums in the prediction output.
+3. **Real home/away.** Build `is_home` from the schedule, and test that it
+   matches `home_team` on every row.
+4. **Train/serve parity.** Build training and prediction features with one
+   function. Compute `days_rest` from the upcoming game date and the player's
+   latest appearance (calendar days, capped), or drop it. Add a test that the
+   prediction path reproduces the training row for past games.
+5. **Model provenance.** Save or commit the models the nightly run actually
+   uses, with a manifest: data checksums, feature list, code SHA, training
+   window and metrics. Refuse to predict on a mismatch.
+6. **Leakage-safe evaluation.** Add a leakage test (changing later rows must
+   not change earlier features). Retrain on earlier seasons and score the
+   held-out season, comparing with and without `days_rest` and real `is_home`.
+   Then require prospective frozen weeks before removing the containment
+   notice.
 
 **Real market lines** (`player_props/market_odds.py`, live since `ODDS_API_KEY`
 was added 2026-09-16): pulls DK/FanDuel lines for the four reliable prop

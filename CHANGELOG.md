@@ -8,6 +8,35 @@ bottom.
 
 ## October 2026
 
+- **Player props: containment notice** (`player_props/containment.py`, Player
+  Props, Parlay Builder, Model Performance).
+  - **Why:** a read-only audit of the committed artifacts found two problems.
+    - The player stats behind every prop end on 2026-01-04 and are not
+      refreshed, so 2026 props use no 2026 games.
+    - The historical home/away values the saved prop models were trained on
+      were assigned at random. It also found `days_rest` constant (7 in
+      training, 1 at prediction time), with 0 splits in every committed model.
+  - **Now:** every page that shows prop outputs leads with a warning not to use
+    them for wagers. The warning explains both issues, says the spread model
+    is separate, and says nightly-retrained models are unverified.
+  - **Wording changes:**
+    - Elite/Strong/Good/Lean become neutral probability bands.
+    - "tested (reliable)" becomes "passed the 2025 holdout check".
+    - "Top Picks/Recommendations" become model outputs.
+    - Model Performance's "Best Strategy: Bet on…" and "Profitable
+      Thresholds" become past results, not advice.
+    - Parlay Builder's betting tips are replaced with neutral guidance.
+    - The stale ROC-AUC claims in the Player Props help text are removed.
+  - **Removed:** Parlay Builder's "Edge" metric and "Our Edge" / "Implied
+    Win Rate" lines. Edge compared the combined probability with odds derived
+    from that same probability, so it was always 0%.
+  - **Unchanged:** probabilities, filters and their defaults, stored
+    predictions, models, stats and past performance figures.
+  - **Repair plan:** documented in `docs/architecture.md`, not yet
+    implemented.
+  - **Tests:** `tests/test_player_props_containment.py`, plus a Model
+    Performance render test.
+
 - **Player Props: remaining-games banner uses the predictions' season**
   (`player_props/season_schedule.py`, `pages/2_Player_Props.py`).
   - **Before:** the page loaded the hard-coded `nfl_schedule_2025.csv`, so in

@@ -278,10 +278,17 @@ def get_recent_form(stats_df, player_name, n_games=5):
 
 def main():
     st.title("🎯 Player Props Predictions")
-    st.markdown("---")
-    
+
     # Load data
     predictions = load_player_props_predictions()
+
+    # Containment notice (player_props/containment.py): shown before anything
+    # else so no prop output appears without it.
+    from player_props.containment import (band_label, holdout_label, latest_stats_date,
+                                          notice_markdown, single_season)
+    st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions)))
+    st.markdown("---")
+
     passing_stats = load_player_passing_stats()
     rushing_stats = load_player_rushing_stats()
     receiving_stats = load_player_receiving_stats()
@@ -330,7 +337,7 @@ def main():
 
     # Main tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
-        "⭐ Top Picks",
+        "📋 Model Outputs",
         "📊 DK Pick 6 Calculator",
         "🎯 Top QBs",
         "🏃 Top RBs", 
@@ -339,27 +346,29 @@ def main():
     ])
     
     # ========================================================================
-    # TAB 1: Top Picks (Model Predictions)
+    # TAB 1: Model outputs (unvalidated; see the containment notice)
     # ========================================================================
     with tab1:
-        st.subheader("Top Player Prop Recommendations")
-        
+        st.subheader("Player Prop Model Outputs (not validated)")
+
         if predictions is not None and not predictions.empty:
-            # Confidence tiers
+            # Counts by model-probability band (formerly Elite/Strong/Good)
             col1, col2, col3 = st.columns(3)
-            
+
             with col1:
                 elite_count = len(predictions[predictions['confidence'] >= 0.65])
-                st.metric("🔥 Elite (≥65%)", elite_count)
-            
+                st.metric("Model output ≥65%", elite_count)
+
             with col2:
                 strong_count = len(predictions[(predictions['confidence'] >= 0.60) & (predictions['confidence'] < 0.65)])
-                st.metric("💪 Strong (60-65%)", strong_count)
-            
+                st.metric("Model output 60–65%", strong_count)
+
             with col3:
                 good_count = len(predictions[(predictions['confidence'] >= 0.55) & (predictions['confidence'] < 0.60)])
-                st.metric("✅ Good (55-60%)", good_count)
-            
+                st.metric("Model output 55–60%", good_count)
+            st.caption("Counts of model outputs by probability band. The bands are not validated "
+                       "betting confidence; see the notice above.")
+
             st.markdown("---")
             
             # Filters
@@ -391,12 +400,14 @@ def main():
                 )
 
             tested_only = st.checkbox(
-                "Show only props from tested (reliable) models",
+                "Show only props whose model passed the 2025 holdout check",
                 value=True,
                 key="reliable_only_top",
-                help="Hides props whose model did not clear the out-of-time reliability "
-                     "bar - every TD prop, plus the skewed-line yards/receptions tiers "
-                     "with no edge over the base rate. Uncheck to see everything.",
+                help="Hides props whose model did not clear the 2025 out-of-time check "
+                     "(AUC ≥ 0.58 and accuracy above the base rate) - every TD prop, plus "
+                     "the skewed-line yards/receptions tiers. Passing it does not validate a "
+                     "model for betting: it was run on models trained with the data problems "
+                     "in the notice above. Uncheck to see everything.",
             )
 
             # Filter predictions
@@ -408,8 +419,8 @@ def main():
                 _rel = filtered['model_reliable'].map(lambda v: str(v).strip().lower() in ('true', '1'))
                 filtered = filtered[_rel.values]
                 if filtered.empty:
-                    st.info("No props from reliable models match these filters. "
-                            "Uncheck 'tested models only' or lower the confidence floor.")
+                    st.info("No props from models that passed the holdout check match these "
+                            "filters. Uncheck that box or lower the probability floor.")
 
             # Apply injury filter
             if injury_filter == "Healthy Only":
@@ -459,15 +470,11 @@ def main():
                 display_df['Recommendation'] = display_df.apply(
                     lambda row: f"{row['recommendation']} {row['line_value']:.1f}", axis=1
                 )
-                display_df['Tier'] = display_df['confidence'].apply(
-                    lambda x: '🔥 Elite' if x >= 0.65 else ('💪 Strong' if x >= 0.60 else '✅ Good')
-                )
+                display_df['Band'] = display_df['confidence'].apply(band_label)
                 display_df['Last 3 Avg'] = display_df['avg_L3'].apply(lambda x: f"{x:.1f}")
                 display_df['Last 5 Avg'] = display_df['avg_L5'].apply(lambda x: f"{x:.1f}")
                 display_df['Last 10 Avg'] = display_df['avg_L10'].apply(lambda x: f"{x:.1f}")
-                display_df['Model'] = display_df['model_reliable'].apply(
-                    lambda x: '✅ tested' if x else '⚠️ display only'
-                )
+                display_df['Model'] = display_df['model_reliable'].apply(holdout_label)
                 _book_label = {'draftkings': 'DK', 'fanduel': 'FD'}
                 display_df['Market'] = display_df.apply(
                     lambda r: (f"{r['market_line']:.1f} ({_book_label.get(str(r['market_book']).lower(), r['market_book'])})"
@@ -487,7 +494,7 @@ def main():
                 # Select columns to show
                 show_cols = [
                     'display_name', 'position', 'team', 'opponent', 'Model', 'trend', 'prop_type',
-                    'Recommendation', 'Confidence', 'Tier', 'Market', 'Market Edge',
+                    'Recommendation', 'Confidence', 'Band', 'Market', 'Market Edge',
                     'Last 3 Avg', 'Last 5 Avg', 'Last 10 Avg', 'weather_conditions', 'Injury Status'
                 ]
 
@@ -496,8 +503,9 @@ def main():
                 _matched = int(display_df['market_line_available'].sum())
                 st.caption(
                     f"💰 **Market** = real DraftKings/FanDuel line. **Market Edge** = how much more "
-                    f"the model favors the recommended side than the market does (always framed in "
-                    f"the direction of the pick, so bigger is always better regardless of OVER/UNDER). "
+                    f"the model favors the recommended side than the market does (framed in the "
+                    f"direction of the pick). It inherits the model's data problems, so it is not "
+                    f"a validated edge. "
                     f"{_matched} of {len(display_df)} rows currently matched — books post more players "
                     f"as games get closer. Edge is only computed when the book's line equals the "
                     f"model's line (the model's probability is for its own line, so a different "
@@ -527,11 +535,11 @@ def main():
                 # Explanation
                 with st.expander("ℹ️ How to Read These Predictions"):
                     st.markdown("""
-                    **Confidence Tiers:**
-                    - 🔥 **Elite (≥65%)**: Highest confidence predictions
-                    - 💪 **Strong (60-65%)**: Very good predictions  
-                    - ✅ **Good (55-60%)**: Solid predictions above breakeven
-                    
+                    **Probability Bands:**
+                    - **≥65%, 60–65%, 55–60%**: bands of the model's own probability for the
+                      recommended side. They are not validated betting confidence (see the
+                      notice at the top of the page).
+
                     **Recommendation Format:**
                     - `OVER 225.5` means the model predicts the player will go OVER this yardage line
                     - `UNDER 65.5` means the model predicts the player will go UNDER this yardage line
@@ -546,9 +554,11 @@ def main():
                     - Dome games show "Dome" with no weather impact
                     
                     **Model Info:**
-                    - Trained on 2020-2025 historical data
+                    - Saved models were trained on 2020-2024 and checked out-of-time on
+                      2025 (per-model figures in `player_props/models/model_metrics.json`)
                     - Uses rolling averages, TDs, completions, attempts as features
-                    - ROC-AUC scores: Passing 0.72, Rushing 0.84, Receiving 0.81
+                    - Those training inputs have the problems described in the notice
+                      above, so the 2025 check does not validate them for betting
                     """)
             else:
                 st.info("No predictions match the selected filters")
@@ -881,15 +891,14 @@ def main():
                 if prob_over >= 0.60:
                     recommendation = "OVER"
                     confidence = prob_over
-                    tier = "🔥 ELITE" if prob_over >= 0.65 else "💪 STRONG"
                 elif prob_under >= 0.60:
                     recommendation = "UNDER"
                     confidence = prob_under
-                    tier = "🔥 ELITE" if prob_under >= 0.65 else "💪 STRONG"
                 else:
                     recommendation = "OVER" if prob_over > prob_under else "UNDER"
                     confidence = max(prob_over, prob_under)
-                    tier = "✅ GOOD" if confidence >= 0.55 else "⚠️ LEAN"
+                # Neutral band (formerly ELITE/STRONG/GOOD/LEAN); not validated confidence.
+                tier = band_label(confidence)
                 
                 # Display results in a prominent card
                 st.markdown(f"""
@@ -909,7 +918,7 @@ def main():
                         </div>
                     </div>
                     <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.2);">
-                        <p style="margin: 0; font-size: 1rem;">Confidence: <strong>{confidence:.1%}</strong> ({prediction_source})</p>
+                        <p style="margin: 0; font-size: 1rem;">Model output: <strong>{confidence:.1%}</strong> ({prediction_source}; not validated betting confidence)</p>
                         <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">
                             Historical: {total_games} games ({games_over} over, {games_under} under)
                         </p>
@@ -1011,16 +1020,17 @@ def main():
                     if model_prob_over is not None:
                         st.markdown(f"""
                         **🤖 Machine Learning Model Prediction Method:**
-                        - Uses trained XGBoost model (tier: {tier})
+                        - Uses a saved XGBoost model (probability band: {tier})
                         - Season average: {season_avg:.1f} → model tier selection
                         - Analyzes rolling stats (L3, L5, L10 games)
                         - Considers TDs, attempts/targets, matchup factors
-                        - Trained on 2020-2024 data (ROC-AUC: 0.72-0.84)
+                        - Trained on 2020-2024 data with the input problems in the notice
+                          above; its 2025 check does not validate it for betting
                         
                         **Prediction Comparison:**
                         - **Machine Learning Model**: {model_prob_over:.1%} probability OVER
                         - **Historical**: {hist_prob_over:.1%} hit rate ({games_over}/{total_games} games)
-                        - **Recommendation**: {recommendation} with {confidence:.1%} confidence
+                        - **Model side**: {recommendation} at {confidence:.1%} (model output, not validated)
                         """)
                     else:
                         st.markdown(f"""
@@ -1032,12 +1042,11 @@ def main():
                         """)
                     
                     st.markdown("""
-                    **Confidence Tiers:**
-                    - 🔥 **ELITE (≥65%)**: Highest confidence picks
-                    - 💪 **STRONG (60-65%)**: Very confident picks  
-                    - ✅ **GOOD (55-60%)**: Solid picks above breakeven
-                    - ⚠️ **LEAN (<55%)**: Lower confidence
-                    
+                    **Probability Bands:**
+                    - **≥65%, 60–65%, 55–60%, <55%**: bands of the model's (or the
+                      historical hit rate's) probability for the side shown. They are not
+                      validated betting confidence.
+
                     **Pro Tips:**
                     - Model auto-selects tier based on season average
                     - Recent form (L3/L5) weighted heavily
@@ -1059,15 +1068,16 @@ def main():
                 2. **Select from Results**: Choose the correct player from the dropdown
                 3. **Pick a Stat Category**: The tool auto-suggests categories based on position
                 4. **Enter DraftKings Line**: Input the exact over/under line from DK Pick 6
-                5. **Get Recommendation**: See the model's OVER/UNDER prediction with confidence
-                
+                5. **See the Model Output**: the model's OVER/UNDER side and its probability
+
                 ### Example:
                 - Player: **Josh Allen**
                 - Category: **Passing Yards**
                 - DK Line: **242.5**
-                - Model says: **OVER 242.5** (💪 STRONG - 63% confidence)
-                
-                The model analyzes recent performance, season averages, and hit rates to give you data-driven recommendations!
+                - Model output: **OVER 242.5** (60–65% band, 63%)
+
+                The output combines recent performance, season averages and hit rates. It is
+                not validated for betting; see the notice at the top of the page.
                 """)
     
     # ========================================================================
