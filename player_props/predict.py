@@ -26,7 +26,12 @@ try:
     from .injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from .weather import get_weather_for_game, adjust_for_weather
     from .market_odds import fetch_market_odds, find_market_line, attach_market_odds
-    from .provenance import check_inputs, format_report
+    from .provenance import check_inputs, format_report, load_games
+    from .aggregators import FeatureValidationError
+    from .features import (
+        PROP_STAT, TARGET_COLUMNS, FeatureContractError, contract_problems, has_history,
+        inference_rows, model_features, model_matrix, resolve_game,
+    )
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -35,7 +40,12 @@ except ImportError:
     from injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from weather import get_weather_for_game, adjust_for_weather
     from market_odds import fetch_market_odds, find_market_line, attach_market_odds
-    from provenance import check_inputs, format_report
+    from provenance import check_inputs, format_report, load_games
+    from aggregators import FeatureValidationError
+    from features import (
+        PROP_STAT, TARGET_COLUMNS, FeatureContractError, contract_problems, has_history,
+        inference_rows, model_features, model_matrix, resolve_game,
+    )
 
 # ============================================================================
 # CONFIGURATION
@@ -183,27 +193,50 @@ def load_player_stats():
     return stats
 
 
+def _load_model_records():
+    """model_name -> its training metrics entry (model_metrics.json), or {}."""
+    import json
+    path = MODELS_DIR / 'model_metrics.json'
+    try:
+        with open(path) as f:
+            data = json.load(f)
+        return {m['model_name']: m for m in data.get('models', [])
+                if isinstance(m, dict) and 'model_name' in m}
+    except Exception:
+        return {}
+
+
 def _load_reliability():
     """model_name -> bool, from the training metrics (temporal hold-out).
 
     TD props and any model with no out-of-time edge come back False. Missing
     file / key defaults to False so nothing is over-sold.
     """
-    import json
-    path = MODELS_DIR / 'model_metrics.json'
-    try:
-        with open(path) as f:
-            data = json.load(f)
-        return {m['model_name']: bool(m.get('reliable', False))
-                for m in data.get('models', [])}
-    except Exception:
-        return {}
+    return {name: bool(m.get('reliable', False)) for name, m in _load_model_records().items()}
+
+
+def model_incompatibility(model_name, prop_type, record, model):
+    """Why a model can't be used with the current feature contract (empty =
+    usable). It must record the contract it was trained under and the exact
+    feature list, and the booster's own feature names must agree."""
+    problems = contract_problems((record or {}).get('feature_contract'),
+                                 (record or {}).get('features'), prop_type)
+    names = model.get_booster().feature_names
+    if names != model_features(prop_type):
+        problems.append(f"model feature names {names} != {model_features(prop_type)}")
+    return problems
 
 
 def load_models():
-    """Load trained XGBoost models."""
+    """Load trained XGBoost models that meet the current feature contract.
+
+    A model without a recorded contract (every model trained before Stage 3, or
+    on stats without a valid provenance manifest) or with a different feature
+    list is refused and reported, never fed the current features."""
     models = {}
+    records = _load_model_records()
     reliability = _load_reliability()
+    refused = {}
     
     # Map model names to their configurations
     model_configs = [
@@ -256,6 +289,10 @@ def load_models():
         if model_path.exists():
             model = xgb.XGBClassifier()
             model.load_model(model_path)
+            problems = model_incompatibility(model_name, prop_type, records.get(model_name), model)
+            if problems:
+                refused[model_name] = problems
+                continue
             
             # Derive stat type and stat column from prop_type
             if prop_type in ['passing_yards', 'passing_tds']:
@@ -288,7 +325,12 @@ def load_models():
             }
         else:
             print(f"⚠️  Model {model_name} not found, skipping")
-    
+
+    if refused:
+        first = next(iter(refused.values()))
+        print(f"⛔ {len(refused)} model(s) refused - not trained under the current feature "
+              f"contract ({'; '.join(first)})")
+
     # Handle missing models with fallbacks
     if 'receiving_yards_elite_wr' not in models and 'receiving_yards_star_wr' in models:
         print("🔄 Using star_wr model as fallback for elite_wr")
@@ -397,175 +439,6 @@ def get_recent_starters(stats_df, team, n_games=3, roster_ids=None):
     return active_players
 
 
-def get_player_features(stats_df, player_name, team, prop_type, opponent=None, is_home=None, all_stats=None):
-    """
-    Get latest feature values for a player.
-    
-    Args:
-        stats_df: Stats DataFrame for the stat type
-        player_name: Player name
-        team: Team name
-        prop_type: Prop type (passing_yards, passing_tds, etc.)
-        opponent: Opponent team name
-        is_home: Whether the game is home for the player's team
-        all_stats: All stats DataFrames for defense ranking calculation
-    """
-    if stats_df is None:
-        return None
-    
-    # Get player's most recent game
-    player_stats = stats_df[
-        (stats_df['player_name'] == player_name) & 
-        (stats_df['team'] == team)
-    ].sort_values('game_date', ascending=False)
-    
-    if player_stats.empty:
-        return None
-    
-    latest = player_stats.iloc[0]
-    
-    # Determine stat type and column
-    if prop_type in ['passing_yards', 'passing_tds']:
-        stat_type = 'passing'
-        stat_col = 'passing_yards' if prop_type == 'passing_yards' else 'pass_tds'
-    elif prop_type in ['rushing_yards', 'rushing_tds']:
-        stat_type = 'rushing'
-        stat_col = 'rushing_yards' if prop_type == 'rushing_yards' else 'rush_tds'
-    elif prop_type in ['receiving_yards', 'receiving_tds', 'receptions']:
-        stat_type = 'receiving'
-        if prop_type == 'receiving_yards':
-            stat_col = 'receiving_yards'
-        elif prop_type == 'receiving_tds':
-            stat_col = 'rec_tds'
-        elif prop_type == 'receptions':
-            stat_col = 'receptions'
-        else:
-            return None
-    else:
-        return None
-    
-    # Build base features
-    features = {
-        f'{stat_col}_L3': latest.get(f'{stat_col}_L3'),
-        f'{stat_col}_L5': latest.get(f'{stat_col}_L5'),
-        f'{stat_col}_L10': latest.get(f'{stat_col}_L10')
-    }
-    
-    # Add position-specific features
-    if stat_type == 'passing':
-        if prop_type == 'passing_tds':
-            # TD models get L10 for all features
-            features.update({
-                'pass_tds_L3': latest.get('pass_tds_L3'),
-                'pass_tds_L5': latest.get('pass_tds_L5'),
-                'pass_tds_L10': latest.get('pass_tds_L10'),
-                'completions_L3': latest.get('completions_L3'),
-                'completions_L5': latest.get('completions_L5'),
-                'completions_L10': latest.get('completions_L10'),
-                'attempts_L3': latest.get('attempts_L3'),
-                'attempts_L5': latest.get('attempts_L5'),
-                'attempts_L10': latest.get('attempts_L10')
-            })
-        else:
-            # Yards models only get L3/L5 for auxiliary features
-            features.update({
-                'pass_tds_L3': latest.get('pass_tds_L3'),
-                'pass_tds_L5': latest.get('pass_tds_L5'),
-                'completions_L3': latest.get('completions_L3'),
-                'completions_L5': latest.get('completions_L5'),
-                'attempts_L3': latest.get('attempts_L3'),
-                'attempts_L5': latest.get('attempts_L5')
-            })
-    elif stat_type == 'rushing':
-        if prop_type == 'rushing_tds':
-            # TD models get L10 for all features
-            features.update({
-                'rush_tds_L3': latest.get('rush_tds_L3'),
-                'rush_tds_L5': latest.get('rush_tds_L5'),
-                'rush_tds_L10': latest.get('rush_tds_L10'),
-                'rush_attempts_L3': latest.get('rush_attempts_L3'),
-                'rush_attempts_L5': latest.get('rush_attempts_L5'),
-                'rush_attempts_L10': latest.get('rush_attempts_L10')
-            })
-        else:
-            # Yards models only get L3/L5 for auxiliary features
-            features.update({
-                'rush_tds_L3': latest.get('rush_tds_L3'),
-                'rush_tds_L5': latest.get('rush_tds_L5'),
-                'rush_attempts_L3': latest.get('rush_attempts_L3'),
-                'rush_attempts_L5': latest.get('rush_attempts_L5')
-            })
-    elif stat_type == 'receiving':
-        if prop_type == 'receiving_tds':
-            # TD models get L10 for all features
-            features.update({
-                'rec_tds_L3': latest.get('rec_tds_L3'),
-                'rec_tds_L5': latest.get('rec_tds_L5'),
-                'rec_tds_L10': latest.get('rec_tds_L10'),
-                'receptions_L3': latest.get('receptions_L3'),
-                'receptions_L5': latest.get('receptions_L5'),
-                'receptions_L10': latest.get('receptions_L10'),
-                'targets_L3': latest.get('targets_L3'),
-                'targets_L5': latest.get('targets_L5'),
-                'targets_L10': latest.get('targets_L10')
-            })
-        else:
-            # Yards models only get L3/L5 for auxiliary features
-            features.update({
-                'rec_tds_L3': latest.get('rec_tds_L3'),
-                'rec_tds_L5': latest.get('rec_tds_L5'),
-                'receptions_L3': latest.get('receptions_L3'),
-                'receptions_L5': latest.get('receptions_L5'),
-                'targets_L3': latest.get('targets_L3'),
-                'targets_L5': latest.get('targets_L5')
-            })
-    
-    # Check if we have required features (L3 stats at minimum)
-    if pd.isna(features[f'{stat_col}_L3']):
-        return None
-    
-    # Add matchup and situational features. (opponent_def_rank was removed - the
-    # training-side feature was a leaky dataset-wide average that clipped to a
-    # constant, so it is no longer part of the model schema.)
-    features['is_home'] = 1 if is_home else 0
-    
-    # Calculate days rest (simplified - would need player's last game date for accuracy)
-    if hasattr(latest, 'game_date'):
-        features['days_rest'] = calculate_days_rest(latest['game_date'])
-    else:
-        features['days_rest'] = 7  # Default
-    
-    return features, latest, player_stats
-
-
-def calculate_days_rest(game_date):
-    """
-    Calculate days of rest before a game.
-    """
-    from datetime import datetime, timezone
-    
-    if pd.isna(game_date):
-        return 7  # Default to 1 week rest
-    
-    # Convert to datetime if needed
-    if isinstance(game_date, str):
-        game_date = pd.to_datetime(game_date)
-    
-    # Ensure game_date is timezone-aware
-    if game_date.tz is None:
-        game_date = game_date.tz_localize('UTC')
-    
-    # Get current time in UTC
-    now = pd.Timestamp.now(tz='UTC')
-    
-    # Calculate days since last game (assuming game_date is next game)
-    # This is a simplification - in reality we'd need the player's last game date
-    days_rest = (game_date - now).days
-    
-    # Clamp to reasonable range
-    return max(1, min(days_rest, 14))
-
-
 def calculate_trend(player_stats, stat_col):
     """
     Calculate if player is trending up, down, or stable.
@@ -594,14 +467,13 @@ def calculate_trend(player_stats, stat_col):
 # PREDICTION GENERATION
 # ============================================================================
 
-def get_player_position(player_name):
-    """Get player position from players database."""
+def get_player_position(player_id):
+    """Position and display name by stable ID (players.csv gsis_id); short
+    names are not unique (e.g. several 'J.Smith')."""
     players_df = load_players()
     if players_df is not None:
-        player_record = players_df[players_df['short_name'] == player_name]
-        if not player_record.empty:
-            # If multiple players with same short_name, prefer QB for passing props, etc.
-            # For now, just return the first match
+        player_record = players_df[players_df['gsis_id'] == player_id]
+        if len(player_record) == 1:
             record = player_record.iloc[0]
             position = record['position']
             display_name = record['display_name']
@@ -612,317 +484,175 @@ def get_player_position(player_name):
     return None, None
 
 
-def get_player_performance_tier(player_name, prop_type, all_stats):
-    """
-    Determine player's performance tier based on recent stats.
-    Returns appropriate line_type for prop betting.
-    """
-    if prop_type == 'passing_yards':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('passing')
+# Tier thresholds on the player's last 8 appearances (raw stat mean): the
+# tiers chosen before Stage 3, keyed by prop type, highest first.
+TIER_RULES = {
+    'passing_yards': ('passing_yards', [(280, 'elite_qb'), (250, 'star_qb'), (220, 'good_qb')], 'starter'),
+    'passing_tds': ('pass_tds', [(2.0, 'elite_qb'), (1.5, 'star_qb'), (1.0, 'good_qb')], 'starter'),
+    'rushing_yards': ('rushing_yards', [(80, 'elite_rb'), (60, 'star_rb'), (45, 'good_rb')], 'starter'),
+    'rushing_tds': ('rush_tds', [(1.0, 'elite_rb'), (0.7, 'star_rb'), (0.4, 'good_rb')], 'anytime'),
+    'receiving_yards': ('receiving_yards', [(75, 'elite_wr'), (55, 'star_wr'), (40, 'good_wr')], 'starter'),
+    'receiving_tds': ('rec_tds', [(1.0, 'elite_wr'), (0.7, 'star_wr'), (0.4, 'good_wr')], 'anytime'),
+    'receptions': ('receptions', [(7.5, 'elite_wr'), (5.5, 'star_wr'), (4.5, 'good_wr')], 'starter'),
+}
+
+
+def player_history(stats_df, player_id):
+    """A player's appearances in one stat table by stable ID, every team and
+    season, newest first."""
+    if stats_df is None or stats_df.empty:
+        return stats_df
+    rows = stats_df[stats_df['player_id'] == player_id]
+    return rows.assign(_d=pd.to_datetime(rows['game_date'])).sort_values(
+        ['_d', 'game_id'], ascending=False).drop(columns='_d')
+
+
+def get_player_performance_tier(player_id, prop_type, all_stats):
+    """Line tier from the player's last 8 appearances (by player_id, all teams).
+    Fewer than 3 appearances -> the lowest tier."""
+    stat_col, cuts, lowest = TIER_RULES[prop_type]
+    stat_type = PROP_STAT[prop_type][0]
+    history = player_history(all_stats.get(stat_type), player_id)
+    if history is None or len(history) < 3:
+        return lowest
+    avg = history.head(8)[stat_col].mean()
+    for cut, tier in cuts:
+        if avg >= cut:
+            return tier
+    return lowest
+
+
+def candidate_players(all_stats, team, n_games=3, roster_ids=None):
+    """Players to predict for `team`, by player_id, with a report.
+
+    A player is a candidate when he appears in one of the team's last
+    `n_games` games in any stat table AND his latest appearance in any table
+    was for this team. A player whose latest appearance was for another team
+    is excluded and counted: the stats can't show which team he is on now (a
+    trade after his last game isn't visible without rosters)."""
+    seen = []
+    for stats_df in all_stats.values():
         if stats_df is None or stats_df.empty:
-            return 'starter'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'starter'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'starter'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['passing_yards'].mean()
-        
-        if avg_performance >= 280:
-            return 'elite_qb'
-        elif avg_performance >= 250:
-            return 'star_qb'
-        elif avg_performance >= 220:
-            return 'good_qb'
-        else:
-            return 'starter'
-    
-    elif prop_type == 'passing_tds':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('passing')
-        if stats_df is None or stats_df.empty:
-            return 'starter'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'starter'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'starter'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['pass_tds'].mean()
-        
-        if avg_performance >= 2.0:
-            return 'elite_qb'
-        elif avg_performance >= 1.5:
-            return 'star_qb'
-        elif avg_performance >= 1.0:
-            return 'good_qb'
-        else:
-            return 'starter'
-    
-    elif prop_type == 'rushing_yards':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('rushing')
-        if stats_df is None or stats_df.empty:
-            return 'starter'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'starter'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'starter'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['rushing_yards'].mean()
-        
-        if avg_performance >= 80:
-            return 'elite_rb'
-        elif avg_performance >= 60:
-            return 'star_rb'
-        elif avg_performance >= 45:
-            return 'good_rb'
-        else:
-            return 'starter'
-    
-    elif prop_type == 'rushing_tds':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('rushing')
-        if stats_df is None or stats_df.empty:
-            return 'anytime'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'anytime'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'anytime'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['rush_tds'].mean()
-        
-        if avg_performance >= 1.0:
-            return 'elite_rb'
-        elif avg_performance >= 0.7:
-            return 'star_rb'
-        elif avg_performance >= 0.4:
-            return 'good_rb'
-        else:
-            return 'anytime'
-    
-    elif prop_type == 'receiving_yards':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('receiving')
-        if stats_df is None or stats_df.empty:
-            return 'starter'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'starter'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'starter'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['receiving_yards'].mean()
-        
-        if avg_performance >= 75:
-            return 'elite_wr'
-        elif avg_performance >= 55:
-            return 'star_wr'
-        elif avg_performance >= 40:
-            return 'good_wr'
-        else:
-            return 'starter'
-    
-    elif prop_type == 'receiving_tds':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('receiving')
-        if stats_df is None or stats_df.empty:
-            return 'anytime'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'anytime'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'anytime'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['rec_tds'].mean()
-        
-        if avg_performance >= 1.0:
-            return 'elite_wr'
-        elif avg_performance >= 0.7:
-            return 'star_wr'
-        elif avg_performance >= 0.4:
-            return 'good_wr'
-        else:
-            return 'anytime'
-    
-    elif prop_type == 'receptions':
-        # Get relevant stats DataFrame
-        stats_df = all_stats.get('receiving')
-        if stats_df is None or stats_df.empty:
-            return 'starter'
-        
-        # Get player's recent performance (last 8 games)
-        player_stats = stats_df[stats_df['player_name'] == player_name].copy()
-        if player_stats.empty:
-            return 'starter'
-        
-        player_stats = player_stats.sort_values('game_date', ascending=False)
-        recent_stats = player_stats.head(8)  # Last 8 games
-        
-        if len(recent_stats) < 3:  # Need at least 3 games
-            return 'starter'
-        
-        # Calculate average performance
-        avg_performance = recent_stats['receptions'].mean()
-        
-        if avg_performance >= 7.5:
-            return 'elite_wr'
-        elif avg_performance >= 5.5:
-            return 'star_wr'
-        elif avg_performance >= 4.5:
-            return 'good_wr'
-        else:
-            return 'starter'
-    
-    # Default fallback
-    return 'starter'
+            continue
+        team_rows = stats_df[stats_df['team'] == team]
+        recent = (team_rows.assign(_d=pd.to_datetime(team_rows['game_date']))
+                  .sort_values('_d', ascending=False)['game_id'].unique()[:n_games])
+        seen += list(team_rows.loc[team_rows['game_id'].isin(recent), 'player_id'].unique())
+    ids = sorted(set(seen))
+    if roster_ids is not None:
+        ids = [i for i in ids if str(i) in roster_ids]
+    every = pd.concat([t[['player_id', 'player_name', 'team', 'game_id', 'game_date']]
+                       for t in all_stats.values() if t is not None and not t.empty])
+    every = every[every['player_id'].isin(ids)]
+    latest = (every.assign(_d=pd.to_datetime(every['game_date']))
+              .sort_values(['_d', 'game_id']).groupby('player_id').tail(1).set_index('player_id'))
+    keep = [i for i in ids if latest.loc[i, 'team'] == team]
+    moved = [i for i in ids if latest.loc[i, 'team'] != team]
+    names = {i: latest.loc[i, 'player_name'] for i in keep}
+    return names, {'team': team, 'candidates': len(keep), 'latest_elsewhere': moved}
 
 
 def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, skip_weather=False,
-                            market_odds_df=None):
+                            market_odds_df=None, games=None):
     """
     Generate prop predictions for all players in a game.
+
+    Features come from features.inference_rows over `all_stats` (the
+    Stage 2 feature source) for the game's unique schedule entry in `games`
+    (nfl_games_historical.csv): the same definition as the training rows.
+    Players are identified by player_id across teams and seasons. A feature
+    or model-input error raises (nothing is silently skipped).
 
     `market_odds_df`: optional DataFrame from market_odds.fetch_market_odds()
     for the whole week (see market_odds.ODDS_COLUMNS). None/empty is fine -
     every prediction just gets market_line_available=False.
     """
     predictions = []
+    if games is None:
+        games = load_games(DATA_DIR)
 
     teams = [game_row['home_team'], game_row['away_team']]
     game_date = game_row['game_date']
     week = game_row['week']
     game_season = game_row.get('season', None)
+    target = resolve_game(games, int(game_season), int(week), game_row['home_team'], game_row['away_team'])
 
     # Injury adjustment is an optional nudge; the ESPN scrape can hang / fail
     # on restricted networks, so it is skippable.
     injuries_df = pd.DataFrame() if skip_injuries else get_injury_report()
-    
+
+    try:
+        _season = int(game_season) if game_season else upcoming_or_current_season()
+    except (TypeError, ValueError):
+        _season = upcoming_or_current_season()
+    roster_ids = load_active_roster(_season)  # None -> no filter
+
+    # Candidates for both sides, then one feature row per player per stat table.
+    rosters = {}
     for team in teams:
-        opponent = game_row['away_team'] if team == game_row['home_team'] else game_row['home_team']
+        names, report = candidate_players(all_stats, team, roster_ids=roster_ids)
+        if report['latest_elsewhere']:
+            print(f"   {team}: {len(report['latest_elsewhere'])} recent player(s) excluded - their "
+                  f"latest appearance was for another team, so current team is unknown")
+        rosters[team] = names
+    target_rows = pd.DataFrame([
+        {'player_id': pid, 'player_name': name, 'game_id': target['game_id'],
+         'season': int(target['season']), 'week': int(target['week']), 'team': team,
+         'opponent': teams[1] if team == teams[0] else teams[0], 'game_date': target['gameday']}
+        for team, names in rosters.items() for pid, name in names.items()],
+        columns=TARGET_COLUMNS)
+    feature_rows = {
+        stat_type: inference_rows(stats_df, target_rows, stat_type, games).set_index('player_id')
+        for stat_type, stats_df in all_stats.items() if stats_df is not None
+    }
+
+    for team in teams:
+        opponent = teams[1] if team == teams[0] else teams[0]
         is_home = team == game_row['home_team']
-        
-        # Get recent starters for this team (from any stat type). When the
-        # opt-in roster filter is on, players no longer in the league are cut.
-        try:
-            _season = int(game_season) if game_season else upcoming_or_current_season()
-        except (TypeError, ValueError):
-            _season = upcoming_or_current_season()
-        roster_ids = load_active_roster(_season)  # None -> no filter
-        all_starters = set()
-        for stat_type, stats_df in all_stats.items():
-            if stats_df is not None:
-                team_starters = get_recent_starters(stats_df, team, roster_ids=roster_ids)
-                all_starters.update(team_starters)
-        
-        for player_name in all_starters:
-            # Skip if player_name is not a valid string
-            if not isinstance(player_name, str) or not player_name:
-                continue
-            
-            # Get player position and display name
-            player_position, player_display_name = get_player_position(player_name)
-            
-            # Get all prop types this player is eligible for based on position
+
+        for player_id, player_name in rosters[team].items():
+            # Position and display name by stable ID (players.csv gsis_id).
+            player_position, player_display_name = get_player_position(player_id)
+
             eligible_props = []
             if player_position and player_position in POSITION_MAP:
                 eligible_props = POSITION_MAP[player_position]
-            
-            # For each eligible prop type, determine tier and use appropriate model
+
             for prop_type in eligible_props:
-                # Get player's performance tier for this prop type
-                player_tier = get_player_performance_tier(player_name, prop_type, all_stats)
-                
-                # Find the model that matches this tier
+                player_tier = get_player_performance_tier(player_id, prop_type, all_stats)
+
                 matching_model = None
                 for model_name, model_info in models.items():
-                    if (model_info['prop_type'] == prop_type and 
+                    if (model_info['prop_type'] == prop_type and
                         model_info['line_type'] == player_tier):
                         matching_model = (model_name, model_info)
                         break
-                
-                # Skip if no matching model found
                 if matching_model is None:
                     continue
-                    
+
                 model_name, model_info = matching_model
                 stat_type = model_info['stat_type']
-                
-                # Get stats DataFrame for this stat type
-                stats_df = all_stats.get(stat_type)
-                if stats_df is None:
+                rows = feature_rows.get(stat_type)
+                if rows is None or player_id not in rows.index:
                     continue
-                
-                # Get player's latest features for this prop type
-                result = get_player_features(stats_df, player_name, team, prop_type, opponent, is_home, all_stats)
-                if result is None:
+                row = rows.loc[[player_id]]
+                # First appearance in this table: no history to average, the
+                # same exclusion as training (features.has_history).
+                if not has_history(row, prop_type).iloc[0]:
                     continue
-                
-                features, player_latest, player_stats_history = result
-                
-                # Get tier-appropriate line value
+                # Exact model input; raises on anything missing or non-finite.
+                X = model_matrix(row, prop_type)
+                features = X.iloc[0].to_dict()
+                player_stats_history = player_history(all_stats.get(stat_type), player_id)
+
                 line_value = PROP_LINES[prop_type].get(player_tier, 0.5)  # Default to 0.5 if tier not found
-                
-                # Use the model's trained line_type for prediction, but display the tier-appropriate line
-                model_line_value = model_info['line_value']
-                
+                prob_over = float(model_info['model'].predict_proba(X)[0, 1])
+
                 try:
-                    # Prepare features as DataFrame
-                    feature_df = pd.DataFrame([features])
-                    
-                    # Make prediction using model's trained threshold
-                    prob_over = model_info['model'].predict_proba(feature_df)[0, 1]
-                    
                     # For star players with tier-appropriate lines, adjust recommendations
                     stat_col = model_info['stat_col']
                     recent_avg = features.get(f"{stat_col}_L5", 0)  # Last 5 games average
-                    
+
                     # If player is a star (averages much more than the line), force OVER
                     if player_tier in ['elite_rb', 'star_rb', 'elite_wr', 'star_wr'] and recent_avg > line_value * 1.3:
                         prob_over = max(prob_over, 0.75)  # Ensure high confidence OVER for stars
@@ -1019,8 +749,9 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                         predictions.append(prediction)
                     
                 except Exception as e:
-                    # Skip if prediction fails (missing features, etc.)
-                    print(f"⚠️  Prediction failed for {player_name} {prop_type}: {e}")
+                    # Injury / weather / market post-processing only; model
+                    # inputs and the model call above fail loudly.
+                    print(f"⚠️  Post-processing failed for {player_name} {prop_type}: {e}")
                     continue
     
     return predictions
@@ -1087,8 +818,11 @@ def generate_predictions(season=None, week=None, freeze=True,
     models = load_models()
 
     if not models:
-        print("❌ No models found. Run 'python player_props/models.py' first")
-        return
+        print("❌ No model meets the current feature contract (features.FEATURE_CONTRACT) - "
+              "no predictions written; existing files are unchanged. Retrain on stats with a "
+              "valid provenance manifest.")
+        return 1
+    games = load_games(DATA_DIR)
 
     # Real DK/FanDuel lines for the reliable prop types, fetched once for the
     # whole week (not per game). No-op (empty DataFrame) unless ODDS_API_KEY
@@ -1108,11 +842,19 @@ def generate_predictions(season=None, week=None, freeze=True,
     for idx, game_row in schedule.iterrows():
         print(f"\n📅 {game_row['away_team']} @ {game_row['home_team']} (Week {game_row['week']})")
 
-        game_predictions = predict_props_for_game(
-            game_row, all_stats, models,
-            skip_injuries=skip_injuries, skip_weather=skip_weather,
-            market_odds_df=market_odds_df,
-        )
+        try:
+            game_predictions = predict_props_for_game(
+                game_row, all_stats, models,
+                skip_injuries=skip_injuries, skip_weather=skip_weather,
+                market_odds_df=market_odds_df, games=games,
+            )
+        except (FeatureContractError, FeatureValidationError) as exc:
+            # Nothing has been written yet; a feature that can't be built
+            # stops the whole run rather than dropping players silently.
+            print(f"❌ Features could not be built for {game_row['away_team']} @ "
+                  f"{game_row['home_team']}: {exc} - no predictions written; existing files "
+                  f"are unchanged.")
+            return 1
         all_predictions.extend(game_predictions)
         
         print(f"   Generated {len(game_predictions)} prop predictions")

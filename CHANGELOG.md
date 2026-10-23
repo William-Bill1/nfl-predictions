@@ -8,6 +8,42 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 3 train/serve feature parity**
+  (`player_props/features.py`, `models.py`, `predict.py`, `aggregators.py`,
+  `provenance.py`). Code only: no data refreshed, no model retrained or
+  replaced. Generation stays blocked, and the containment notice stays.
+  - **Found:** prediction used each player's latest stored row, whose
+    rolling stats exclude that game, so they were one game stale (about 95%
+    of 2025 rows differed in L3). Its `days_rest` was always 1. It took
+    `is_home` from the team order, and matched players by short name and
+    team, which mixes players who share a name and loses traded players.
+    Model-input errors were skipped silently.
+  - **Now:** one definition (`MODEL_FEATURES`, exact order).
+    `inference_rows` rebuilds a target game's features with the Stage 1
+    functions from the player's eligible history: by player ID, every team
+    and season, strictly before the game, within Stage 2's feature source.
+    - `days_rest` is the gap to the previous appearance, capped at 21.
+    - `is_home` comes from the unique schedule game.
+    - First appearances are excluded on both paths.
+    - History is validated first: repeated player-games, rows of a game
+      that disagree on labels, or a player in two games on one date raise.
+      Nothing is deduplicated.
+    - Inputs are validated (`model_matrix`), and stats are read with
+      round-trip float parsing.
+  - **Compatibility boundary:** models record `FEATURE_CONTRACT` and their
+    feature list, but only when trained on stats with a valid manifest. The
+    recorded list is required: an exact list of unique names in order.
+    Prediction refuses any other model, so all committed models are
+    refused, with no provenance created for them.
+  - **Training changes too:** nightly retraining builds rows from the
+    shared list, which gives the same rows on the current CSVs. It reads
+    stats with exact float parsing (value differences up to about 6e-14). It
+    fails on invalid stats instead of skipping columns. It records a null
+    contract, so those models are refused.
+  - **Offline check:** 42,924 rebuilt rows (612,606 values) equal their
+    training rows exactly; 2,283 first appearances are excluded on both
+    paths. No accuracy improvement is claimed.
+
 - **Player props: Stage 2 freshness and provenance**
   (`player_props/provenance.py`, `predict.py`, `aggregators.py`,
   `train_models.py`, `backtest.py`). Code only: no data refreshed, no stats

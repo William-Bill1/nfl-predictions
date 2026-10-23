@@ -69,6 +69,13 @@ class FeatureValidationError(ValueError):
         super().__init__("; ".join(self.problems))
 
 
+def read_stats_csv(source) -> pd.DataFrame:
+    """Read a stats CSV with exact float round-tripping. pandas' default parser
+    can be off by one unit in the last place, which would make a stored
+    feature differ from the same value recomputed at prediction time."""
+    return pd.read_csv(source, float_precision='round_trip')
+
+
 def output_columns(stat_type: str, windows: List[int] = ROLLING_WINDOWS) -> List[str]:
     """The exact columns written for a stat table, in order."""
     rolling = [f'{s}_L{w}' for s in ROLLING_STATS[stat_type] for w in windows]

@@ -13,7 +13,14 @@ try:
 except ImportError:
     LGBM_AVAILABLE = False
 import json
+import sys
 from datetime import datetime
+
+sys.path.insert(0, str(Path(__file__).parent.parent))
+from player_props.aggregators import read_stats_csv
+from player_props.features import (
+    FEATURE_CONTRACT, FeatureContractError, model_features, model_matrix, training_rows,
+)
 
 # ============================================================================
 # CONFIGURATION
@@ -72,7 +79,6 @@ PROP_LINES = {
 # Training configuration
 RANDOM_STATE = 42
 TEST_SIZE = 0.2
-MIN_GAMES_PLAYED = 5  # Minimum games to have reliable rolling stats
 MIN_TEST_ROWS = 40    # need at least this many held-out rows to report a metric
 
 # A metric is only marked "reliable" if the model clears these out-of-time bars
@@ -82,6 +88,11 @@ RELIABLE_MIN_AUC = 0.58
 RELIABLE_MIN_ACC_EDGE = 0.01   # accuracy must beat the majority-class base rate by this
 TD_NOTE = ("TD props are ~coin-flip out-of-time (all tiers collapse to the same "
            "0.5 line); kept for display only, not a betting signal.")
+
+
+# Longest name first, so 'receiving_tds' isn't taken for 'receiving'.
+MODEL_FEATURES_BY_LEN = sorted(('passing_yards', 'passing_tds', 'rushing_yards', 'rushing_tds',
+                                'receiving_yards', 'receiving_tds', 'receptions'), key=len, reverse=True)
 
 
 def temporal_holdout(df):
@@ -118,9 +129,31 @@ def load_player_stats(stat_type='passing'):
         print(f"   Run 'python player_props/aggregators.py' first")
         return None
     
-    df = pd.read_csv(file_path)
+    df = read_stats_csv(file_path)
     print(f"✅ Loaded {len(df):,} {stat_type} records")
     return df
+
+
+def training_feature_contract(data_dir=None):
+    """The feature contract the stats being trained on can be shown to meet,
+    or None. It is established only from a valid Stage 2 provenance manifest
+    for the stats files (provenance.check_provenance); without one the models
+    are trained but record no contract, so prediction refuses them. Nothing
+    is assumed about stats that can't be verified."""
+    from player_props.provenance import _read_stats, check_provenance, MANIFEST_FILE, _sha256
+    data_dir = Path(data_dir or DATA_DIR)
+    raw, tables, problems = _read_stats(data_dir)
+    more, _, manifest = check_provenance(data_dir, raw, tables)
+    problems += more
+    if problems or manifest is None:
+        print("⚠️  No feature contract recorded for these models: "
+              + "; ".join(problems or ["no valid provenance manifest"]))
+        return None
+    if manifest['aggregation']['feature_definition'] != FEATURE_CONTRACT['feature_definition']:
+        print("⚠️  No feature contract recorded: the stats use another feature definition")
+        return None
+    return {**FEATURE_CONTRACT,
+            'stats_manifest_sha256': _sha256((data_dir / MANIFEST_FILE).read_bytes())}
 
 
 def create_prop_targets(df, stat_col, line_values):
@@ -161,62 +194,18 @@ def prepare_training_features(df, stat_type='passing'):
         'receiving': 'receiving_yards'
     }
     
-    stat_col = stat_col_map[stat_type]
-    
-    # Filter to only games with valid rolling averages
-    # (need at least 3 games for L3 average)
-    rolling_col = f'{stat_col}_L3'
-    df = df.dropna(subset=[rolling_col]).copy()
-    
-    # Base features (rolling averages already calculated by aggregator)
-    feature_cols = [
-        f'{stat_col}_L3',
-        f'{stat_col}_L5', 
-        f'{stat_col}_L10'
-    ]
-    
-    # Add position-specific features
-    if stat_type == 'passing':
-        extra_cols = [
-            'pass_tds_L3', 'pass_tds_L5',
-            'completions_L3', 'completions_L5',
-            'attempts_L3', 'attempts_L5'
-        ]
-    elif stat_type == 'rushing':
-        extra_cols = [
-            'rush_tds_L3', 'rush_tds_L5',
-            'rush_attempts_L3', 'rush_attempts_L5'
-        ]
-    elif stat_type == 'receiving':
-        extra_cols = [
-            'rec_tds_L3', 'rec_tds_L5',
-            'receptions_L3', 'receptions_L5',
-            'targets_L3', 'targets_L5',
-            'target_share_L3', 'target_share_L5'
-        ]
-    
-    # Only add features that exist in the dataframe
-    extra_cols = [c for c in extra_cols if c in df.columns]
-    feature_cols.extend(extra_cols)
-    
-    # Add matchup and situational features
-    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
-    # (leaky) average that clipped to a constant 1 for every row.
-    matchup_cols = [
-        'is_home',
-        'days_rest'
-    ]
-    
-    # Only add matchup features that exist
-    matchup_cols = [c for c in matchup_cols if c in df.columns]
-    feature_cols.extend(matchup_cols)
-    
-    # Filter to only existing columns
-    feature_cols = [c for c in feature_cols if c in df.columns]
-    
-    print(f"📊 Using {len(feature_cols)} features: {feature_cols[:5]}...")
-    
-    return df, feature_cols
+    return _prepare(df, f'{stat_col_map[stat_type]}')
+
+
+def _prepare(df, prop_type):
+    """Rows and exact feature list for one prop type (features.MODEL_FEATURES).
+    Rows without an earlier appearance are excluded and counted; any other
+    missing or bad value raises (features.training_rows)."""
+    rows, report = training_rows(df, prop_type)
+    feature_cols = model_features(prop_type)
+    print(f"📊 {prop_type}: {len(feature_cols)} features {feature_cols}; "
+          f"{report['used']:,} rows, {report['excluded_no_history']:,} first appearances excluded")
+    return rows.copy(), feature_cols
 
 
 def prepare_td_training_features(df, stat_type='passing'):
@@ -228,48 +217,8 @@ def prepare_td_training_features(df, stat_type='passing'):
     - Exclude yards (to avoid data leakage for TD predictions)
     - Include matchup features for better predictions
     """
-    # Filter to only games with valid rolling TD averages
-    td_col = 'pass_tds' if stat_type == 'passing' else ('rush_tds' if stat_type == 'rushing' else 'rec_tds')
-    rolling_td_col = f'{td_col}_L3'
-    df = df.dropna(subset=[rolling_td_col]).copy()
-    
-    # TD-specific features (no yards to avoid leakage)
-    if stat_type == 'passing':
-        feature_cols = [
-            'pass_tds_L3', 'pass_tds_L5', 'pass_tds_L10',
-            'completions_L3', 'completions_L5', 'completions_L10',
-            'attempts_L3', 'attempts_L5', 'attempts_L10'
-        ]
-    elif stat_type == 'rushing':
-        feature_cols = [
-            'rush_tds_L3', 'rush_tds_L5', 'rush_tds_L10',
-            'rush_attempts_L3', 'rush_attempts_L5', 'rush_attempts_L10'
-        ]
-    elif stat_type == 'receiving':
-        feature_cols = [
-            'rec_tds_L3', 'rec_tds_L5', 'rec_tds_L10',
-            'receptions_L3', 'receptions_L5', 'receptions_L10',
-            'targets_L3', 'targets_L5', 'targets_L10'
-        ]
-    
-    # Add matchup and situational features
-    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
-    # (leaky) average that clipped to a constant 1 for every row.
-    matchup_cols = [
-        'is_home',
-        'days_rest'
-    ]
-    
-    # Only add matchup features that exist
-    matchup_cols = [c for c in matchup_cols if c in df.columns]
-    feature_cols.extend(matchup_cols)
-    
-    # Filter to only existing columns
-    feature_cols = [c for c in feature_cols if c in df.columns]
-    
-    print(f"🏈 Using {len(feature_cols)} TD features: {feature_cols[:5]}...")
-    
-    return df, feature_cols
+    return _prepare(df, {'passing': 'passing_tds', 'rushing': 'rushing_tds',
+                         'receiving': 'receiving_tds'}[stat_type])
 
 
 def prepare_receptions_training_features(df):
@@ -281,43 +230,10 @@ def prepare_receptions_training_features(df):
     - Rolling targets and TD features
     - Matchup features (opponent defense rank, home/away, days rest)
     """
-    # Filter to only games with valid rolling receptions averages
-    df = df.dropna(subset=['receptions_L3']).copy()
-    
-    # Core receptions features
-    feature_cols = [
-        'receptions_L3',
-        'receptions_L5', 
-        'receptions_L10',
-        'rec_tds_L3', 
-        'rec_tds_L5',
-        'targets_L3', 
-        'targets_L5',
-        'target_share_L3',
-        'target_share_L5'
-    ]
-    
-    # Add matchup and situational features
-    # opponent_def_rank was dropped: its aggregator produced a dataset-wide
-    # (leaky) average that clipped to a constant 1 for every row.
-    matchup_cols = [
-        'is_home',
-        'days_rest'
-    ]
-    
-    # Only add matchup features that exist
-    matchup_cols = [c for c in matchup_cols if c in df.columns]
-    feature_cols.extend(matchup_cols)
-    
-    # Filter to only existing columns
-    feature_cols = [c for c in feature_cols if c in df.columns]
-    
-    print(f"📊 Using {len(feature_cols)} receptions features: {feature_cols}")
-    
-    return df, feature_cols
+    return _prepare(df, 'receptions')
 
 
-def train_prop_model(df, features, target_col, model_name):
+def train_prop_model(df, features, target_col, model_name, contract=None):
     """
     Train an XGBoost + LightGBM soft-voting ensemble for a specific prop line.
     Both models are saved; inference averages their predicted probabilities.
@@ -331,9 +247,13 @@ def train_prop_model(df, features, target_col, model_name):
     Returns:
         Trained XGB model (primary), metrics dict
     """
-    # Remove rows with missing features or target (keep season/week for the split)
+    # Exact, validated model input (features.model_matrix): rows were already
+    # limited to players with history; a bad value raises instead of being dropped.
+    prop_type = next(p for p in MODEL_FEATURES_BY_LEN if model_name.startswith(p + '_'))
+    if list(features) != model_features(prop_type):
+        raise FeatureContractError(f"{model_name}: features {features} != {model_features(prop_type)}")
     split_cols = [c for c in ('season', 'week') if c in df.columns]
-    df_clean = df[features + [target_col] + split_cols].dropna()
+    df_clean = pd.concat([model_matrix(df, prop_type), df[[target_col] + split_cols]], axis=1)
 
     if len(df_clean) < 100:
         print(f"Warning: Not enough data for {target_col}: {len(df_clean)} rows")
@@ -431,6 +351,10 @@ def train_prop_model(df, features, target_col, model_name):
         'ensemble': LGBM_AVAILABLE,
         'reliable': reliable,
         'note': TD_NOTE if is_td else ('' if reliable else 'No out-of-time edge over the base rate.'),
+        # Stage 3 compatibility boundary: prediction refuses a model whose
+        # contract is missing or differs (predict.load_models).
+        'features': list(features),
+        'feature_contract': contract,
     }
 
     print(f"\n{model_name} Results (ensemble={LGBM_AVAILABLE}, holdout={holdout_season}):")
@@ -460,6 +384,7 @@ def train_all_models():
     print("=" * 70)
 
     all_metrics = []
+    contract = training_feature_contract()
 
     # ========================================================================
     # 1. PASSING YARDS MODELS
@@ -484,7 +409,7 @@ def train_all_models():
             model_name = f'passing_yards_{line_type}'
 
             model, metrics = train_prop_model(
-                passing_df, pass_features, target_col, model_name
+                passing_df, pass_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -512,7 +437,7 @@ def train_all_models():
             model_name = f'passing_tds_{line_type}'
 
             model, metrics = train_prop_model(
-                passing_df, pass_td_features, target_col, model_name
+                passing_df, pass_td_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -538,7 +463,7 @@ def train_all_models():
             model_name = f'rushing_yards_{line_type}'
 
             model, metrics = train_prop_model(
-                rushing_df, rush_features, target_col, model_name
+                rushing_df, rush_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -566,7 +491,7 @@ def train_all_models():
             model_name = f'rushing_tds_{line_type}'
 
             model, metrics = train_prop_model(
-                rushing_df, rush_td_features, target_col, model_name
+                rushing_df, rush_td_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -592,7 +517,7 @@ def train_all_models():
             model_name = f'receiving_yards_{line_type}'
 
             model, metrics = train_prop_model(
-                receiving_df, rec_features, target_col, model_name
+                receiving_df, rec_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -620,7 +545,7 @@ def train_all_models():
             model_name = f'receiving_tds_{line_type}'
 
             model, metrics = train_prop_model(
-                receiving_df, rec_td_features, target_col, model_name
+                receiving_df, rec_td_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)
@@ -648,7 +573,7 @@ def train_all_models():
             model_name = f'receptions_{line_type}'
 
             model, metrics = train_prop_model(
-                receiving_df, rec_features, target_col, model_name
+                receiving_df, rec_features, target_col, model_name, contract
             )
             if metrics:
                 all_metrics.append(metrics)

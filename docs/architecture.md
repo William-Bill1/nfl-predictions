@@ -392,26 +392,150 @@ an authoritative final status, so they count only when corroborated (see
 prediction time are still unversioned (model provenance, below). The
 manifest is replaced with the stats but is not crash-atomic, like the CSVs.
 
+**Stage 3 train/serve parity (code done; generation stays blocked).**
+
+*Mismatches found (October 2026).* Training used each stored stats row's own
+features; prediction rebuilt them differently:
+- **Rolling stats:** prediction reused the player's latest stored row, whose
+  L3/L5/L10 exclude that latest game, so they were one game stale. On the
+  2025 rows of a local rebuild, L3 differed from training on about 95%.
+- **`days_rest`:** prediction used (latest game date - now) clamped to
+  1-14, so it was always 1. Training uses the gap to the previous
+  appearance, capped at 21.
+- **`is_home`:** prediction took it from the prediction schedule's team
+  order, with no unique-game check. Training uses the unique
+  `nfl_games_historical.csv` game.
+- **Player identity:** prediction matched history, tier and position by
+  short name (and team). Short names aren't unique: 4/40/64 names are shared
+  by more than one player ID in passing/rushing/receiving. The team filter
+  also lost players after a trade (28/75/119 such 2025 rows).
+- **Feature lists:** training built them by silently skipping absent
+  columns (receiving `target_share` was skipped). Prediction swallowed any
+  model-input error with "Prediction failed" and moved on.
+- **Parsing:** pandas' default CSV float parser is not exactly round-trip,
+  so stored features could differ from recomputed ones in the last digit.
+
+*Design (`player_props/features.py`):*
+- **One definition:** `MODEL_FEATURES` gives the exact, ordered inputs per
+  prop type. They are the names the committed models were trained on, and
+  `target_share` is deliberately excluded.
+- **Training rows** are the Stage 1 stats rows (`features.training_rows`).
+- **Prediction rows:** `features.inference_rows` appends the target game to
+  the player's eligible history and runs the same Stage 1 functions:
+  `calculate_rolling_averages` (exponential weighting of strictly earlier
+  appearances, by date then `game_id`), `derive_days_rest` and
+  `derive_is_home`. A stored historical game rebuilt this way equals its
+  training row exactly.
+- **Eligible history** for a target game is the player's appearances in
+  that stat table, by player ID, on every team and season, dated strictly
+  before the target game. For prediction this is Stage 2's feature source:
+  completed games before the target week, dated before its first game. A
+  result already recorded in the target week (a Thursday game) never enters
+  that week's features, and history containing the target game itself is
+  refused.
+- **History is checked before any feature is computed**
+  (`features.history_problems`), and failures raise:
+  - a repeated player-game row (it would be averaged twice);
+  - rows of one game disagreeing on season, week or date, or not naming the
+    same two teams as team and opponent;
+  - a player in two games on one date;
+  - missing identity or date values, or missing columns.
+
+  Nothing is deduplicated or summed. Appearances on other teams and in other
+  seasons are valid and kept.
+- **`days_rest`:** calendar days from the previous appearance in that table
+  to the target game, capped at 21. A first-ever appearance gets 7.
+- **`is_home`:** the target game must resolve to exactly one schedule game
+  (`features.resolve_game`), and the team must be one side of it. Missing,
+  duplicate or conflicting evidence raises.
+- **No history:** a player-game with no earlier appearance in the table has
+  nothing to average. It is excluded from training and from prediction alike,
+  and counted. A row with only some rolling values breaks the Stage 1
+  contract and raises.
+- **Input checks:** `features.model_matrix` builds the exact model input.
+  It rejects missing or duplicated columns, non-numeric, boolean or
+  non-finite values, `is_home` outside 0/1, and `days_rest` outside 1-21.
+  Prediction feature errors stop the whole run before anything is written.
+- **Player identity:** stable `player_id` for history, tiers and position
+  (`players.csv` `gsis_id`). A recent player whose latest appearance was for
+  another team is excluded and reported: the stats can't show his current
+  team, and a trade after his last game isn't visible without rosters.
+- **Parsing:** stats are read with round-trip float parsing
+  (`aggregators.read_stats_csv`) on both paths.
+
+*Compatibility boundary:*
+- **The contract:** `FEATURE_CONTRACT` = `FEATURE_SCHEMA_VERSION`
+  (`props-features-1`) plus Stage 1's `FEATURE_DEFINITION`.
+- **Training** records the contract, the exact feature list and the stats
+  manifest hash in `model_metrics.json`. It does so only when the stats it
+  trains on have a valid Stage 2 manifest; otherwise it records none.
+- **Prediction** loads a model only when all three of these hold:
+  - its recorded contract matches;
+  - its recorded feature list is an explicit list of unique names in exactly
+    `MODEL_FEATURES` order (a missing, null, non-list, repeated or reordered
+    list is refused);
+  - the booster's own feature names agree.
+
+  Correct booster names alone are not enough. Otherwise it refuses the model
+  and reports why, and with no usable model it exits 1 before writing.
+- **The committed models** were trained before Stage 3 on the January
+  features, so all of them are refused. No contract is created for them,
+  and generation stays blocked (Stage 2 blocks it first).
+
+*Offline reconciliation:* a local rebuild was compared week by week, using
+the Stage 2 cutoff for each week's history.
+- 42,924 player-game rows across all three tables were rebuilt through
+  `inference_rows`: 612,606 values (rolling stats, `is_home`, `days_rest`),
+  with 0 differing.
+- 2,283 first appearances were excluded on both paths.
+- The local source has no player with two games in one week, so the Stage 2
+  week cutoff and "strictly before the game" give the same history there.
+
+*Effect on nightly retraining.* This is also a training change.
+`train_models.py --skip-aggregation` → `models.train_all_models` now:
+- **Builds training rows explicitly** from `MODEL_FEATURES` via
+  `features.training_rows`, instead of dropping NaN rows and silently
+  skipping absent columns. On the current CSVs every prop type trains on
+  exactly the same rows as before (verified read-only: 3,888 / 13,184 /
+  25,827).
+- **Reads the stats with exact float parsing.** Some feature values differ
+  from the old parse by at most about 6e-14, so a retrained model may differ
+  marginally where a split threshold falls in between. Not measured: no
+  retrain was run.
+- **Fails instead of skipping** when a feature column is missing, a row has
+  only some rolling values, or a value is non-finite or out of range. The
+  step has `continue-on-error`, so the run continues with whatever models
+  are present.
+- **Records `features` and `feature_contract`** in `model_metrics.json`. On
+  the current stats (no manifest) the contract is null and a warning is
+  printed, so the retrained models are refused at prediction. Generation is
+  already blocked by Stage 2.
+
+*Remaining incompatibilities (not features):*
+- **Ensemble:** training metrics are for an XGBoost + LightGBM average, but
+  prediction uses XGBoost only, and no LightGBM files are committed.
+- **Tier and line:** tier selection (raw last-8 average) and the
+  forced-OVER/UNDER clamps happen only at prediction.
+- **Adjustments:** injury and weather adjustments are applied after the
+  model.
+- **No accuracy claim:** parity makes the inputs consistent; it is not
+  evidence that predictions are better.
+
 **Remaining stages (not implemented):**
-2. **Source refresh.** Give the runner a complete source (it lacks 2025
-   today), rebuild the stats with their manifest from it, and record the
-   manifest's hashes with each prediction. The Stage 2 freshness and
-   provenance checks are done; they block predictions until this exists.
-3. **Train/serve parity.** One feature builder for training and prediction:
-   - compute prediction-time `days_rest` from the upcoming game date and the
-     player's latest appearance, or drop the feature;
-   - match the rolling definition the models are trained on;
-   - decide on `target_share` explicitly;
-   - add a test that the prediction path reproduces the training row for past
-     games.
+2. **Complete source refresh.** Give the runner a complete source (it lacks
+   2025 today), rebuild the stats with their manifest from it, and record
+   the manifest's hashes with each prediction. The Stage 2 checks block
+   predictions until this exists.
 4. **Model provenance.** Save or commit the models the nightly run actually
-   uses, with a manifest (data checksums, feature list, code SHA, training
-   window, metrics), and refuse to predict on a mismatch.
-5. **Retraining.** Retrain on the rebuilt features only after stages 2-4.
-6. **Leakage-safe evaluation.** Score the held-out season, comparing with and
-   without `days_rest` and the real `is_home`, then require prospective frozen
-   weeks before removing the containment notice. No accuracy improvement is
-   claimed until then.
+   uses, with a manifest (data and stats-manifest hashes, the Stage 3
+   feature contract, code SHA, training window, metrics). Refuse to predict
+   on a mismatch, and settle the XGBoost-only vs ensemble difference.
+5. **Retraining.** Retrain on the rebuilt, manifested features only after
+   stages 2 and 4, so the models carry the Stage 3 contract.
+6. **Leakage-safe and prospective evaluation.** Score the held-out season,
+   comparing with and without `days_rest` and the real `is_home`. Then
+   require prospective frozen weeks before removing the containment notice.
+   No accuracy improvement is claimed until then, including from parity.
 
 **Real market lines** (`player_props/market_odds.py`, live since `ODDS_API_KEY`
 was added 2026-09-16): pulls DK/FanDuel lines for the four reliable prop
