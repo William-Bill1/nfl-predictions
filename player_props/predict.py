@@ -4,6 +4,7 @@ Generate prop predictions for upcoming NFL games using trained XGBoost models.
 """
 import argparse
 import os
+import sys
 from functools import lru_cache
 import pandas as pd
 import numpy as np
@@ -25,6 +26,7 @@ try:
     from .injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from .weather import get_weather_for_game, adjust_for_weather
     from .market_odds import fetch_market_odds, find_market_line, attach_market_odds
+    from .provenance import check_inputs, format_report
 except ImportError:
     # Fallback for direct execution
     import sys
@@ -33,6 +35,7 @@ except ImportError:
     from injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
     from weather import get_weather_for_game, adjust_for_weather
     from market_odds import fetch_market_odds, find_market_line, attach_market_odds
+    from provenance import check_inputs, format_report
 
 # ============================================================================
 # CONFIGURATION
@@ -1042,6 +1045,13 @@ def generate_predictions(season=None, week=None, freeze=True,
     default, but market_odds.fetch_market_odds() is itself a no-op unless
     ODDS_API_KEY is set, so this stays a true no-cost no-op everywhere the key
     isn't configured. See docs/ODDS_API_INTEGRATION_PLAN.md.
+
+    Before anything is fetched or written, provenance.check_inputs must pass
+    for the target week: the stats must match their provenance manifest and
+    cover every earlier completed game. Otherwise this returns 1 and leaves
+    every existing predictions file untouched. Features come only from games
+    before the target week. See docs/architecture.md ("Stage 2 freshness and
+    provenance").
     """
     print("=" * 70)
     print("🎯 NFL Player Props Prediction Pipeline")
@@ -1054,8 +1064,26 @@ def generate_predictions(season=None, week=None, freeze=True,
     if schedule is None or schedule.empty:
         print("❌ No games to predict")
         return
-    
-    all_stats = load_player_stats()
+
+    resolved_season = int(schedule['season'].dropna().iloc[0]) if 'season' in schedule.columns and schedule['season'].notna().any() else (season or upcoming_or_current_season())
+    resolved_week = int(schedule['week'].dropna().iloc[0])
+
+    # Freshness + provenance gate (read-only). Nothing below runs, and no
+    # predictions file is touched, unless it passes.
+    try:
+        check = check_inputs(resolved_season, resolved_week, DATA_DIR,
+                             prediction_matchups=set(zip(schedule['home_team'], schedule['away_team'])))
+    except Exception as exc:  # noqa: BLE001 - an unfinished check is a failed check
+        print(f"❌ The player-prop input check could not complete ({type(exc).__name__}: {exc}) - "
+              f"no predictions written; existing files are unchanged.")
+        return 1
+    print(format_report(check))
+    if not check.ok:
+        print("❌ Player-prop inputs are not verified fresh for this week - no predictions "
+              "written; existing files are unchanged.")
+        return 1
+    # Only rows from completed games before the target week.
+    all_stats = check.feature_tables
     models = load_models()
 
     if not models:
@@ -1065,8 +1093,6 @@ def generate_predictions(season=None, week=None, freeze=True,
     # Real DK/FanDuel lines for the reliable prop types, fetched once for the
     # whole week (not per game). No-op (empty DataFrame) unless ODDS_API_KEY
     # is set - see market_odds.py.
-    resolved_season = int(schedule['season'].dropna().iloc[0]) if 'season' in schedule.columns and schedule['season'].notna().any() else (season or upcoming_or_current_season())
-    resolved_week = int(schedule['week'].dropna().iloc[0])
     market_odds_df = (
         pd.DataFrame() if skip_market_odds
         else fetch_market_odds(resolved_season, resolved_week, schedule)
@@ -1160,8 +1186,8 @@ if __name__ == '__main__':
     ap.add_argument('--no-market-odds', action='store_true',
                     help="skip fetching real DK/FanDuel prop lines (also a no-op if ODDS_API_KEY is unset)")
     args = ap.parse_args()
-    generate_predictions(
+    sys.exit(generate_predictions(
         season=args.season, week=args.week, freeze=not args.no_freeze,
         skip_injuries=args.no_injuries, skip_weather=args.no_weather,
         skip_market_odds=args.no_market_odds,
-    )
+    ) or 0)

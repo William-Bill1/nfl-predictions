@@ -8,6 +8,45 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 2 freshness and provenance**
+  (`player_props/provenance.py`, `predict.py`, `aggregators.py`,
+  `train_models.py`, `backtest.py`). Code only: no data refreshed, no stats
+  rebuilt in production, no model retrained; the containment notice stays.
+  - **Found:** the nightly runner's play-by-play is 2020-2024 plus 2026, with
+    no 2025, and nothing nightly reads it. The committed stats CSVs end on
+    2026-01-04 but miss BAL@PIT from that day, the 2025 playoffs and all of
+    2026. `pbp_metadata.json` claims "2020-2026".
+  - **Source observation:** the actual seasons, games, dates, per-game
+    `END GAME` scores and SHA-256 of the play-by-play content, with the time
+    it was read. Modification times and metadata are not used.
+  - **Manifest:** `player_props_stats_manifest.json` is written with the
+    three stats CSVs, in the same rollback set. It links each file's hash and
+    coverage to the source, the aggregation code revision and the feature
+    definition. The existing CSVs have no manifest and stay unverified.
+    Malformed or incomplete manifests (any nested structure, hash, timestamp
+    or coverage field) are reported failures, not tracebacks.
+  - **Freshness policy:** for a target week, every completed earlier game
+    (this season, last season including its playoffs, and earlier seasons in
+    the stats) must be in all three tables, with rows for both teams.
+    Missing or ambiguous completion evidence fails. Rows from the target
+    week or later are removed from the feature source.
+  - **Completed** means all of these hold:
+    - whole, possible scores, not 0-0;
+    - a recorded result and total that agree with the scores;
+    - dated before today in Toronto;
+    - the source's `END GAME` play shows the same score.
+
+    Recorded schedule scores alone are not treated as a final status.
+  - **Command:** `python player_props/provenance.py` (read-only; exit 1 when
+    freshness or provenance can't be established).
+  - **Gate:** `predict.py` runs the check first and exits 1 without touching
+    any predictions file when it fails. With the current files it fails, so
+    nightly prop predictions stop being refreshed until the stats are rebuilt.
+  - **Backtest:** a predictions file is scored only when every row's week
+    and season equal the requested ones. Files that lack the columns, are
+    empty, or hold mixed or other weeks are refused; the file name alone
+    proves nothing.
+
 - **Player props: Stage 1 feature generation** (`player_props/aggregators.py`,
   `player_props/train_models.py`). Code only: no stats were rebuilt in
   production, no model was retrained, and the containment notice stays.

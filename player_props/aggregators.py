@@ -10,15 +10,17 @@ Usage:
 
 Persisted stats (build_player_stats -> write_player_stats) carry the matchup
 features, are validated before writing, and are written atomically; see
-docs/architecture.md ("Stage 1 feature generation").
+docs/architecture.md ("Stage 1 feature generation"). With a provenance
+manifest (player_props/provenance.py) the manifest is written in the same set.
 """
+import json
 import os
 import shutil
 import tempfile
 
 import pandas as pd
 import numpy as np
-from typing import Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent.parent / 'data_files'
@@ -50,6 +52,12 @@ ROLLING_STATS = {
     'receiving': ['receiving_yards', 'receptions', 'rec_tds', 'targets'],
 }
 MATCHUP_COLUMNS = ['is_home', 'days_rest']
+MANIFEST_FILE = 'player_props_stats_manifest.json'
+# Names how the persisted features are computed (the rolling, days_rest and
+# is_home definitions below). It is recorded in the provenance manifest; change
+# it whenever a feature's meaning changes, so stats built under the old
+# definition stop validating.
+FEATURE_DEFINITION = 'stage1-v1'
 
 
 class FeatureValidationError(ValueError):
@@ -552,8 +560,16 @@ class PersistenceRollbackError(RuntimeError):
 
 
 def write_player_stats(tables: Dict[str, pd.DataFrame], out_dir: Path | str,
-                       windows: List[int] = ROLLING_WINDOWS) -> Dict[str, Path]:
+                       windows: List[int] = ROLLING_WINDOWS,
+                       manifest_for: Optional[Callable[[Dict[str, Path]], dict]] = None
+                       ) -> Dict[str, Path]:
     """Validate every table, then replace the three stats files as a set.
+
+    ``manifest_for`` (see provenance.stats_manifest) is called with the
+    temporary stats files once they are written; the manifest it returns is
+    written as MANIFEST_FILE and replaced in the same set, so it is restored
+    or removed with them. Without it no manifest is written, and an existing
+    one no longer matches the new files.
 
     1. Every table is validated first; any problem raises
        FeatureValidationError and nothing is written.
@@ -578,7 +594,10 @@ def write_player_stats(tables: Dict[str, pd.DataFrame], out_dir: Path | str,
         raise FeatureValidationError(problems)
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
-    dests = {s: out_dir / name for s, name in STATS_FILES.items()}
+    names = dict(STATS_FILES)
+    if manifest_for is not None:
+        names['manifest'] = MANIFEST_FILE
+    dests = {s: out_dir / name for s, name in names.items()}
     temps: Dict[str, Path] = {}
     backups: Dict[Path, Path] = {}       # destination -> backup of its previous content
     keep_backups = False
@@ -588,6 +607,12 @@ def write_player_stats(tables: Dict[str, pd.DataFrame], out_dir: Path | str,
             os.close(fd)
             temps[stat_type] = Path(tmp)
             tables[stat_type].to_csv(tmp, index=False)
+        if manifest_for is not None:
+            manifest = manifest_for({s: temps[s] for s in STATS_FILES})
+            fd, tmp = tempfile.mkstemp(dir=out_dir, prefix=f'.{MANIFEST_FILE}.', suffix='.tmp')
+            os.close(fd)
+            temps['manifest'] = Path(tmp)
+            Path(tmp).write_text(json.dumps(manifest, indent=2), encoding='utf-8')
         for stat_type, dest in dests.items():
             if dest.exists():
                 fd, bak = tempfile.mkstemp(dir=out_dir, prefix=f'.{dest.name}.', suffix='.bak')
@@ -636,6 +661,7 @@ def aggregate_all_stats(
     rolling_windows: List[int] = [3, 5, 10],
     save_to_dir: Optional[Path] = None,
     schedule: Optional[pd.DataFrame] = None,
+    source: Optional[dict] = None,
 ) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """
     Aggregate all player stats, calculate rolling averages and matchup features.
@@ -645,6 +671,8 @@ def aggregate_all_stats(
         rolling_windows: Window sizes for rolling averages
         save_to_dir: If provided, validate and atomically save the stats there
         schedule: game schedule for is_home (default: data_files/nfl_games_historical.csv)
+        source: observation of the play-by-play (provenance.read_source); when
+            saving, a provenance manifest is written with the stats
 
     Returns:
         Tuple of (passing_stats, rushing_stats, receiving_stats)
@@ -659,8 +687,17 @@ def aggregate_all_stats(
               f"{report['excluded_plays']} plays excluded, {report['name_merges']} name merges")
 
     if save_to_dir:
-        for stat_type, path in write_player_stats(tables, save_to_dir, rolling_windows).items():
-            print(f"💾 Saved {path.name} ({len(tables[stat_type]):,} rows)")
+        manifest_for = None
+        if source is not None:
+            from player_props.provenance import stats_manifest
+            manifest_for = stats_manifest(source, rolling_windows)
+        written = write_player_stats(tables, save_to_dir, rolling_windows, manifest_for)
+        for stat_type in STATS_FILES:
+            print(f"💾 Saved {written[stat_type].name} ({len(tables[stat_type]):,} rows)")
+        if 'manifest' in written:
+            print(f"💾 Saved {written['manifest'].name}")
+        else:
+            print("⚠️  No provenance manifest written (no source observation); the stats are unverified")
 
     print("\n✅ All stats aggregated successfully!")
 
@@ -671,7 +708,10 @@ def aggregate_all_stats(
 if __name__ == '__main__':
     import sys
     from pathlib import Path
-    
+
+    sys.path.insert(0, str(Path(__file__).parent.parent))
+    from player_props.provenance import read_source
+
     print("🏈 NFL Player Stats Aggregator")
     print("=" * 60)
     
@@ -685,14 +725,15 @@ if __name__ == '__main__':
         sys.exit(1)
     
     print(f"\n📂 Loading {pbp_file.name}...")
-    pbp = pd.read_csv(pbp_file, compression='gzip', sep='\t', low_memory=False)
+    pbp, source = read_source(pbp_file)
     print(f"✅ Loaded {len(pbp):,} plays from {pbp['season'].min()}-{pbp['season'].max()}")
-    
+
     # Aggregate all stats
     passing, rushing, receiving = aggregate_all_stats(
         pbp,
         rolling_windows=[3, 5, 10],
-        save_to_dir=DATA_DIR
+        save_to_dir=DATA_DIR,
+        source=source,
     )
     
     print("\n" + "=" * 60)

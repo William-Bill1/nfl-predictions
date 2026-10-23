@@ -251,12 +251,152 @@ committed models were trained on the January features (simple rolling means,
 random `is_home`, constant `days_rest`), and the rebuilt rolling values differ
 on roughly 84-88% of rows.
 
+**Stage 2 freshness and provenance (code done; blocks nightly prop
+predictions until the stats are rebuilt).**
+
+*Source chain as found (October 2026):*
+- **Nightly runner:** checks out without LFS, so
+  `nfl_play_by_play_historical.csv.gz` is only a pointer.
+  `update_pbp_smart.py` then combines the cached 2020-2024 file with a fresh
+  download of the current season (2026), so **the runner's file has no 2025
+  season**. Its committed `pbp_metadata.json` (262,769 plays) is consistent
+  with that, but says "2020-2026" and records only the run time. The file
+  itself is never committed (the commit step adds `data_files/*.csv` and
+  `*.json`).
+- **Nothing in the nightly job reads that play-by-play.**
+  `train_models.py --skip-aggregation` trains from the committed stats CSVs,
+  and the retrained models stay on the runner. `predict.py` uses those
+  models and the same CSVs, and its predictions files are committed.
+- **The committed stats CSVs** (January 2026 build, no manifest) end on
+  2026-01-04 but miss BAL@PIT from that same day and all 13 games of the 2025
+  playoffs, besides every 2026 game.
+- **This checkout's play-by-play file** (Git LFS) is a different file:
+  seasons 2020-2025, 292,670 plays, 1,680 games, last game 2026-01-04.
+
+*What Stage 2 adds (`player_props/provenance.py`):*
+- **Source observation:** `read_source` reads the play-by-play once and
+  records the content's SHA-256, size, actual seasons, game counts and date
+  range, plus `observed_at` (when it was read). It also records, per game,
+  whether the `END GAME` play is present and its score
+  (`backtest.pbp_game_completion`). File modification times and
+  `pbp_metadata.json` are not used, and no generation time is claimed for a
+  file.
+- **Manifest:** `data_files/player_props_stats_manifest.json`, written by
+  `write_player_stats(..., manifest_for=stats_manifest(source))` in the same
+  replace-and-rollback set as the three CSVs. It records each file's hash,
+  columns and actual coverage; the source observation; the aggregation code
+  (`aggregators.py` hash, git commit and whether that file had uncommitted
+  changes); `FEATURE_DEFINITION`; and the rolling windows. Both rebuild
+  entry points write it. The existing CSVs have none, so they are
+  unverified, and none is created for them.
+
+*Freshness policy for target season S, week W.* The game schedule
+(`nfl_games_historical.csv`, read-only) records results, but they are not
+an authoritative final status, so they count only when corroborated (see
+"Completed" below).
+- **Cutoff:** the date of the target week's first game. The feature source
+  is only stats rows from completed games with (season, week) before (S, W)
+  *and* dated before the cutoff. Rows from the target week (for example a
+  Thursday game already played) or later are removed and counted.
+- **Expected games:** every scheduled game before the target week, in season
+  S, season S-1 (including its playoffs) and every earlier season the stats
+  contain.
+- **Completed** (`provenance.completion_status`), checked in this order.
+  Every condition must hold:
+  - both scores are present, whole, non-negative and possible (a score of 1
+    is impossible);
+  - the scores are not 0-0, which is treated as a placeholder (unplayed rows
+    are filled with 0 elsewhere);
+  - the recorded `result` and `total` equal home - away and home + away;
+  - the game is dated before today in Toronto;
+  - the play-by-play the stats were built from has that game's `END GAME`
+    play with the same score.
+
+  These follow the reviewed conventions already in use: `total > 0` and
+  `gameday < today` (betting log, weekly backtest), the journal's
+  "consistent integer scores, not 0-0, game day before today", and the
+  weekly backtest's `END GAME` rule. Without a valid manifest nothing can be
+  corroborated, so no game counts as completed.
+- **Game-level coverage:** each completed expected game must appear in all
+  three stats tables, with rows for both teams. The latest date alone proves
+  nothing; a recent maximum date can hide missing games.
+- **Reported, never guessed** (each fails the check):
+  - an earlier game dated before the cutoff that isn't completed, with the
+    reason: no recorded score (postponed, in progress or not yet recorded),
+    one score, invalid scores, 0-0, a missing or inconsistent result/total,
+    dated today or later, or no matching `END GAME` play in the source;
+  - an invalid date;
+  - a duplicate `game_id`, or a team twice in one week;
+  - no target-week games, or a prediction schedule that disagrees with the
+    game schedule;
+  - stats games missing from the schedule;
+  - stats rows for a game without completion evidence.
+
+  A game moved to on or after the cutoff is not expected, and this is noted.
+- **Provenance:** the manifest must exist and parse, and its structure is
+  checked before any value is used. This covers the source, its coverage
+  and per-game `END GAME` evidence, the aggregation code, and each stats
+  entry. It also covers 64-character hashes, time-zone-aware timestamps
+  that aren't in the future (and source read before stats written), and
+  coverage fields. A malformed manifest is a reported failure, never a
+  traceback.
+
+  Every stats file must match its recorded hash, size and coverage. The
+  columns, feature definition and rolling windows must match the current
+  code. A changed `aggregators.py`, a changed source file or a build from
+  uncommitted code is reported as a note.
+- **No substitution:** nothing falls back to another season, the latest
+  feed or older stats. Week 1 is valid only with the whole previous season.
+
+*Enforcement:*
+- **Command:** `python player_props/provenance.py [--season S --week W]
+  [--data-dir DIR]`. It is read-only, prints the diagnostics, and exits 0
+  (valid), 1 (not established) or 2 (could not run). Without a season and
+  week it uses the week `predict.py` would target.
+- **Prediction gate:** `predict.generate_predictions` runs the same check for
+  its target week before loading models, fetching odds or writing anything.
+  On failure, including an error inside the check, it returns 1 (the
+  script exits 1). Every predictions file and frozen snapshot is left
+  byte-identical. On success the models see only the feature source.
+- **Backtest guard:** the weekly backtest matches predictions on player name
+  only. When a week had no frozen snapshot, it used to fall back to
+  `player_props_predictions.csv` whatever week that held.
+  - Now the file it picks (frozen snapshot or fallback) must have `week` and
+    `season` columns, at least one row, and every row equal to the requested
+    week and season. Anything else is refused.
+  - A file name alone is not proof, and the committed snapshots for Weeks
+    1-7 2026 all pass.
+
+*Effect on the nightly job:*
+- The "Freeze player-prop predictions" step fails (exit 1) with the
+  diagnostics in its log. It has `continue-on-error`, so the job continues
+  and the run is not marked failed.
+- No new `player_props_predictions.csv` or weekly snapshot is written, so
+  the existing files (Week 7 2026 and earlier) stay as committed and keep
+  their containment notice.
+- Model retraining still runs (unchanged), and so do the spread steps.
+- Weekly backtests for Week 8 onward report "no predictions" instead of
+  scoring Week 7's predictions.
+- This holds until the stats are rebuilt from a complete source with a
+  manifest (source refresh, below). Local verification against these files
+  showed: no manifest, so no game's completion can be corroborated; 108
+  games with recorded results missing for Week 8 (14 from 2025, 94 from
+  2026); and Week 7's games not yet scored.
+
+*Offline rebuild with manifest (local source, temporary directory):*
+- **Passes:** 2025 Weeks 18 and 19, the latest weeks this source supports.
+- **Fails 2026 Week 1:** the 13 playoff games are missing.
+- **Fails 2026 Weeks 7 and 8:** 106 and 107 missing games.
+
+*Limits:* this checks the stats, not the models: the models used at
+prediction time are still unversioned (model provenance, below). The
+manifest is replaced with the stats but is not crash-atomic, like the CSVs.
+
 **Remaining stages (not implemented):**
-2. **Source refresh and freshness checks.** Persist or refresh the
-   play-by-play data the nightly job fetches (today it isn't committed and
-   the metadata overstates coverage). Rebuild the stats nightly, and before
-   predicting, warn or fail when the latest stats date is behind the target
-   week; record that date and the checksums with each prediction.
+2. **Source refresh.** Give the runner a complete source (it lacks 2025
+   today), rebuild the stats with their manifest from it, and record the
+   manifest's hashes with each prediction. The Stage 2 freshness and
+   provenance checks are done; they block predictions until this exists.
 3. **Train/serve parity.** One feature builder for training and prediction:
    - compute prediction-time `days_rest` from the upcoming game date and the
      player's latest appearance, or drop the feature;

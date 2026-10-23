@@ -258,9 +258,9 @@ def _collect(monkeypatch, pbp, week=3, season=2026):
     return actuals
 
 
-def _write_prop_predictions(data_dir):
+def _write_prop_predictions(data_dir, week=3):
     data_dir.mkdir(exist_ok=True)
-    pd.DataFrame({"player_name": ["QB 0"], "prop_type": ["passing_yards"],
+    pd.DataFrame({"week": [week], "season": [2026], "player_name": ["QB 0"], "prop_type": ["passing_yards"],
                   "line_value": [50.5], "recommendation": ["OVER"],
                   "confidence": [0.7]}).to_csv(data_dir / "player_props_predictions.csv", index=False)
 
@@ -432,6 +432,7 @@ class TestAccuracyCache:
         assert backtest.load_accuracy_results_for_week(3, 2026) is None
 
     def test_partly_played_week_is_not_saved(self, workdir, monkeypatch):
+        _write_prop_predictions(workdir, week=4)
         result = self._run(monkeypatch, COMPLETE, week=4)
         assert result["final"] is False
         assert list(workdir.glob("accuracy_results_*.json")) == []
