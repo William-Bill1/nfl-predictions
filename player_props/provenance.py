@@ -42,10 +42,12 @@ import pandas as pd
 try:
     from player_props.aggregators import (
         DATA_DIR, FEATURE_DEFINITION, ROLLING_WINDOWS, SCHEDULE_FILE, STATS_FILES, output_columns,
+        read_stats_csv,
     )
 except ImportError:  # run as a script from inside player_props/
     from aggregators import (
         DATA_DIR, FEATURE_DEFINITION, ROLLING_WINDOWS, SCHEDULE_FILE, STATS_FILES, output_columns,
+        read_stats_csv,
     )
 
 ROOT = Path(__file__).parent.parent
@@ -178,7 +180,7 @@ def stats_manifest(source: dict, windows: List[int] = ROLLING_WINDOWS,
         stats = {}
         for stat_type, name in STATS_FILES.items():
             data = Path(paths[stat_type]).read_bytes()
-            df = pd.read_csv(io.BytesIO(data))
+            df = read_stats_csv(io.BytesIO(data))
             stats[stat_type] = {'file': name, 'sha256': _sha256(data), 'bytes': len(data),
                                 'columns': list(df.columns), 'coverage': content_coverage(df)}
         return {'kind': MANIFEST_KIND, 'manifest_version': MANIFEST_VERSION,
@@ -349,7 +351,7 @@ def _read_stats(data_dir: Path) -> Tuple[Dict[str, Optional[bytes]], Dict[str, p
         path = data_dir / name
         try:
             raw[stat_type] = path.read_bytes()
-            tables[stat_type] = pd.read_csv(io.BytesIO(raw[stat_type]))
+            tables[stat_type] = read_stats_csv(io.BytesIO(raw[stat_type]))
         except FileNotFoundError:
             raw[stat_type] = None
             problems.append(f"{name} is missing")
