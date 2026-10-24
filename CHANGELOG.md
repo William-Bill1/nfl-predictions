@@ -8,6 +8,32 @@ bottom.
 
 ## October 2026
 
+- **Player props: Pick 6 calculator wording** (`pages/2_Player_Props.py`,
+  `player_props/pick6.py`). The calculator has scored no model since Stage 4;
+  its wording now says so.
+  - **Wording:** the percentage is labelled **Smoothed historical hit rate**
+    (was "Model output"). It is explained as Laplace-smoothed from historical
+    games ((over + 1) / (games + 2)), not a model prediction, a calibrated
+    win probability or a betting recommendation.
+  - **Counts:** the card shows the sample, split into games strictly above,
+    strictly below and exactly at the line, plus the observed games behind
+    the side shown and that side's formula with its numbers.
+  - **Equality and ties:** with a whole-number line, games exactly at the line
+    still count as not over (unchanged), so the other side is labelled
+    **NOT OVER (below or equal)** with (games not over + 1) / (games + 2).
+    Before, ten games all equal to the line showed "91.7% UNDER". It reads
+    "UNDER" only when no game equalled the line.
+    - A note says this counting convention does not describe sportsbook
+      settlement rules; check the operator's rules separately.
+    - Tied sides are flagged, and the heading is now "Side with the higher
+      smoothed rate".
+  - **Removed:** the intro's "model's prediction", the "Recommendation"
+    heading, and the obsolete Pro Tips (model tier selection, weighting
+    claims, defense rank). The how-to guide's model example is replaced.
+  - **Unchanged:** the calculation (now `pick6.historical_hit_rate`, tested
+    against the original formula), the containment notice and the
+    stale-data warning.
+
 - **Player props: Stage 4 model provenance and consistent scoring**
   (`player_props/model_bundle.py`, `models.py`, `predict.py`, `features.py`,
   `train_models.py`, `containment.py`, `pages/2_Player_Props.py`). Code

@@ -552,7 +552,11 @@ def main():
     # ========================================================================
     with tab2:
         st.subheader("📊 DraftKings Pick 6 - Line Comparison")
-        st.markdown("Enter a player and their DraftKings Pick 6 line to get the model's prediction")
+        from player_props.pick6 import (EXPLANATION as PICK6_EXPLANATION, INTRO as PICK6_INTRO,
+                                        RATE_LABEL as PICK6_RATE_LABEL, SIDE_LABEL as PICK6_SIDE_LABEL,
+                                        counts_text, formula_text, hits_text, historical_hit_rate,
+                                        notes as pick6_notes, side_label)
+        st.markdown(PICK6_INTRO)
         
         
         # Check if we have the necessary data
@@ -745,26 +749,11 @@ def main():
                 # own tier line, not the line entered above. Only the historical hit
                 # rate below is shown.
                 
-                # === HISTORICAL HIT RATE ===
-                total_games = len(recent_games)
-                games_over = len(recent_games[recent_games[stat_col] > dk_line])
-                games_under = total_games - games_over
-                prob_over = (games_over + 1) / (total_games + 2)
-                prob_under = 1 - prob_over
-                prediction_source = "📊 Historical hit rate; no model is scored for an entered line"
-                
-                # Determine recommendation
-                if prob_over >= 0.60:
-                    recommendation = "OVER"
-                    confidence = prob_over
-                elif prob_under >= 0.60:
-                    recommendation = "UNDER"
-                    confidence = prob_under
-                else:
-                    recommendation = "OVER" if prob_over > prob_under else "UNDER"
-                    confidence = max(prob_over, prob_under)
-                # Neutral band (formerly ELITE/STRONG/GOOD/LEAN); not validated confidence.
-                tier = band_label(confidence)
+                # === HISTORICAL HIT RATE (player_props/pick6.py) ===
+                hit = historical_hit_rate(recent_games[stat_col], dk_line)
+                total_games = hit['games']
+                # Neutral band of the smoothed rate; not validated confidence.
+                tier = band_label(hit['rate'])
                 
                 # Display results in a prominent card
                 st.markdown(f"""
@@ -778,15 +767,15 @@ def main():
                             <p style="margin: 0; font-size: 2.5rem; font-weight: bold;">{dk_line}</p>
                         </div>
                         <div style="text-align: right;">
-                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">Recommendation</p>
-                            <p style="margin: 0; font-size: 2.5rem; font-weight: bold;">{recommendation}</p>
+                            <p style="margin: 0; font-size: 0.9rem; opacity: 0.8;">{PICK6_SIDE_LABEL}</p>
+                            <p style="margin: 0; font-size: 2.5rem; font-weight: bold;">{side_label(hit)}</p>
                             <p style="margin: 0.5rem 0 0 0; font-size: 1.2rem;">{tier}</p>
                         </div>
                     </div>
                     <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid rgba(255,255,255,0.2);">
-                        <p style="margin: 0; font-size: 1rem;">Model output: <strong>{confidence:.1%}</strong> ({prediction_source}; not validated betting confidence)</p>
+                        <p style="margin: 0; font-size: 1rem;">{PICK6_RATE_LABEL}: <strong>{hit['rate']:.1%}</strong> {side_label(hit)} ({hits_text(hit)})</p>
                         <p style="margin: 0.5rem 0 0 0; font-size: 0.9rem; opacity: 0.8;">
-                            Historical: {total_games} games ({games_over} over, {games_under} under)
+                            {counts_text(hit)}. {formula_text(hit)}. {PICK6_EXPLANATION} {' '.join(pick6_notes(hit))}
                         </p>
                     </div>
                 </div>
@@ -884,26 +873,29 @@ def main():
                 # Explanation
                 with st.expander("ℹ️ How This Works"):
                     st.markdown(f"""
-                    **📊 Historical Analysis Method:**
-                    - Analyzes {selected_player_full}'s {total_games} games in 2025
-                    - Compares actual performance to line ({dk_line})
-                    - Uses Laplace smoothing for reliability
-                    - No model probability is shown: this calculator has no target game, so
-                      it can't build the model features, and each model is trained for its
+                    **📊 Historical comparison at the entered line:**
+                    - Counts {selected_player_full}'s last {total_games} games in 2025 against
+                      the line ({dk_line}): {counts_text(hit)}
+                    - {PICK6_RATE_LABEL}: for the side shown, {formula_text(hit)}; the over side
+                      is (games above + 1) / (games + 2) and the other side its complement,
+                      (games not over + 1) / (games + 2), so a small sample
+                      doesn't show 0% or 100%
+                    - {PICK6_EXPLANATION}
+                    - No model is scored here: the calculator has no target game, so it
+                      can't build the model features, and each prop model is trained for its
                       own tier line, not the line entered here
                     """)
-                    
+
                     st.markdown("""
                     **Probability Bands:**
-                    - **≥65%, 60–65%, 55–60%, <55%**: bands of the model's (or the
-                      historical hit rate's) probability for the side shown. They are not
-                      validated betting confidence.
+                    - **≥65%, 60–65%, 55–60%, <55%**: bands of the smoothed historical hit
+                      rate for the side shown. They are not validated betting confidence.
 
-                    **Pro Tips:**
-                    - Model auto-selects tier based on season average
-                    - Recent form (L3/L5) weighted heavily
-                    - Check opponent defense rank for full analysis
-                    - Weather/injuries not included in quick calculator
+                    **Limits:**
+                    - Every recent game counts equally; matchup, home/away, rest, weather and
+                      injuries are not considered
+                    - The games come from the stale player statistics described in the notice
+                      at the top of the page
                     """)
             else:
                 st.info(f"No 2025 season data available for {selected_player_full}")
@@ -920,16 +912,18 @@ def main():
                 2. **Select from Results**: Choose the correct player from the dropdown
                 3. **Pick a Stat Category**: The tool auto-suggests categories based on position
                 4. **Enter DraftKings Line**: Input the exact over/under line from DK Pick 6
-                5. **See the Model Output**: the model's OVER/UNDER side and its probability
+                5. **Compare with History**: how often the player's recent games went over or
+                   under that line, with a smoothed historical hit rate
 
                 ### Example:
                 - Player: **Josh Allen**
                 - Category: **Passing Yards**
                 - DK Line: **242.5**
-                - Model output: **OVER 242.5** (60–65% band, 63%)
+                - Result: **OVER**, smoothed historical hit rate 63.6% (6 of 9 games over)
 
-                The output combines recent performance, season averages and hit rates. It is
-                not validated for betting; see the notice at the top of the page.
+                The rate is Laplace-smoothed from historical games. It is not a model
+                prediction, a calibrated win probability or a betting recommendation; see the
+                notice at the top of the page.
                 """)
     
     # ========================================================================
