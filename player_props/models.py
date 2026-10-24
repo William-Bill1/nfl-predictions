@@ -1,26 +1,26 @@
 """
 Player Props XGBoost Models
 Train baseline models for predicting player prop over/under outcomes.
+
+One XGBoost classifier per prop line, scored with model_bundle.score_probabilities
+in evaluation and prediction alike, and published as one verified bundle
+(model_bundle.publish_bundle). See docs/architecture.md ("Stage 4 model provenance").
 """
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, roc_auc_score
+from sklearn.metrics import (accuracy_score, brier_score_loss, f1_score, log_loss, precision_score,
+                             recall_score, roc_auc_score)
 import xgboost as xgb
-try:
-    import lightgbm as lgb
-    LGBM_AVAILABLE = True
-except ImportError:
-    LGBM_AVAILABLE = False
-import json
 import sys
-from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 from player_props.aggregators import read_stats_csv
 from player_props.features import (
-    FEATURE_CONTRACT, FeatureContractError, model_features, model_matrix, training_rows,
+    FEATURE_CONTRACT, PROP_LINES, PROP_STAT, FeatureContractError, model_features, model_matrix,
+    training_rows,
 )
+from player_props.model_bundle import SCORER, publish_bundle, score_probabilities, window
 
 # ============================================================================
 # CONFIGURATION
@@ -28,53 +28,6 @@ from player_props.features import (
 
 DATA_DIR = Path('data_files')
 MODELS_DIR = Path('player_props/models')
-MODELS_DIR.mkdir(exist_ok=True, parents=True)
-
-# Common prop betting lines - UPDATED TO COMPREHENSIVE TIERED SYSTEM
-PROP_LINES = {
-    'passing_yards': {
-        'elite_qb': 275.0,     # For QBs averaging 280+ yards/game (Stafford, Purdy)
-        'star_qb': 250.0,      # For QBs averaging 250-280 yards/game (Burrow, Goff)
-        'good_qb': 225.0,      # For QBs averaging 220-250 yards/game (Maye, Daniels)
-        'starter': 200.0       # For QBs averaging <220 yards/game
-    },
-    'passing_tds': {
-        'elite_qb': 2.5,       # For QBs averaging 2.0+ tds/game (Stafford, Purdy)
-        'star_qb': 1.5,        # For QBs averaging 1.5-2.0 tds/game (Maye, Prescott)
-        'good_qb': 1.5,        # For QBs averaging 1.0-1.5 tds/game (Most QBs)
-        'starter': 0.5         # For QBs averaging <1.0 tds/game
-    },
-    'rushing_yards': {
-        'elite_rb': 55.0,      # For RBs averaging 80+ yards/game (Henry, Barkley)
-        'star_rb': 45.0,       # For RBs averaging 60-80 yards/game (Taylor, Allen)
-        'good_rb': 35.0,       # For RBs averaging 40-60 yards/game (Jacobs, Cook)
-        'starter': 24.0        # For RBs averaging <40 yards/game
-    },
-    'receiving_yards': {
-        'elite_wr': 75.0,      # For WRs averaging 80+ yards/game (Adams, Diggs)
-        'star_wr': 60.0,       # For WRs averaging 60-80 yards/game (Wilson, Lamb)
-        'good_wr': 45.0,       # For WRs averaging 40-60 yards/game (Kraft, Waller)
-        'starter': 27.0        # For WRs averaging <40 yards/game
-    },
-    'rushing_tds': {
-        'elite_rb': 0.5,       # For RBs averaging 1.0+ tds/game (Taylor, Henry)
-        'star_rb': 0.5,        # For RBs averaging 0.7-1.0 tds/game (Allen, Jacobs)
-        'good_rb': 0.5,        # For RBs averaging 0.4-0.7 tds/game (Cook, Charbonnet)
-        'anytime': 0.5         # For RBs averaging <0.4 tds/game
-    },
-    'receiving_tds': {
-        'elite_wr': 0.5,       # For WRs averaging 1.0+ tds/game (Adams)
-        'star_wr': 0.5,        # For WRs averaging 0.7-1.0 tds/game (Wilson, Kraft)
-        'good_wr': 0.5,        # For WRs averaging 0.4-0.7 tds/game (Higgins, Goedert)
-        'anytime': 0.5         # For WRs averaging <0.4 tds/game
-    },
-    'receptions': {
-        'elite_wr': 7.5,       # Elite WRs: 8+ receptions (Adams, Diggs)
-        'star_wr': 5.5,        # Star WRs: 6+ receptions (Wilson, Lamb)
-        'good_wr': 4.5,        # Good WRs: 5+ receptions (Kraft, Waller)
-        'starter': 3.5         # Role players: 4+ receptions
-    }
-}
 
 # Training configuration
 RANDOM_STATE = 42
@@ -88,11 +41,6 @@ RELIABLE_MIN_AUC = 0.58
 RELIABLE_MIN_ACC_EDGE = 0.01   # accuracy must beat the majority-class base rate by this
 TD_NOTE = ("TD props are ~coin-flip out-of-time (all tiers collapse to the same "
            "0.5 line); kept for display only, not a betting signal.")
-
-
-# Longest name first, so 'receiving_tds' isn't taken for 'receiving'.
-MODEL_FEATURES_BY_LEN = sorted(('passing_yards', 'passing_tds', 'rushing_yards', 'rushing_tds',
-                                'receiving_yards', 'receiving_tds', 'receptions'), key=len, reverse=True)
 
 
 def temporal_holdout(df):
@@ -134,26 +82,44 @@ def load_player_stats(stat_type='passing'):
     return df
 
 
-def training_feature_contract(data_dir=None):
-    """The feature contract the stats being trained on can be shown to meet,
-    or None. It is established only from a valid Stage 2 provenance manifest
-    for the stats files (provenance.check_provenance); without one the models
-    are trained but record no contract, so prediction refuses them. Nothing
-    is assumed about stats that can't be verified."""
-    from player_props.provenance import _read_stats, check_provenance, MANIFEST_FILE, _sha256
+def training_inputs(data_dir=None):
+    """(inputs, problems). inputs = {'tables', 'source'} only when the stats
+    files verify against their Stage 2 provenance manifest and use the
+    current feature definition; otherwise (None, reasons).
+
+    The tables are the exact bytes that were verified, so a bundle's
+    training_source hashes describe the data its models were trained on. The
+    training source is recorded on its own; it need not be the latest feature
+    source used at prediction time."""
+    from player_props.provenance import MANIFEST_FILE, _read_stats, _sha256, check_provenance
     data_dir = Path(data_dir or DATA_DIR)
     raw, tables, problems = _read_stats(data_dir)
     more, _, manifest = check_provenance(data_dir, raw, tables)
     problems += more
     if problems or manifest is None:
-        print("⚠️  No feature contract recorded for these models: "
-              + "; ".join(problems or ["no valid provenance manifest"]))
-        return None
+        return None, problems or ["no valid provenance manifest"]
     if manifest['aggregation']['feature_definition'] != FEATURE_CONTRACT['feature_definition']:
-        print("⚠️  No feature contract recorded: the stats use another feature definition")
+        return None, ["the stats use another feature definition"]
+    stats = manifest['stats']
+    source = {
+        'stats_manifest_sha256': _sha256((data_dir / MANIFEST_FILE).read_bytes()),
+        'stats_written_at': manifest['written_at'],
+        'feature_definition': manifest['aggregation']['feature_definition'],
+        'stats_files': {e['file']: e['sha256'] for e in stats.values()},
+        'last_game_date': max(e['coverage']['last_date'] for e in stats.values()),
+        'play_by_play': {k: manifest['source'][k] for k in ('file', 'sha256', 'observed_at')},
+    }
+    return {'tables': tables, 'source': source}, []
+
+
+def training_feature_contract(data_dir=None):
+    """The feature contract the stats being trained on meet, or None (Stage 3
+    helper; training_inputs is what training uses)."""
+    inputs, problems = training_inputs(data_dir)
+    if inputs is None:
+        print("⚠️  No feature contract: " + "; ".join(problems))
         return None
-    return {**FEATURE_CONTRACT,
-            'stats_manifest_sha256': _sha256((data_dir / MANIFEST_FILE).read_bytes())}
+    return {**FEATURE_CONTRACT, 'stats_manifest_sha256': inputs['source']['stats_manifest_sha256']}
 
 
 def create_prop_targets(df, stat_col, line_values):
@@ -233,388 +199,141 @@ def prepare_receptions_training_features(df):
     return _prepare(df, 'receptions')
 
 
-def train_prop_model(df, features, target_col, model_name, contract=None):
+def train_prop_model(df, features, prop_type, line_type, line_value):
     """
-    Train an XGBoost + LightGBM soft-voting ensemble for a specific prop line.
-    Both models are saved; inference averages their predicted probabilities.
+    Train one XGBoost classifier for "stat > line" and evaluate it out of time.
 
-    Args:
-        df: DataFrame with features and target
-        features: List of feature column names
-        target_col: Target column name
-        model_name: Name for saving model (e.g. 'passing_yards_elite_qb')
+    The scorer evaluated is the one prediction serves
+    (model_bundle.score_probabilities on this exact model): there is no
+    ensemble. Rows must come from features.training_rows.
 
-    Returns:
-        Trained XGB model (primary), metrics dict
+    Returns (bundle entry, None) or (None, reason it was skipped). The entry
+    holds the serialised model ('data') and everything the bundle manifest
+    records for it; nothing is written here (see train_all_models).
     """
-    # Exact, validated model input (features.model_matrix): rows were already
-    # limited to players with history; a bad value raises instead of being dropped.
-    prop_type = next(p for p in MODEL_FEATURES_BY_LEN if model_name.startswith(p + '_'))
+    name = f'{prop_type}_{line_type}'
     if list(features) != model_features(prop_type):
-        raise FeatureContractError(f"{model_name}: features {features} != {model_features(prop_type)}")
-    split_cols = [c for c in ('season', 'week') if c in df.columns]
-    df_clean = pd.concat([model_matrix(df, prop_type), df[[target_col] + split_cols]], axis=1)
+        raise FeatureContractError(f"{name}: features {features} != {model_features(prop_type)}")
+    stat_col = PROP_STAT[prop_type][1]
+    X_all = model_matrix(df, prop_type)
+    y_all = (df[stat_col] > line_value).astype(int)
+    meta = df[['season', 'week', 'game_date']]
+    if len(X_all) < 100:
+        return None, f"only {len(X_all)} rows"
 
-    if len(df_clean) < 100:
-        print(f"Warning: Not enough data for {target_col}: {len(df_clean)} rows")
-        return None, None
+    class_dist = y_all.value_counts()
+    print(f"\n{name}: over {class_dist.get(1, 0):,} / under {class_dist.get(0, 0):,}")
+    if min(class_dist.get(0, 0), class_dist.get(1, 0)) / len(y_all) < 0.1:
+        return None, "too imbalanced (under 10% of one class)"
 
-    y = df_clean[target_col]
-
-    # Check class balance
-    class_dist = y.value_counts()
-    print(f"\nTarget distribution for {target_col}:")
-    print(f"   Over (1): {class_dist.get(1, 0):,} ({class_dist.get(1, 0)/len(y)*100:.1f}%)")
-    print(f"   Under (0): {class_dist.get(0, 0):,} ({class_dist.get(0, 0)/len(y)*100:.1f}%)")
-
-    # Skip if too imbalanced (less than 10% of either class)
-    if min(class_dist.get(0, 0), class_dist.get(1, 0)) / len(y) < 0.1:
-        print(f"Warning: Skipping {target_col}: too imbalanced")
-        return None, None
-
-    # Temporal train/test split - hold out the most recent season so the
-    # reported metrics are genuinely out-of-time (the old random split let the
-    # model see games from the same weeks it was scored on).
-    train_df, test_df, holdout_season = temporal_holdout(df_clean)
-    X_train, y_train = train_df[features], train_df[target_col]
-    X_test, y_test = test_df[features], test_df[target_col]
-
+    # Temporal hold-out: train on earlier seasons, evaluate on the latest one.
+    frame = pd.concat([X_all, y_all.rename('_y'), meta], axis=1)
+    train_df, test_df, holdout_season = temporal_holdout(frame)
+    if holdout_season is None:
+        return None, "needs at least two seasons for an out-of-time evaluation"
+    X_train, y_train = train_df[features], train_df['_y']
+    X_test, y_test = test_df[features], test_df['_y']
     if len(X_test) < MIN_TEST_ROWS or y_test.nunique() < 2 or y_train.nunique() < 2:
-        print(f"Warning: Skipping {target_col}: held-out season too small/degenerate "
-              f"({len(X_test)} rows)")
-        return None, None
+        return None, f"held-out season too small or one-class ({len(X_test)} rows)"
 
-    # Calculate scale_pos_weight for imbalanced classes
     scale_pos_weight = (y_train == 0).sum() / max((y_train == 1).sum(), 1)
+    model = xgb.XGBClassifier(
+        n_estimators=100, max_depth=4, learning_rate=0.1,
+        scale_pos_weight=scale_pos_weight, random_state=RANDOM_STATE, eval_metric='logloss')
+    model.fit(X_train, y_train)
 
-    # ------------------------------------------------------------------
-    # XGBoost model
-    # ------------------------------------------------------------------
-    xgb_model = xgb.XGBClassifier(
-        n_estimators=100,
-        max_depth=4,
-        learning_rate=0.1,
-        scale_pos_weight=scale_pos_weight,
-        random_state=RANDOM_STATE,
-        eval_metric='logloss'
-    )
-    xgb_model.fit(X_train, y_train)
-    xgb_proba = xgb_model.predict_proba(X_test)[:, 1]
-
-    # ------------------------------------------------------------------
-    # LightGBM model (optional — falls back to XGB-only if unavailable)
-    # ------------------------------------------------------------------
-    ensemble_proba = xgb_proba
-    if LGBM_AVAILABLE:
-        lgbm_model = lgb.LGBMClassifier(
-            n_estimators=100,
-            max_depth=4,
-            learning_rate=0.1,
-            scale_pos_weight=scale_pos_weight,
-            random_state=RANDOM_STATE,
-            verbosity=-1
-        )
-        lgbm_model.fit(X_train, y_train)
-        lgbm_proba = lgbm_model.predict_proba(X_test)[:, 1]
-        # Soft-vote: equal weight average
-        ensemble_proba = (xgb_proba + lgbm_proba) / 2.0
-        # Persist LGBM model alongside XGB
-        lgbm_path = MODELS_DIR / f'{model_name}_lgbm.txt'
-        lgbm_model.booster_.save_model(str(lgbm_path))
-
-    y_pred = (ensemble_proba >= 0.5).astype(int)
+    # Serialise, reload and score the reloaded model: the metrics describe the
+    # exact bytes the bundle stores and prediction loads.
+    data = bytes(model.get_booster().save_raw('json'))
+    served = xgb.XGBClassifier()
+    served.load_model(bytearray(data))
+    proba = score_probabilities(served, X_test, prop_type)
+    y_pred = (proba >= 0.5).astype(int)
 
     accuracy = float(accuracy_score(y_test, y_pred))
-    roc_auc = float(roc_auc_score(y_test, ensemble_proba))
+    roc_auc = float(roc_auc_score(y_test, proba))
     base_rate = float(max(y_test.mean(), 1 - y_test.mean()))
-    is_td = '_tds_' in model_name
-    reliable = bool(
-        not is_td
-        and roc_auc >= RELIABLE_MIN_AUC
-        and accuracy >= base_rate + RELIABLE_MIN_ACC_EDGE
-    )
-
-    # Metrics computed on ensemble output
+    is_td = '_tds_' in name
+    reliable = bool(not is_td and roc_auc >= RELIABLE_MIN_AUC
+                    and accuracy >= base_rate + RELIABLE_MIN_ACC_EDGE)
     metrics = {
-        'model_name': model_name,
-        'target': target_col,
-        'split': 'temporal',
-        'holdout_season': holdout_season,
-        'train_samples': int(len(X_train)),
-        'test_samples': int(len(X_test)),
-        'base_rate': base_rate,
-        'accuracy': accuracy,
+        'scorer': SCORER['name'],
+        'base_rate': base_rate, 'accuracy': accuracy, 'roc_auc': roc_auc,
         'precision': float(precision_score(y_test, y_pred, zero_division=0)),
         'recall': float(recall_score(y_test, y_pred, zero_division=0)),
         'f1': float(f1_score(y_test, y_pred, zero_division=0)),
-        'roc_auc': roc_auc,
-        'ensemble': LGBM_AVAILABLE,
+        # Depend on every probability, not just ranks or the 0.5 threshold.
+        'brier': float(brier_score_loss(y_test, proba)),
+        'log_loss': float(log_loss(y_test, proba, labels=[0, 1])),
         'reliable': reliable,
         'note': TD_NOTE if is_td else ('' if reliable else 'No out-of-time edge over the base rate.'),
-        # Stage 3 compatibility boundary: prediction refuses a model whose
-        # contract is missing or differs (predict.load_models).
-        'features': list(features),
-        'feature_contract': contract,
     }
-
-    print(f"\n{model_name} Results (ensemble={LGBM_AVAILABLE}, holdout={holdout_season}):")
-    print(f"   Accuracy: {metrics['accuracy']:.3f}  (base rate {base_rate:.3f})")
-    print(f"   Precision: {metrics['precision']:.3f}")
-    print(f"   Recall: {metrics['recall']:.3f}")
-    print(f"   F1: {metrics['f1']:.3f}")
-    print(f"   ROC-AUC: {metrics['roc_auc']:.3f}")
-    print(f"   Reliable: {reliable}")
-
-    # Persist XGB model (always present)
-    model_path = MODELS_DIR / f'{model_name}.json'
-    xgb_model.save_model(model_path)
-    print(f"Saved XGB model to {model_path}")
-
-    return xgb_model, metrics
+    print(f"   holdout {holdout_season}: accuracy {accuracy:.3f} (base {base_rate:.3f}), "
+          f"AUC {roc_auc:.3f}, reliable {reliable}")
+    entry = {
+        'data': data, 'prop_type': prop_type, 'line_type': line_type, 'line_value': line_value,
+        'target': {'stat': stat_col, 'rule': 'stat > line'},
+        'features': list(features), 'scorer': dict(SCORER),
+        'training': window(train_df, y_train),
+        'evaluation': {**window(test_df, y_test),
+                       'protocol': (f"temporal hold-out: trained on seasons before {holdout_season}, "
+                                    f"evaluated on season {holdout_season}; raw model probability "
+                                    f"(no tier, clamp, injury or weather adjustment); "
+                                    f"OVER when P >= 0.5")},
+        'metrics': metrics,
+    }
+    return entry, None
 
 
 # ============================================================================
 # MAIN TRAINING PIPELINE
 # ============================================================================
 
-def train_all_models():
-    """Train all player prop models with comprehensive tiered system."""
+def train_all_models(data_dir=None, models_dir=None):
+    """Train every prop model and publish them as one verified bundle.
+
+    Training uses only stats whose Stage 2 manifest verifies
+    (training_inputs); otherwise nothing is trained or written. Models are
+    held in memory and published together by model_bundle.publish_bundle,
+    which switches the current bundle only after the new one verifies from
+    disk. Nothing is written to the flat player_props/models/*.json files.
+
+    Returns {'published': bool, 'bundle': path or None, 'models': [...],
+    'skipped': {name: reason}, 'problems': [...]}.
+    """
     print("=" * 70)
-    print("🏈 NFL Player Props Model Training - Comprehensive Tiered System")
+    print("🏈 NFL Player Props Model Training (XGBoost, one bundle)")
     print("=" * 70)
+    models_dir = Path(models_dir or MODELS_DIR)
+    inputs, problems = training_inputs(data_dir)
+    if inputs is None:
+        print("⛔ Not training: the stats can't be verified - " + "; ".join(problems))
+        return {'published': False, 'bundle': None, 'models': [], 'skipped': {}, 'problems': problems}
 
-    all_metrics = []
-    contract = training_feature_contract()
+    entries, skipped = {}, {}
+    for prop_type, lines in PROP_LINES.items():
+        stat_type = PROP_STAT[prop_type][0]
+        rows, features = _prepare(inputs['tables'][stat_type], prop_type)
+        for line_type, line_value in lines.items():
+            entry, reason = train_prop_model(rows, features, prop_type, line_type, line_value)
+            name = f'{prop_type}_{line_type}'
+            if entry is None:
+                skipped[name] = reason
+                print(f"   skipped {name}: {reason}")
+            else:
+                entries[name] = entry
+    if not entries:
+        problems = ["no model could be trained"]
+        print("⛔ " + problems[0])
+        return {'published': False, 'bundle': None, 'models': [], 'skipped': skipped, 'problems': problems}
 
-    # ========================================================================
-    # 1. PASSING YARDS MODELS
-    # ========================================================================
-    print("\n\n📊 PASSING YARDS MODELS")
-    print("-" * 70)
-
-    passing_df = load_player_stats('passing')
-    if passing_df is not None:
-        # Create targets for all QB tiers
-        passing_df = create_prop_targets(
-            passing_df,
-            'passing_yards',
-            PROP_LINES['passing_yards']
-        )
-
-        passing_df, pass_features = prepare_training_features(passing_df, 'passing')
-
-        # Train models for each tier
-        for line_type in PROP_LINES['passing_yards'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'passing_yards_{line_type}'
-
-            model, metrics = train_prop_model(
-                passing_df, pass_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 2. PASSING TDS MODELS
-    # ========================================================================
-    print("\n\n🏈 PASSING TDS MODELS")
-    print("-" * 70)
-
-    if passing_df is not None:
-        # Create targets for all TD tiers
-        passing_df = create_prop_targets(
-            passing_df,
-            'pass_tds',
-            PROP_LINES['passing_tds']
-        )
-
-        # Prepare TD-specific features (no yards leakage)
-        passing_df, pass_td_features = prepare_td_training_features(passing_df, 'passing')
-
-        # Train models for each TD tier
-        for line_type in PROP_LINES['passing_tds'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'passing_tds_{line_type}'
-
-            model, metrics = train_prop_model(
-                passing_df, pass_td_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 3. RUSHING YARDS MODELS
-    # ========================================================================
-    print("\n\n🏃 RUSHING YARDS MODELS")
-    print("-" * 70)
-
-    rushing_df = load_player_stats('rushing')
-    if rushing_df is not None:
-        rushing_df = create_prop_targets(
-            rushing_df,
-            'rushing_yards',
-            PROP_LINES['rushing_yards']
-        )
-
-        rushing_df, rush_features = prepare_training_features(rushing_df, 'rushing')
-
-        for line_type in PROP_LINES['rushing_yards'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'rushing_yards_{line_type}'
-
-            model, metrics = train_prop_model(
-                rushing_df, rush_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 4. RUSHING TDS MODELS
-    # ========================================================================
-    print("\n\n🏃 RUSHING TDS MODELS")
-    print("-" * 70)
-
-    if rushing_df is not None:
-        # Create targets for all TD tiers
-        rushing_df = create_prop_targets(
-            rushing_df,
-            'rush_tds',
-            PROP_LINES['rushing_tds']
-        )
-
-        # Prepare TD-specific features (no yards leakage)
-        rushing_df, rush_td_features = prepare_td_training_features(rushing_df, 'rushing')
-
-        # Train models for each TD tier
-        for line_type in PROP_LINES['rushing_tds'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'rushing_tds_{line_type}'
-
-            model, metrics = train_prop_model(
-                rushing_df, rush_td_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 5. RECEIVING YARDS MODELS
-    # ========================================================================
-    print("\n\n🤲 RECEIVING YARDS MODELS")
-    print("-" * 70)
-
-    receiving_df = load_player_stats('receiving')
-    if receiving_df is not None:
-        receiving_df = create_prop_targets(
-            receiving_df,
-            'receiving_yards',
-            PROP_LINES['receiving_yards']
-        )
-
-        receiving_df, rec_features = prepare_training_features(receiving_df, 'receiving')
-
-        for line_type in PROP_LINES['receiving_yards'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'receiving_yards_{line_type}'
-
-            model, metrics = train_prop_model(
-                receiving_df, rec_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 6. RECEIVING TDS MODELS
-    # ========================================================================
-    print("\n\n🤲 RECEIVING TDS MODELS")
-    print("-" * 70)
-
-    if receiving_df is not None:
-        # Create targets for all TD tiers
-        receiving_df = create_prop_targets(
-            receiving_df,
-            'rec_tds',
-            PROP_LINES['receiving_tds']
-        )
-
-        # Prepare TD-specific features (no yards leakage)
-        receiving_df, rec_td_features = prepare_td_training_features(receiving_df, 'receiving')
-
-        # Train models for each TD tier
-        for line_type in PROP_LINES['receiving_tds'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'receiving_tds_{line_type}'
-
-            model, metrics = train_prop_model(
-                receiving_df, rec_td_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # 7. RECEPTIONS MODELS
-    # ========================================================================
-    print("\n\n🤲 RECEPTIONS MODELS")
-    print("-" * 70)
-
-    if receiving_df is not None:
-        # Create targets for all reception tiers
-        receiving_df = create_prop_targets(
-            receiving_df,
-            'receptions',
-            PROP_LINES['receptions']
-        )
-
-        # Prepare reception-specific features
-        receiving_df, rec_features = prepare_receptions_training_features(receiving_df)
-
-        # Train models for each reception tier
-        for line_type in PROP_LINES['receptions'].keys():
-            target_col = f'over_{line_type}'
-            model_name = f'receptions_{line_type}'
-
-            model, metrics = train_prop_model(
-                receiving_df, rec_features, target_col, model_name, contract
-            )
-            if metrics:
-                all_metrics.append(metrics)
-
-    # ========================================================================
-    # SAVE SUMMARY METRICS
-    # ========================================================================
-    if all_metrics:
-        metrics_df = pd.DataFrame(all_metrics)
-        metrics_path = MODELS_DIR / 'model_metrics.csv'
-        metrics_df.to_csv(metrics_path, index=False)
-        print(f"\n\n💾 Saved metrics summary to {metrics_path}")
-
-        # Save JSON version too
-        metrics_json_path = MODELS_DIR / 'model_metrics.json'
-        with open(metrics_json_path, 'w') as f:
-            json.dump({
-                'trained_at': datetime.now().isoformat(),
-                'models': all_metrics
-            }, f, indent=2)
-
-        # Print summary table
-        print("\n" + "=" * 70)
-        print("📊 MODEL PERFORMANCE SUMMARY (out-of-time hold-out)")
-        print("=" * 70)
-        cols = [c for c in ['model_name', 'base_rate', 'accuracy', 'roc_auc', 'reliable']
-                if c in metrics_df.columns]
-        print(metrics_df[cols].to_string(index=False))
-        n_reliable = int(metrics_df['reliable'].sum()) if 'reliable' in metrics_df.columns else 0
-        print(f"\n{n_reliable}/{len(metrics_df)} models clear the out-of-time bar "
-              f"(AUC>={RELIABLE_MIN_AUC}, accuracy > base rate).")
-    
-    print("\n" + "=" * 70)
-    print("✅ Training Complete!")
-    print(f"📁 Models saved to: {MODELS_DIR}")
-    print("\nNext steps:")
-    print("  1. Review metrics in player_props/models/model_metrics.csv")
-    print("  2. Create prediction pipeline for upcoming games")
-    print("  3. Integrate with Player Props UI page")
-    print("=" * 70)
+    path = publish_bundle(models_dir, entries, inputs['source'], PROP_LINES)
+    reliable = sum(e['metrics']['reliable'] for e in entries.values())
+    print(f"\n✅ Published bundle {path.name}: {len(entries)} models "
+          f"({reliable} clear the out-of-time bar), {len(skipped)} skipped")
+    return {'published': True, 'bundle': path, 'models': sorted(entries), 'skipped': skipped,
+            'problems': []}
 
 
 if __name__ == '__main__':
-    train_all_models()
+    raise SystemExit(0 if train_all_models()['published'] else 1)

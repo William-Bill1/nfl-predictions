@@ -66,6 +66,12 @@ def notice_markdown(stats_date: date | None, season: int | None = None) -> str:
         "models were trained on, each game's home/away value was assigned at random (it "
         "matches the real home team only about half the time). The models learned from "
         "that noise, while predictions supply the real home/away value.",
+        "- **Holdout labels describe a different scorer.** The stored props' holdout-check "
+        "labels come from metrics measured on an XGBoost + LightGBM average, but the props "
+        "were scored by XGBoost alone, so the labels don't describe the model that produced them.",
+        "- **Some lines don't match their model.** About 1 in 12 stored props (rushing and "
+        "receiving yards, and the elite TD tiers) show a line other than the one their model "
+        "was trained on, so their probability is for a different line.",
         "",
         "Probabilities, probability bands, holdout-check labels, and past hit rates or ROI "
         "describe these model outputs only; they are **not validated betting confidence**. "
@@ -73,8 +79,8 @@ def notice_markdown(stats_date: date | None, season: int | None = None) -> str:
         "",
         "**Scope:** player props only. The game spread model on the main page is a separate "
         "model and pipeline and is not covered by this notice. Checked against the committed "
-        "model files in `player_props/models/`; models retrained during nightly runs are not "
-        "saved, so they remain unverified.",
+        "model files in `player_props/models/`. They have no provenance bundle, so they are no "
+        "longer used for new predictions.",
     ])
 
 

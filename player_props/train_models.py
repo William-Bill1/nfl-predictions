@@ -11,8 +11,12 @@ Workflow:
     3. Calculate exponentially-weighted rolling averages
     4. Add matchup features (is_home, days_rest) and save the validated stats
        with their provenance manifest
-    5. Train XGBoost + LightGBM ensemble for each prop category
-    6. Save models to player_props/models/ and metrics to player_props/models/model_metrics.json
+    5. Train one XGBoost classifier per prop line (no ensemble), evaluated with
+       the scorer prediction uses - only from stats whose provenance manifest
+       verifies
+    6. Publish the models, metrics and manifest as one verified bundle under
+       player_props/models/bundles/ and switch player_props/models/current_bundle.json
+       (exit 1 when no bundle is published)
 """
 from pathlib import Path
 import sys
@@ -106,7 +110,7 @@ def _aggregate_and_roll(pbp: pd.DataFrame, source: dict | None = None) -> dict:
     return tables
 
 
-def run(skip_aggregation: bool = False) -> None:
+def run(skip_aggregation: bool = False) -> dict:
     """
     Full player prop model training pipeline.
 
@@ -128,13 +132,16 @@ def run(skip_aggregation: bool = False) -> None:
         for stat_type, df in stats.items():
             print(f"  {stat_type}: {len(df):,} player-game records")
 
-    # Call the master training function from models.py, which reads the saved
-    # CSVs from data_files/ and trains/saves all prop models.
+    # Call the master training function from models.py, which verifies the
+    # saved CSVs in data_files/, trains every prop model and publishes one bundle.
     print("\nStarting model training ...")
-    train_all_models()
+    result = train_all_models()
 
-    print("\nTraining pipeline complete.")
-    print(f"Models saved to: {ROOT / 'player_props' / 'models'}")
+    if result['published']:
+        print(f"\nTraining pipeline complete. Bundle: {result['bundle']}")
+    else:
+        print("\nTraining pipeline finished without publishing a model bundle.")
+    return result
 
 
 if __name__ == '__main__':
@@ -147,4 +154,4 @@ if __name__ == '__main__':
         help='Skip PBP aggregation and use pre-built stat CSVs (faster)',
     )
     args = parser.parse_args()
-    run(skip_aggregation=args.skip_aggregation)
+    sys.exit(0 if run(skip_aggregation=args.skip_aggregation)['published'] else 1)

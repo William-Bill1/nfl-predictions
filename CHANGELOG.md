@@ -8,6 +8,42 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 4 model provenance and consistent scoring**
+  (`player_props/model_bundle.py`, `models.py`, `predict.py`, `features.py`,
+  `train_models.py`, `containment.py`, `pages/2_Player_Props.py`). Code
+  only: no model retrained, replaced or regenerated. Generation stays
+  blocked, and the containment notice stays and gains two items.
+  - **Found:**
+    - Training reported XGBoost + LightGBM ensemble metrics, but prediction
+      scored with XGBoost only (the LightGBM files were never committed).
+      Rescoring the committed models read-only changed AUC by at most 0.009
+      and no `reliable` flag.
+    - Prediction kept its own `PROP_LINES`, which differed from training for
+      8 tiers, so about 1 in 12 stored props show a line their model wasn't
+      trained on.
+    - Two elite tiers were silently served by the `star_wr` model.
+    - Model files were written one at a time with no manifest.
+    - The Player Props calculator scored unverified models on improvised
+      features.
+  - **Now:**
+    - XGBoost only, scored by one shared, validated `score_probabilities`
+      in evaluation and prediction.
+    - Models, metrics and a versioned manifest form one bundle under
+      `player_props/models/bundles/`. It is verified from disk before an
+      atomic pointer switch (`current_bundle.json`) and re-verified before
+      every use.
+    - The manifest records hashes, identity, the feature contract, the
+      training source, code, libraries, windows and the evaluation protocol.
+    - No fallbacks, and one `PROP_LINES`.
+    - Outputs gain `raw_model_prob_over`, `adjustments`, `model_name` and
+      `model_bundle`. `adjustments` names every clamp, injury rule
+      (questionable, doubtful, limited practice) and weather change that
+      altered the probability.
+    - The page calculator shows only the historical rate.
+  - **Existing models are refused**, with no retrospective manifest.
+    Nightly retraining now refuses to train on unverified stats (exit 1) and
+    no longer overwrites the flat model files.
+
 - **Player props: Stage 3 train/serve feature parity**
   (`player_props/features.py`, `models.py`, `predict.py`, `aggregators.py`,
   `provenance.py`). Code only: no data refreshed, no model retrained or

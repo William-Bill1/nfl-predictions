@@ -53,6 +53,54 @@ PROP_STAT = {
     'receiving_tds': ('receiving', 'rec_tds'),
     'receptions': ('receiving', 'receptions'),
 }
+# The line each prop model is trained on, by tier: the probability a model
+# returns is P(stat > this line). Prediction shows this same line (Stage 4;
+# before that predict.py kept a different copy for several tiers).
+PROP_LINES = {
+    'passing_yards': {
+        'elite_qb': 275.0,     # For QBs averaging 280+ yards/game (Stafford, Purdy)
+        'star_qb': 250.0,      # For QBs averaging 250-280 yards/game (Burrow, Goff)
+        'good_qb': 225.0,      # For QBs averaging 220-250 yards/game (Maye, Daniels)
+        'starter': 200.0       # For QBs averaging <220 yards/game
+    },
+    'passing_tds': {
+        'elite_qb': 2.5,       # For QBs averaging 2.0+ tds/game (Stafford, Purdy)
+        'star_qb': 1.5,        # For QBs averaging 1.5-2.0 tds/game (Maye, Prescott)
+        'good_qb': 1.5,        # For QBs averaging 1.0-1.5 tds/game (Most QBs)
+        'starter': 0.5         # For QBs averaging <1.0 tds/game
+    },
+    'rushing_yards': {
+        'elite_rb': 55.0,      # For RBs averaging 80+ yards/game (Henry, Barkley)
+        'star_rb': 45.0,       # For RBs averaging 60-80 yards/game (Taylor, Allen)
+        'good_rb': 35.0,       # For RBs averaging 40-60 yards/game (Jacobs, Cook)
+        'starter': 24.0        # For RBs averaging <40 yards/game
+    },
+    'receiving_yards': {
+        'elite_wr': 75.0,      # For WRs averaging 80+ yards/game (Adams, Diggs)
+        'star_wr': 60.0,       # For WRs averaging 60-80 yards/game (Wilson, Lamb)
+        'good_wr': 45.0,       # For WRs averaging 40-60 yards/game (Kraft, Waller)
+        'starter': 27.0        # For WRs averaging <40 yards/game
+    },
+    'rushing_tds': {
+        'elite_rb': 0.5,       # For RBs averaging 1.0+ tds/game (Taylor, Henry)
+        'star_rb': 0.5,        # For RBs averaging 0.7-1.0 tds/game (Allen, Jacobs)
+        'good_rb': 0.5,        # For RBs averaging 0.4-0.7 tds/game (Cook, Charbonnet)
+        'anytime': 0.5         # For RBs averaging <0.4 tds/game
+    },
+    'receiving_tds': {
+        'elite_wr': 0.5,       # For WRs averaging 1.0+ tds/game (Adams)
+        'star_wr': 0.5,        # For WRs averaging 0.7-1.0 tds/game (Wilson, Kraft)
+        'good_wr': 0.5,        # For WRs averaging 0.4-0.7 tds/game (Higgins, Goedert)
+        'anytime': 0.5         # For WRs averaging <0.4 tds/game
+    },
+    'receptions': {
+        'elite_wr': 7.5,       # Elite WRs: 8+ receptions (Adams, Diggs)
+        'star_wr': 5.5,        # Star WRs: 6+ receptions (Wilson, Lamb)
+        'good_wr': 4.5,        # Good WRs: 5+ receptions (Kraft, Waller)
+        'starter': 3.5         # Role players: 4+ receptions
+    }
+}
+
 MATCHUP = ['is_home', 'days_rest']
 # Exact, ordered model inputs: the names the committed models were trained on.
 MODEL_FEATURES: Dict[str, List[str]] = {
