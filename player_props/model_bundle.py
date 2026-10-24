@@ -478,8 +478,69 @@ def build_manifest(bundle_id: str, models: Dict[str, dict], training_source: dic
     return manifest
 
 
+LOCK_SLOT = 'model-bundle'
+
+
+class publisher_lock:
+    """Exclusive lock on a models directory for anything that installs a
+    bundle or switches the pointer (ontario_spreads.SlotLock: owner recorded,
+    never removed on age alone, removed on exit only if still ours). A
+    conflict raises BundleError with the recorded owner and recovery advice."""
+
+    def __init__(self, models_dir: Path, run_id: str):
+        from ontario_spreads import SlotLock
+        self._lock = SlotLock(Path(models_dir), LOCK_SLOT, run_id, what='model bundle publication')
+
+    def __enter__(self):
+        from ontario_spreads import CaptureError
+        Path(self._lock.path.parent).mkdir(parents=True, exist_ok=True)
+        try:
+            self._lock.__enter__()
+        except CaptureError as exc:
+            raise BundleError([str(exc)]) from exc
+        return self
+
+    def __exit__(self, *exc):
+        return self._lock.__exit__(*exc)
+
+
+def switch_pointer(models_dir: Path, bundle_id: str, prop_lines: dict) -> None:
+    """Make an installed bundle current. The bundle is verified from disk
+    first; the pointer is replaced with one os.replace. Call under
+    publisher_lock. On any failure the previous pointer is untouched."""
+    models_dir = Path(models_dir)
+    if not isinstance(bundle_id, str) or not _BUNDLE_ID.fullmatch(bundle_id):
+        raise BundleError([f"bundle id {bundle_id!r} is malformed"])
+    bundle_dir = models_dir / BUNDLES_DIR / bundle_id
+    if not bundle_dir.is_dir():
+        raise BundleError([f"bundle {bundle_id} is not installed"])
+    manifest_sha = _sha256((bundle_dir / MANIFEST_FILE).read_bytes())
+    verify_bundle_dir(bundle_dir, prop_lines, manifest_sha, bundle_id)
+    pointer_tmp = models_dir / f".{POINTER_FILE}.{bundle_id}.{secrets.token_hex(4)}.tmp"
+    try:
+        pointer_tmp.write_text(json.dumps({'kind': POINTER_KIND, 'bundle_id': bundle_id,
+                                           'manifest_sha256': manifest_sha}, indent=2),
+                               encoding='utf-8')
+        os.replace(pointer_tmp, models_dir / POINTER_FILE)
+    finally:
+        if pointer_tmp.exists():
+            pointer_tmp.unlink()
+
+
 def publish_bundle(models_dir: Path, models: Dict[str, dict], training_source: dict,
                    prop_lines: dict) -> Path:
+    """Publish a new bundle under publisher_lock (see _publish_unlocked). An
+    invalid manifest is refused before anything (even the lock) is written."""
+    models_dir = Path(models_dir)
+    problems = manifest_problems(build_manifest(new_bundle_id(), models, training_source), prop_lines)
+    if problems:
+        raise BundleError(["bundle not published: " + p for p in problems])
+    with publisher_lock(models_dir, new_bundle_id()):
+        return _publish_unlocked(models_dir, models, training_source, prop_lines)
+
+
+def _publish_unlocked(models_dir: Path, models: Dict[str, dict], training_source: dict,
+                      prop_lines: dict) -> Path:
     """Write, verify and switch to a new bundle. Returns its directory.
 
     1. Everything is written to ``bundles/.<id>.partial`` and verified from
@@ -491,9 +552,8 @@ def publish_bundle(models_dir: Path, models: Dict[str, dict], training_source: d
     use. A failure before step 3 removes the unfinished directory; if even
     that fails, BundleError names the path left behind. Not handled: a crash
     or power loss mid-write (the pointer still names the old bundle, and a
-    leftover directory is ignored), durability of the rename (no fsync), and
-    two publishers at once (no lock: the last pointer replace wins; each
-    bundle stays self-consistent)."""
+    leftover directory is ignored) and durability of the rename (no fsync).
+    Concurrent publishers are excluded by publisher_lock."""
     models_dir = Path(models_dir)
     bundle_id = new_bundle_id()
     manifest = build_manifest(bundle_id, models, training_source)
