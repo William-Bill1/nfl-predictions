@@ -654,15 +654,159 @@ The commit step adds only `data_files/`, so the bundle would not be
 committed; workflow uploads are unchanged. Prediction stays blocked by
 Stage 2 first, then by the missing bundle.
 
+**Stage 5A complete-source refresh and bundle storage (mechanisms only; not
+deployed).** Nothing here runs on a schedule. No live data was fetched, no
+production file or model was changed, and generation stays blocked.
+
+*What was found:*
+- **No 2025 on the runner:** the nightly runner checks out without LFS, so
+  `update_pbp_smart.py` builds its file from a cached 2020-2024 file plus the
+  current season only.
+- **Metadata isn't evidence:** `pbp_metadata.json` records the requested
+  seasons and the run time, not the content.
+- **Shared contract:** both are part of the spread pipeline's contract, so
+  this stage adds a separate prop-specific path rather than changing them.
+- **Bundles weren't durable:** they lived only on the runner's disk, with no
+  lock between publishers.
+
+*Source refresh (`player_props/source_refresh.py`):*
+- **Explicit seasons:** every season from `FIRST_SEASON` through the newest
+  season with play-by-play, with no gaps (`required_seasons`).
+- **Validated per season:** each season is downloaded (the fetcher is
+  injectable; tests are offline) and checked before use. The checks:
+  - Git LFS pointers are refused, plain or gzipped;
+  - empty, truncated or unreadable data, and missing required columns;
+  - season labels and `game_id` prefixes must match the season;
+  - dates must be valid, one per game, and inside the season;
+  - duplicate (`game_id`, `play_id`) plays;
+  - **the schedule itself** must be well formed (fail closed): required
+    values present, valid `game_id`s for the season, valid dates, no
+    duplicate `game_id`, and no team in two games in one week;
+  - **each downloaded game** must match its unique schedule row's date,
+    season and week, and no game may be absent from the schedule;
+  - **game-level coverage**: every completed game in the schedule, by the
+    Stage 2 completion predicate, must be present with an `END GAME` play
+    matching the recorded score;
+  - **unfinished vs malformed**: a game counts as unfinished only when no
+    score is recorded or it is dated today or later. Malformed evidence
+    (one score, 0-0, an impossible score, a missing or inconsistent
+    result/total, an invalid date) fails the refresh and is never treated as
+    an unfinished game.
+- **Staged install:** a complete candidate is written to a staging directory
+  (tab-separated gzip with a fixed gzip timestamp, so equal content hashes
+  equal). It is re-read with `provenance.read_source`, checked to cover
+  exactly the required seasons, and installed with its manifest as one set:
+  backed-up replace, with rollback on a catchable failure. A backup leaves
+  the recovery list only after its restore succeeds. If a restore fails, the
+  error names each destination left wrong and the backup still holding its
+  previous content (or says it didn't exist before), and those backups are
+  kept.
+- **Failure:** any problem leaves the previous source and manifest untouched
+  and lists every problem, including the missing coverage.
+- **Lock:** a refresh lock (`ontario_spreads.SlotLock`) excludes concurrent
+  refreshes of the same directory.
+- **Manifest** (`player_props_source_manifest.json`):
+  - the required seasons;
+  - each download's SHA-256 and size;
+  - the installed file's SHA-256, size and actual coverage;
+  - per-season coverage counts, including games present without completion
+    evidence;
+  - the schedule file's hash;
+  - `refreshed_at`, distinct from the data's coverage.
+- **Output location:** `--out-dir` is required and nothing else is written.
+  The shared `nfl_play_by_play_historical.csv.gz` and `pbp_metadata.json` are
+  never read or written.
+- **Score corrections:** every refresh replaces each season wholesale, so a
+  correction arrives with the next successful refresh. If the play-by-play's
+  `END GAME` score and the schedule's recorded score disagree (one source
+  corrected first), the refresh fails and the previous source stays until
+  they agree.
+- **Incomplete games:** a game present without completion evidence (in
+  progress, or not yet scored) is kept but listed. Stage 2 excludes it from
+  features until it is corroborated. Unplayed games aren't required.
+
+*Bundle storage (`player_props/bundle_store.py`, `model_bundle.py`):*
+- **Export:** one verified bundle goes to a tar containing `export.json`
+  (bundle id, manifest hash, and each file's SHA-256 and size) and
+  `<bundle_id>/<file>.json`. Entries have fixed metadata, so the same bundle
+  exports byte-identically, and the archive is written to a temporary file
+  and renamed.
+- **Import refuses, before writing anything:**
+  - unreadable or truncated archives;
+  - links, devices, directories and other non-regular entries;
+  - absolute, traversing, backslash or drive-letter paths;
+  - unexpected or duplicate names, and entries over the size caps;
+  - index/entry mismatches, and hash, size or manifest-hash mismatches;
+  - a bundle id already installed with different content.
+- **Import then, under the publisher lock:** stages the files, verifies the
+  staged bundle exactly as prediction loads it, renames it into place, and
+  only then switches the pointer. Re-importing an identical bundle is a
+  no-op. A failure removes the staged copy and leaves the previous current
+  bundle in use.
+- **Pointer switch (`model_bundle.switch_pointer`):** re-verifies the bundle
+  from disk and replaces `current_bundle.json` with one `os.replace`.
+- **Publisher coordination (`model_bundle.publisher_lock`):** the existing
+  `ontario_spreads.SlotLock` (`.model-bundle.lock` in the models directory)
+  covers publication, import and pointer switches.
+  - The lock records its owner. A conflict names that owner and the lock's
+    age, and the lock is never removed on age alone.
+  - On exit it is removed only if it still carries the holder's token.
+  - It coordinates processes sharing one filesystem, not separate runners.
+- **Retention:**
+  - Bundles are immutable, and nothing deletes them automatically.
+  - `inventory` lists every bundle, the current one, whether each verifies,
+    and leftover staging directories, and changes nothing.
+  - The current bundle, and the only verified copy of any bundle, must never
+    be removed. Pruning is a manual decision made from the inventory.
+
+*Implemented vs operationally verified:* every mechanism above is
+implemented and tested offline (`tests/test_player_props_stage5a.py`, with
+synthetic data, injected downloads and no network). None has been exercised
+against real nflverse downloads, a GitHub runner, or artifact storage.
+
+*Later deployment procedure (stage 5B; not enabled):*
+1. **Refresh the source** in the nightly job, before retraining, as its own
+   step without `continue-on-error`, so a failure is visible:
+   `python player_props/source_refresh.py --out-dir data_files/player_props_source`.
+   It needs network access to nflverse (about 7 season downloads).
+2. **Aggregate from the prop source** (a small code change in 5B: point
+   `train_models.py`'s full aggregation at the prop source). Then train,
+   which writes stats with a Stage 2 manifest and publishes a bundle.
+3. **Persist the bundle durably.** Recommended: commit
+   `player_props/models/bundles/<id>/` and `current_bundle.json` in the
+   existing commit step (the job already has `contents: write`). A bundle is
+   on the order of a few megabytes and is immutable.
+   - As a secondary copy, upload the export as an artifact:
+     `bundle_store.py export --out $RUNNER_TEMP/prop-bundle.tar`, then
+     `actions/upload-artifact@v4` with `retention-days` set explicitly.
+4. **Restore before predicting** on a fresh runner: either from the
+   committed bundle (no action needed), or with `actions/download-artifact@v4`
+   from the last successful run (needs `actions: read` and a `github-token`
+   with `run-id`), then
+   `python player_props/bundle_store.py import --models-dir player_props/models --archive prop-bundle.tar`.
+5. **Serialise runs** with workflow
+   `concurrency: {group: nightly-update, cancel-in-progress: false}`, since
+   the file lock doesn't span runners.
+
+*Storage and retention limits:*
+- **Artifacts** expire after their retention period (90 days by default;
+  configurable per repository), so they can't be the only recovery copy.
+- **The Actions cache** can be evicted at any time (unused entries after 7
+  days; a per-repository size cap), so the play-by-play cache is a
+  convenience. A restored cache must pass `verify_installed` or be
+  re-downloaded.
+- **The prop source** (a column subset, all seasons) is tens of megabytes:
+  too large to commit nightly without LFS. Plan to re-download it, or cache
+  it and verify it on restore.
+
 **Remaining stages (not implemented):**
-2. **Complete source refresh.** Give the runner a complete source (it lacks
-   2025 today), rebuild the stats with their manifest from it, and record
-   the manifest's hashes with each prediction. The Stage 2 checks block
-   predictions until this exists.
-4. **Model bundle storage.** Model provenance and verified loading are done
-   (Stage 4). Still open: where bundles are kept (committed, or uploaded and
-   restored), retention of old bundles, and a lock if publishers can run
-   concurrently.
+2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
+   runner, aggregate from the prop source, rebuild the stats with their
+   manifest, and record the manifest's hashes with each prediction. The
+   Stage 2 checks block predictions until this exists.
+4. **Deploy bundle storage (5B).** Commit or upload the published bundle,
+   restore it before predicting, and serialise runs (see the procedure
+   above). Export, import, locking and inventory are done (Stage 5A).
 5. **Retraining.** Retrain on rebuilt, manifested stats (after stage 2),
    publishing a verified bundle.
 6. **Leakage-safe and prospective evaluation.** Score the held-out season,

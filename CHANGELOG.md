@@ -8,6 +8,39 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 5A source refresh and bundle storage (mechanisms;
+  not deployed)** (`player_props/source_refresh.py`,
+  `player_props/bundle_store.py`, `model_bundle.py`). No live data fetched,
+  no workflow changed, no production file or model changed; generation stays
+  blocked.
+  - **Source refresh:**
+    - The required seasons are explicit (no "cache plus current year"), and
+      every season is validated.
+    - Validation covers LFS pointers, empty or truncated data, season
+      identity, game IDs, dates, duplicate plays, and game-level coverage
+      against the Stage 2 completion predicate.
+    - Each downloaded game must match its schedule row's date, season and
+      week.
+    - A malformed schedule (invalid dates, duplicates, conflicts,
+      contradictory scores) fails closed, rather than being read as
+      unfinished games.
+    - A failed rollback names every unrestored file and the backup that
+      still holds its previous content.
+    - A complete candidate is staged and installed with a manifest of what
+      was actually read; any failure keeps the previous source.
+    - It is separate from the spread pipeline's file and metadata.
+  - **Bundle storage:**
+    - Deterministic export and fully validated import (unsafe entries,
+      hash mismatches and conflicting IDs are refused).
+    - The pointer switches only after the staged bundle verifies.
+    - The existing `SlotLock` coordinates publishers and is never removed on
+      age alone.
+    - A read-only inventory; retention never deletes the current bundle or
+      the only verified copy.
+  - **Deployment:** a later procedure (5B) is documented in
+    `docs/architecture.md`, including workflow changes, permissions and
+    artifact/cache limits. None of it is enabled.
+
 - **Player props: Pick 6 calculator wording** (`pages/2_Player_Props.py`,
   `player_props/pick6.py`). The calculator has scored no model since Stage 4;
   its wording now says so.
