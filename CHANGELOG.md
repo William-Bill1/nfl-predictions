@@ -8,6 +8,22 @@ bottom.
 
 ## October 2026
 
+- **Home page: the sidebar downloads are back** (`home_downloads.py`,
+  `predictions.py`). Download Predictions, Download Betting Log and Generate
+  Predictions PDF never appeared: `home_page()` created the three sidebar
+  placeholders as locals but filled them only `if '...' in globals()`, which
+  is always false inside a function, and every error was swallowed.
+  - **Fix:** `home_page()` now passes its placeholders to
+    `home_downloads.render_home_downloads()`. The CSV, PDF and link code moved
+    there unchanged, so file names, contents and the on-demand PDF (also saved
+    under `data_files/exports/`) are as before.
+  - **Missing inputs are explained:** predictions not loaded yet, no
+    recommendation log yet, or the PDF library (now imported optionally)
+    unavailable. A failure is shown in the sidebar instead of hiding the
+    control.
+  - "Betting log" is the model's recommendation log
+    (`betting_recommendations_log.csv`), not the Bet Journal.
+
 - **Player props: Stage 5B preparation, an isolated end-to-end rehearsal**
   (`player_props/rehearsal.py`, `player_props/rehearsal_fixtures.py`,
   `predict.py`). Offline only: synthetic downloads, network blocked; no
