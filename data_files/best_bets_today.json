@@ -1,10 +1,55 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-24T07:49:35.088676+00:00",
+    "generated_at": "2026-10-25T08:01:12.943447+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-10-24"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-10-25",
+      "game_time": "09:30",
+      "game": "PIT @ NO",
+      "home_team": "NO",
+      "away_team": "PIT",
+      "bet_type": "Spread",
+      "pick": "NO +3",
+      "confidence": 0.558626199795715,
+      "edge": 0.0393954305649457,
+      "tier": "Strong",
+      "odds": -108,
+      "line": 3.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-25",
+      "game_time": "13:00",
+      "game": "MIA @ NYJ",
+      "home_team": "NYJ",
+      "away_team": "MIA",
+      "bet_type": "Spread",
+      "pick": "MIA +4.5",
+      "confidence": 0.6786169146196508,
+      "edge": 0.1548073908101269,
+      "tier": "Elite",
+      "odds": -110,
+      "line": 4.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-10-25",
+      "game_time": "20:20",
+      "game": "KC @ SEA",
+      "home_team": "SEA",
+      "away_team": "KC",
+      "bet_type": "Spread",
+      "pick": "KC +3",
+      "confidence": 0.5598433561011726,
+      "edge": 0.0249596351709401,
+      "tier": "Strong",
+      "odds": -115,
+      "line": 3.0,
+      "notes": null
+    }
+  ]
 }
