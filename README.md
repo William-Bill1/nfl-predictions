@@ -65,7 +65,7 @@ market-implied columns, on the Probabilities & Edges tab.
 
 | Page | Contents |
 |---|---|
-| `1_Historical_Data.py` | filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination |
+| `1_Historical_Data.py` | filter-driven browser over ~290k play-by-play rows (2020–present); 12+ filters, quick presets, pagination; CSV export of the current page or of every filtered row (labelled as a sample until the full dataset is loaded) |
 | `2_Player_Props.py` | per-player prop predictions (defaults to a "tested (reliable) models only" view — see below; shows a real DK/FanDuel "Market" line + edge where matched) + interactive **DK Pick 6 calculator** (enter a line, pre-filled from a real sportsbook line when one's matched → OVER/UNDER + confidence tier; ML model or Laplace-smoothed historical fallback) |
 | `3_Parlay_Builder.py` | combine bets, compute parlay odds |
 | `4_Model_Performance.py` | model evaluation and calibration metrics |
