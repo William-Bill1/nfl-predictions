@@ -106,6 +106,7 @@ st.download_button(
 **Status: ✅ COMPLETED** (Nov 27, 2025)
 
 Notes:
+- Historical Data (Oct 2026): the single "Export Filtered Data" button exported only the visible page. It is now **Export current page** plus **Export all filtered rows**, the latter built only when clicked (`historical_exports.py`). Until the full dataset is loaded, the second button is **Export filtered sample** and says only the loaded sample is included.
 - Added a PDF export generator in the sidebar that builds a compact, print-friendly PDF of upcoming games (today or later) and exposes a download button with embedded PDF icon. The PDF uses a compact layout and short headers to fit more columns.
 - Exported PDFs are saved under `data_files/exports/` for auditability. The app no longer attempts to spawn a local static server to open the PDF link — the download button is the canonical retrieval method.
 - The generator filters predictions to include only upcoming games and will write a short message to the PDF if no upcoming games are found.

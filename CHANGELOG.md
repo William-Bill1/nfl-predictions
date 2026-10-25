@@ -8,6 +8,34 @@ bottom.
 
 ## October 2026
 
+- **Historical Data: clearer CSV exports** (`historical_exports.py`,
+  `pages/1_Historical_Data.py`). "Export Filtered Data" downloaded only the
+  visible page (typically 50 rows) although its label suggested every
+  filtered row.
+  - **Export current page (N rows):** the rows shown, as before; file
+    `nfl_historical_data_<date>_page<p>_of_<n>.csv`.
+  - **Export all filtered rows (N rows):** every row matching the active
+    filters, across all pages; file
+    `nfl_historical_data_<date>_all_filtered_<N>_rows.csv`. It is built only
+    when clicked (a deferred Streamlit download), never on a rerun, and
+    nothing is kept in session state, so it always reflects the filters and
+    data in effect. Clicking it doesn't rerun the page: in a real browser a
+    rerun replaced the deferred download mid-fetch and no file arrived.
+  - **Before the full dataset is loaded** the page works from a small sample,
+    so that button reads **Export filtered sample (N rows)** and its file is
+    `nfl_historical_data_<date>_sample_filtered_<N>_rows.csv`. A caption says
+    only the loaded sample is included and that "Load full historical
+    play-by-play data" is needed to export the full filtered dataset. The
+    page passes the loaded-data scope explicitly; it isn't inferred from the
+    row count.
+  - **Known limitation (unchanged):** filters set on the sample are cleared
+    when the full dataset is loaded, because that button reruns the page
+    before the filters render. Re-apply them after loading.
+  - **Unchanged:** columns, UTF-8 encoding, display order and no index
+    column. Filtering and pagination are untouched.
+  - **Edge cases:** no matching rows says there is nothing to export. An
+    export failure is shown instead of hiding the buttons.
+
 - **Home page: the sidebar downloads are back** (`home_downloads.py`,
   `predictions.py`). Download Predictions, Download Betting Log and Generate
   Predictions PDF never appeared: `home_page()` created the three sidebar

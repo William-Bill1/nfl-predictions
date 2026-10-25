@@ -6,6 +6,7 @@ from os import path
 from datetime import datetime
 
 from footer import add_betting_oracle_footer
+from historical_exports import render_exports
 
 
 DATA_DIR = 'data_files/'
@@ -221,6 +222,8 @@ st.write("Historical play-by-play data and game summaries")
 
 # Do not load the large play-by-play data automatically. Load on demand from the UI.
 if 'historical_data' not in st.session_state or st.session_state.get('historical_data') is None:
+    # Only a sample is loaded until the user loads the full dataset (exports say so).
+    data_scope = 'sample'
     # Show a small sample immediately so users see content quickly.
     file_path = path.join(DATA_DIR, 'nfl_play_by_play_historical.csv.gz')
     sample_df = pd.DataFrame()
@@ -367,6 +370,7 @@ if 'historical_data' not in st.session_state or st.session_state.get('historical
 else:
     # Get historical_data from session if present, otherwise use empty DataFrame
     historical_data = st.session_state.get('historical_data', pd.DataFrame())
+    data_scope = 'full'
 
 current_year = datetime.now().year
 
@@ -755,21 +759,18 @@ if 'game_date' in historical_data.columns:
         }
     )
 
-    # Download button for current filtered view (only when rows exist)
+    # CSV exports: the page shown above, or every filtered row (built on click)
     try:
         if total_rows > 0:
-            to_download = filtered_data[display_cols].iloc[start_idx:end_idx]
-            if not to_download.empty:
-                csv_bytes = convert_df_to_csv(to_download)
-                st.download_button(
-                    label="📥 Export Filtered Data",
-                    data=csv_bytes,
-                    file_name=f'nfl_historical_data_{datetime.now().strftime("%Y%m%d")}.csv',
-                    mime='text/csv'
-                )
-    except Exception:
-        # If export fails, don't break the page
-        pass
+            render_exports(filtered_data, display_cols, start_idx=start_idx, end_idx=end_idx,
+                           page=page, total_pages=total_pages, convert=convert_df_to_csv,
+                           scope=data_scope)
+        else:
+            render_exports(filtered_data, display_cols, start_idx=0, end_idx=0, page=1,
+                           total_pages=0, convert=convert_df_to_csv, scope=data_scope)
+    except Exception as e:
+        # Don't break the page, but say why the export isn't offered
+        st.error(f"Export unavailable: {e}")
 
 else:
     # Fallback: show all data without date filtering
