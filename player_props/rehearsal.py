@@ -12,8 +12,10 @@ One command runs the real production functions, in order, inside a workspace:
   ``<workspace>/published/``). The workspace, and every directory the run
   creates, is resolved (symlinks, junctions) and refused if it is, contains or
   lies inside the repository or a protected production location.
-* Downloads are synthetic (player_props/rehearsal_fixtures.py) and the network
-  is blocked for the whole run.
+* Inputs are a synthetic league (player_props/rehearsal_fixtures.py) by default,
+  or real nflverse downloads made beforehand by player_props/rehearsal_real.py
+  (``real_inputs``; every file re-verified against its recorded hash). Either
+  way the network is blocked for the whole run.
 * Training uses a source refreshed only through ``train_seasons``; inference
   uses its own, newer source. The bundle is restored into a fresh, empty
   runtime models directory, and prediction is pointed only there.
@@ -29,8 +31,10 @@ One command runs the real production functions, in order, inside a workspace:
 
 No accuracy or betting edge is measured or claimed.
 
-CLI (synthetic fixtures only; there is no live-data option):
+CLI:
     python player_props/rehearsal.py --workspace DIR [--seed 7]
+    python player_props/rehearsal.py --workspace DIR --real-inputs DOWNLOADS_DIR \
+        --players PLAYERS_CSV --train-seasons 2020-2025 --target 2026:7
 """
 from __future__ import annotations
 
@@ -73,8 +77,11 @@ PRODUCTION_PATHS = [ROOT / 'data_files', ROOT / 'player_props' / 'models']
 STAGES = ['workspace', 'source_training', 'source_inference', 'aggregate_training', 'train',
           'export', 'restore', 'aggregate_inference', 'validate_inputs', 'predict',
           'verify_outputs', 'publish']
+SYNTHETIC_LIMITATION = "synthetic league and downloads only; no real nflverse data, runner, artifact or cache storage"
+REAL_LIMITATION = ("real nflverse downloads made beforehand, run offline; no GitHub runner, artifact or cache "
+                   "storage; the players reference is the file given, not a fresh download")
 LIMITATIONS = [
-    "synthetic league and downloads only; no real nflverse data, runner, artifact or cache storage",
+    SYNTHETIC_LIMITATION,
     "injury, weather and market-odds inputs skipped: those adjustments are not exercised",
     "output verification checks every row present, not which players/props should have been included",
     "at most one clamp applies under these rules, so adjustment-label order is only checked as an exact string",
@@ -129,13 +136,16 @@ def _check_location(path: Path, real: Path, workspace_real: Path,
             raise RehearsalError(f"{path} resolves to {real}, overlapping protected location {p}")
 
 
-def safe_dir(path: Path, workspace_real: Path, protected: Optional[List[Path]] = None) -> Path:
+def safe_dir(path: Path, workspace_real: Path, protected: Optional[List[Path]] = None,
+             exclusive: bool = False) -> Path:
     """Create ``path`` only if it really points inside the workspace and
     nowhere near a protected location. Checked before anything is created
     (realpath resolves links and junctions in the part that exists, including
-    ones placed inside the workspace) and again afterwards."""
+    ones placed inside the workspace) and again afterwards. With
+    ``exclusive``, an existing ``path`` raises FileExistsError instead of
+    being reused."""
     _check_location(path, _real(path), workspace_real, protected)
-    path.mkdir(parents=True, exist_ok=True)
+    path.mkdir(parents=True, exist_ok=not exclusive)
     _check_location(path, _real(path), workspace_real, protected)
     return path
 
@@ -171,6 +181,10 @@ class RehearsalConfig:
     protected: List[Path] = field(default_factory=list)
     drop_seasons: tuple = ()
     drop_games: frozenset = frozenset()
+    # Real inputs: a downloads directory from rehearsal_real.download, and the
+    # players reference to use. None (default) = the synthetic league.
+    real_inputs: Optional[Path] = None
+    players_file: Optional[Path] = None
 
     @property
     def seasons(self) -> List[int]:
@@ -206,26 +220,44 @@ def _stage_workspace(run: Run) -> dict:
         run.paths[key] = safe_dir(run.dir / rel, run.workspace, cfg.protected)
     if any(run.paths['runtime_models'].iterdir()):
         raise RehearsalError("the runtime models directory is not empty")
-    played = {s: fixtures.WEEKS for s in cfg.train_seasons}
-    played[cfg.target_season] = cfg.played_target_weeks
-    plays, schedule = fixtures.league(cfg.seasons, played, cfg.seed)
-    run.info['plays'] = plays
+    detail = {}
+    if cfg.real_inputs is None:
+        played = {s: fixtures.WEEKS for s in cfg.train_seasons}
+        played[cfg.target_season] = cfg.played_target_weeks
+        plays, schedule = fixtures.league(cfg.seasons, played, cfg.seed)
+        run.info['fetch'] = fixtures.fetcher(plays, cfg.drop_seasons, set(cfg.drop_games))
+        players = fixtures.players()
+        run.info['prediction_schedule'] = lambda: fixtures.prediction_schedule(schedule, cfg.target_season)
+        detail['inputs'] = 'synthetic'
+    else:
+        from player_props.rehearsal_real import RealInputs
+        if cfg.players_file is None:
+            raise RehearsalError("real inputs need an explicit players file")
+        inputs = RealInputs(cfg.real_inputs, cfg.players_file)
+        missing = sorted(set(cfg.seasons) - set(inputs.seasons))
+        if missing:
+            raise RehearsalError(f"real inputs lack season(s) {missing}; downloaded {inputs.seasons}")
+        schedule = inputs.schedule()
+        run.info['fetch'] = inputs.fetch
+        players = inputs.players
+        run.info['prediction_schedule'] = lambda: inputs.prediction_schedule(cfg.target_season)
+        run.info['real'] = True
+        detail['inputs'] = inputs.describe()
     sched_path = run.paths['fixtures'] / SCHEDULE_FILE
     schedule.to_csv(sched_path, sep='\t', index=False)
-    fixtures.players().to_csv(run.paths['fixtures'] / 'players.csv', index=False)
+    players.to_csv(run.paths['fixtures'] / 'players.csv', index=False)
     target = schedule[(schedule['season'] == cfg.target_season) & (schedule['week'] == cfg.target_week)]
     if target.empty:
         raise RehearsalError(f"no scheduled games for {cfg.target_season} week {cfg.target_week}")
     run.info['target_first_game'] = str(target['gameday'].min())
     return {'run_dir': str(run.dir), 'seasons': cfg.seasons,
             'target': {'season': cfg.target_season, 'week': cfg.target_week,
-                       'first_game': run.info['target_first_game']}}
+                       'first_game': run.info['target_first_game']}, **detail}
 
 
 def _refresh(run: Run, key: str, seasons: List[int], as_of: date) -> dict:
     from player_props.source_refresh import refresh_source, verify_installed
-    fetch = fixtures.fetcher(run.info['plays'], run.config.drop_seasons, set(run.config.drop_games))
-    manifest = refresh_source(run.paths[key], run.paths['fixtures'] / SCHEDULE_FILE, fetch=fetch,
+    manifest = refresh_source(run.paths[key], run.paths['fixtures'] / SCHEDULE_FILE, fetch=run.info['fetch'],
                               seasons=seasons, today=as_of)
     verify_installed(run.paths[key])
     cov = manifest['source']['coverage']
@@ -298,8 +330,7 @@ def _stage_aggregate_inference(run: Run) -> dict:
     detail = _aggregate(run, 'infer_source', 'runtime_data')
     data = run.paths['runtime_data']
     shutil.copy2(run.paths['fixtures'] / 'players.csv', data / 'players.csv')
-    schedule = pd.read_csv(run.paths['fixtures'] / SCHEDULE_FILE, sep='\t')
-    fixtures.prediction_schedule(schedule, run.config.target_season).to_csv(
+    run.info['prediction_schedule']().to_csv(
         data / f'nfl_schedule_{run.config.target_season}.csv', index=False)
     return detail
 
@@ -380,11 +411,34 @@ class _Expectations:
         self.tier_of = get_player_performance_tier
         self.cfg = run.config
         self.models = run.info['bundle']['models']
-        players = pd.read_csv(run.paths['runtime_data'] / 'players.csv')
-        self.ids = dict(zip(players['display_name'], players['gsis_id']))
+        players = pd.read_csv(run.paths['runtime_data'] / 'players.csv', low_memory=False)
+        # The output names players, not IDs, and a display name can belong to
+        # several players (the real players.csv has retired namesakes), so a
+        # name maps to every ID carrying it.
+        self.ids = {n: list(dict.fromkeys(g)) for n, g in players.groupby('display_name')['gsis_id']}
         self.games = load_games(run.paths['runtime_data'])
         self.feature = run.info['check'].feature_tables
+        # Production picks players by ID from the team's stats, so a shared
+        # name is resolved to the one candidate with stats for the row's team.
+        self.team_ids: Dict[str, set] = {}
+        for table in self.feature.values():
+            for team, ids in table.groupby('team')['player_id']:
+                self.team_ids.setdefault(team, set()).update(ids)
         self.cache: Dict[tuple, dict] = {}
+
+    def player_id(self, r: dict) -> tuple:
+        """(player_id, None), or (None, problem) when the row's player can't be
+        identified uniquely. Never guesses."""
+        ids = self.ids.get(r['display_name'], [])
+        if not ids:
+            return None, f"unknown player {r['display_name']!r}"
+        if len(ids) > 1:
+            on_team = [i for i in ids if i in self.team_ids.get(r['team'], ())]
+            if len(on_team) != 1:
+                return None, (f"player {r['display_name']!r} is ambiguous: {len(ids)} players share the name "
+                              f"and {len(on_team)} of them have stats for {r['team']}")
+            ids = on_team
+        return ids[0], None
 
     def for_row(self, r: dict) -> dict:
         key = (r['display_name'], r['player_name'], r['team'], r['opponent'], r['is_home'], r['prop_type'])
@@ -394,9 +448,9 @@ class _Expectations:
 
     def _compute(self, r: dict) -> dict:
         cfg, prop_type = self.cfg, r['prop_type']
-        player_id = self.ids.get(r['display_name'])
-        if player_id is None:
-            return {'problem': f"unknown player {r['display_name']!r}"}
+        player_id, problem = self.player_id(r)
+        if problem:
+            return {'problem': problem}
         tier = self.tier_of(player_id, prop_type, self.feature)
         # predict_props_for_game takes the first model with this prop type and tier.
         name = next((n for n, i in self.models.items()
@@ -587,6 +641,8 @@ def _summary(run: Run, status: str) -> dict:
     return {
         'kind': SUMMARY_KIND, 'summary_version': SUMMARY_VERSION, 'run_id': run.run_id,
         'status': status, 'finished_at': _now(),
+        # 'synthetic', or the real downloads (URL, size, SHA-256) and players file used.
+        'inputs': stage.get('workspace', {}).get('detail', {}).get('inputs'),
         'stages': [{'stage': s, 'status': stage.get(s, {}).get('status', 'not_run'),
                     **({'error': stage[s]['error']} if 'error' in stage.get(s, {}) else {})}
                    for s in STAGES],
@@ -603,7 +659,7 @@ def _summary(run: Run, status: str) -> dict:
                        'external_inputs_skipped': ['injuries', 'weather', 'market_odds']},
         'outputs': {k: stage.get(k, {}).get('detail') for k in ('predict', 'verify_outputs', 'publish')},
         'artifacts': _artifacts(run),
-        'limitations': LIMITATIONS,
+        'limitations': ([REAL_LIMITATION] + LIMITATIONS[1:]) if run.info.get('real') else LIMITATIONS,
     }
 
 
@@ -657,9 +713,22 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap.add_argument('--workspace', type=Path, required=True,
                     help="directory outside the repository for this and later rehearsal runs")
     ap.add_argument('--seed', type=int, default=7)
+    ap.add_argument('--real-inputs', type=Path,
+                    help="downloads directory from player_props/rehearsal_real.py (default: synthetic league)")
+    ap.add_argument('--players', type=Path, help="players reference CSV (required with --real-inputs)")
+    ap.add_argument('--train-seasons', help="FIRST-LAST, e.g. 2020-2025")
+    ap.add_argument('--target', help="SEASON:WEEK, e.g. 2026:7")
     args = ap.parse_args(argv)
+    kw = {}
+    if args.train_seasons:
+        first, last = (int(x) for x in args.train_seasons.split('-'))
+        kw['train_seasons'] = list(range(first, last + 1))
+    if args.target:
+        season, week = (int(x) for x in args.target.split(':'))
+        kw.update(target_season=season, target_week=week)
     try:
-        summary = run_rehearsal(RehearsalConfig(workspace=args.workspace, seed=args.seed))
+        summary = run_rehearsal(RehearsalConfig(workspace=args.workspace, seed=args.seed,
+                                                real_inputs=args.real_inputs, players_file=args.players, **kw))
     except RehearsalError as exc:
         print(json.dumps({'status': 'refused', 'error': str(exc)}))
         return 2
