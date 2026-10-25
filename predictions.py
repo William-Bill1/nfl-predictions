@@ -48,11 +48,6 @@ import requests
 import sys
 import json
 from io import BytesIO
-from reportlab.lib.pagesizes import letter, landscape
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.lib.units import inch
-from reportlab.lib import colors
 import base64
 import traceback
 import threading
@@ -60,6 +55,7 @@ import time
 import functools
 
 from footer import add_betting_oracle_footer
+from home_downloads import convert_df_to_csv, generate_predictions_pdf, render_home_downloads
 
 # Application-level startup log and uncaught exception hook so Cloud logs
 # include clear tracebacks when the app crashes during startup.
@@ -244,157 +240,6 @@ def load_predictions_csv():
             return df
         return df
     return None
-
-
-def convert_df_to_csv(df: pd.DataFrame) -> bytes:
-    """Convert a DataFrame to a CSV bytes object suitable for `st.download_button`.
-
-    Keeps encoding explicit to UTF-8 to avoid platform issues.
-    """
-    try:
-        return df.to_csv(index=False).encode('utf-8')
-    except Exception:
-        # Fallback: coerce to strings then export
-        df2 = df.copy()
-        for c in df2.columns:
-            try:
-                df2[c] = df2[c].astype(str)
-            except Exception:
-                pass
-        return df2.to_csv(index=False).encode('utf-8')
-
-
-def generate_predictions_pdf(df: pd.DataFrame, max_rows: int = 200) -> bytes:
-    """Generate a simple PDF summary of the predictions DataFrame and return bytes.
-
-    Keeps layout compact and avoids embedding large images. Uses a landscape
-    letter page with a table of core fields.
-    """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=landscape(letter), topMargin=0.4 * inch)
-
-    styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('Title', parent=styles['Heading1'], fontSize=16, alignment=1)
-
-    story = []
-    story.append(Paragraph("NFL Predictions", title_style))
-    story.append(Spacer(1, 8))
-
-    date_text = f"Generated: {datetime.now().strftime('%B %d, %Y %H:%M')}"
-    story.append(Paragraph(date_text, styles['Normal']))
-    story.append(Spacer(1, 8))
-
-    # Table header and column selection - keep columns compact for readability
-    # Short, compact headers to improve fit on the PDF
-    header = ['Gameday', 'Home', 'Away', 'Spread', 'Total', 'Home ML', 'Away ML', 'Pr Cover', 'Pr Win', 'Pr Over']
-    table_data = [header]
-    # Only include games that are today or later (no past games)
-    try:
-        today_dt = pd.to_datetime(datetime.now().date())
-        if 'gameday' in df.columns:
-            gamedays = pd.to_datetime(df['gameday'], errors='coerce')
-            upcoming_mask = gamedays >= today_dt
-            df_to_use = df[upcoming_mask]
-        else:
-            df_to_use = df.copy()
-    except Exception:
-        df_to_use = df.copy()
-
-    # If there are no upcoming games, emit a short message instead of a table
-    if df_to_use is None or len(df_to_use) == 0:
-        story.append(Spacer(1, 6))
-        story.append(Paragraph("No upcoming games found for the selected predictions.", styles['Normal']))
-        try:
-            doc.build(story)
-        except Exception:
-            pass
-
-        buffer.seek(0)
-        return buffer.getvalue()
-
-    # Fill rows (limit to max_rows for performance)
-    for _, row in df_to_use.head(max_rows).iterrows():
-        try:
-            gameday_val = row.get('gameday', '')
-            gameday = ''
-            if pd.notna(gameday_val):
-                try:
-                    dt = pd.to_datetime(gameday_val)
-                    # If time is exactly midnight, only show the date (hide 00:00:00)
-                    if dt.hour == 0 and dt.minute == 0 and dt.second == 0:
-                        gameday = dt.strftime('%Y-%m-%d')
-                    else:
-                        gameday = dt.strftime('%Y-%m-%d %H:%M')
-                except Exception:
-                    gameday = str(gameday_val)
-
-            def fmt(v, digits=2):
-                try:
-                    if pd.isna(v):
-                        return ''
-                    if isinstance(v, (int, float, np.floating, np.integer)):
-                        return f"{v:.{digits}f}"
-                    return str(v)
-                except Exception:
-                    return str(v)
-
-            row_vals = [
-                gameday,
-                row.get('home_team', ''),
-                row.get('away_team', ''),
-                fmt(row.get('spread_line', '')),
-                fmt(row.get('total_line', '')),
-                str(row.get('home_moneyline', '')),
-                str(row.get('away_moneyline', '')),
-                fmt(row.get('prob_underdogCovered', ''), 2),
-                fmt(row.get('prob_underdogWon', ''), 2),
-                fmt(row.get('prob_overHit', ''), 2),
-            ]
-            table_data.append(row_vals)
-        except Exception:
-            # Skip problematic rows but continue building the PDF
-            continue
-
-    # Create table with reasonable column widths for landscape
-    # Adjust column widths for a tighter, print-friendly layout
-    col_widths = [1.0 * inch, 1.0 * inch, 1.0 * inch, 0.6 * inch, 0.6 * inch, 0.8 * inch, 0.8 * inch, 0.6 * inch, 0.6 * inch, 0.6 * inch]
-    table = Table(table_data, colWidths=col_widths)
-
-    table_style = TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#2f4f4f')),
-        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-        # Smaller header and body fonts to fit more content
-        ('FONTSIZE', (0, 0), (-1, 0), 9),
-        ('FONTSIZE', (0, 1), (-1, -1), 7),
-        # Tighter paddings for compact layout
-        ('LEFTPADDING', (0, 0), (-1, -1), 4),
-        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, 0), 6),
-        ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#f7f7f7')]),
-        # Alignments: header centered, numeric columns right-aligned for readability
-        ('ALIGN', (0, 0), (-1, 0), 'CENTER'),
-        ('ALIGN', (3, 1), (6, -1), 'RIGHT'),
-        ('ALIGN', (7, 1), (9, -1), 'RIGHT')
-    ])
-    table.setStyle(table_style)
-
-    story.append(table)
-
-    # Build PDF
-    try:
-        doc.build(story)
-    except Exception:
-        # If building fails, return an empty bytes object instead of crashing the app
-        return b''
-
-    buffer.seek(0)
-    return buffer.getvalue()
-
-
-
 
 
 def get_base_url_from_browser(timeout_ms: int = 1000):
@@ -1982,117 +1827,14 @@ def home_page():
 
     # Data loading complete (terminal logs suppressed)
 
-    # Populate sidebar download placeholders (created earlier) now that data is loaded
+    # Populate sidebar download placeholders (created earlier) now that data is loaded.
+    # They are locals of this function; home_downloads reports a missing input
+    # or a failure in the sidebar instead of hiding the control.
     try:
-        icons_dir = DATA_DIR
-        csv_icon = path.join(icons_dir, 'csv_icon.png')
-        pdf_icon = path.join(icons_dir, 'pdf_icon.png')
-        fallback_icon = path.join(icons_dir, 'favicon.png')
-
-        # Helper to render an HTML download button with embedded icon, fallback to st.download_button
-        def _render_download(placeholder, filename, data_bytes, mime='application/octet-stream', display_text=None):
-            try:
-                b64_file = base64.b64encode(data_bytes).decode('ascii')
-                if mime == 'text/csv':
-                    file_data_uri = f"data:text/csv;base64,{b64_file}"
-                elif mime == 'application/pdf':
-                    file_data_uri = f"data:application/pdf;base64,{b64_file}"
-                else:
-                    file_data_uri = f"data:application/octet-stream;base64,{b64_file}"
-
-                # Choose icon based on mime
-                chosen_icon_path = None
-                if mime == 'text/csv' and os.path.exists(csv_icon):
-                    chosen_icon_path = csv_icon
-                elif mime == 'application/pdf' and os.path.exists(pdf_icon):
-                    chosen_icon_path = pdf_icon
-                elif os.path.exists(fallback_icon):
-                    chosen_icon_path = fallback_icon
-
-                img_tag = ''
-                if chosen_icon_path is not None:
-                    try:
-                        with open(chosen_icon_path, 'rb') as ifh:
-                            img_b64 = base64.b64encode(ifh.read()).decode('ascii')
-                        img_tag = f'<img src="data:image/png;base64,{img_b64}" style="width:36px;height:36px;margin-right:10px;vertical-align:middle;border-radius:6px;">'
-                    except Exception:
-                        img_tag = ''
-
-                if display_text is None:
-                    display_text = filename
-                html = (
-                    f'<div style="display:flex;align-items:center;margin:6px 0;">'
-                    f'<a download="{filename}" href="{file_data_uri}" '
-                    f'style="display:flex;align-items:center;padding:6px 12px;background:#1976d2;color:#fff;border-radius:6px;text-decoration:none;font-weight:600;">'
-                    f'{img_tag}'
-                    f'<span style="color:#fff;">{display_text}</span>'
-                    f'</a></div>'
-                )
-                placeholder.markdown(html, unsafe_allow_html=True)
-            except Exception:
-                try:
-                    placeholder.download_button(label=f"Download {filename}", data=data_bytes, file_name=filename, mime=mime)
-                except Exception:
-                    placeholder.write(f'Could not prepare download for {filename}')
-
-        # Predictions CSV
-        if 'predictions_dl_placeholder' in globals() and predictions_dl_placeholder is not None:
-            if predictions_df is not None:
-                try:
-                    csv_bytes = convert_df_to_csv(predictions_df)
-                    filename = f'nfl_predictions_{datetime.now().strftime("%Y%m%d")}.csv'
-                    _render_download(predictions_dl_placeholder, filename, csv_bytes, mime='text/csv', display_text='Download Predictions')
-                except Exception:
-                    pass
-
-        # Betting log CSV
-        log_path = path.join(DATA_DIR, 'betting_recommendations_log.csv')
-        if 'betting_log_dl_placeholder' in globals() and betting_log_dl_placeholder is not None:
-            if os.path.exists(log_path):
-                try:
-                    with open(log_path, 'rb') as _f:
-                        log_bytes = _f.read()
-                    filename = f'betting_recommendations_log_{datetime.now().strftime("%Y%m%d")}.csv'
-                    _render_download(betting_log_dl_placeholder, filename, log_bytes, mime='text/csv', display_text='Download Betting Log')
-                except Exception:
-                    pass
-
-        # PDF export: generate on demand to avoid pre-building large binary at load time
-        if 'pdf_dl_placeholder' in globals() and pdf_dl_placeholder is not None:
-            if predictions_df is not None:
-                try:
-                    if pdf_dl_placeholder.button("📄 Generate Predictions PDF"):
-                        try:
-                            pdf_bytes = generate_predictions_pdf(predictions_df)
-                        except Exception as e:
-                            st.sidebar.error(f"PDF generation failed: {e}")
-                            st.sidebar.text(traceback.format_exc())
-                            pdf_bytes = b''
-
-                        if pdf_bytes:
-                            try:
-                                exports_dir = path.join(DATA_DIR, 'exports')
-                                os.makedirs(exports_dir, exist_ok=True)
-                                filename = f'nfl_predictions_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pdf'
-                                file_path = path.join(exports_dir, filename)
-                                with open(file_path, 'wb') as f:
-                                    f.write(pdf_bytes)
-
-                                    try:
-                                        _render_download(pdf_dl_placeholder, filename, pdf_bytes, mime='application/pdf', display_text='Download Predictions (PDF)')
-                                    except Exception as e:
-                                        st.sidebar.error(f"Saved PDF but failed to create download button: {e}")
-                            except Exception as e:
-                                st.sidebar.error(f"Failed to save generated PDF: {e}")
-                        else:
-                            st.sidebar.error("Failed to generate PDF.")
-                except Exception as e:
-                    st.sidebar.error(f"PDF export handler error: {e}")
-    except Exception:
-        # Non-fatal: download UI should not block the app
-        pass
-
-
+        render_home_downloads(predictions_dl_placeholder, betting_log_dl_placeholder,
+                              pdf_dl_placeholder, predictions_df, DATA_DIR)
+    except Exception as e:
+        st.sidebar.error(f"Export controls failed: {e}")
 
     # In-App Notifications for Elite and Strong Bets
     # Store new bets in session state to avoid duplicate notifications
