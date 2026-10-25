@@ -8,6 +8,24 @@ bottom.
 
 ## October 2026
 
+- **Player props: real-data compatibility rehearsal** (`player_props/rehearsal_real.py`,
+  `player_props/rehearsal.py`). Isolated; not deployed. Generation stays blocked
+  and the containment warnings are unchanged.
+  - **How it runs:** the Stage 5B rehearsal can now run on real nflverse data.
+    A separate download step fetches the play-by-play and schedule into the
+    workspace with recorded hashes. The rehearsal then runs offline on those
+    exact bytes (`--real-inputs`, `--players`, `--train-seasons`, `--target`).
+  - **First run (2026 week 7):** passed source validation (2020-2026), the
+    Stage 2 checks, training, bundle restore, prediction and output
+    verification.
+  - **Fix:** the verifier mis-identified players who share a display name.
+    It now resolves them by team and refuses ambiguity.
+  - **Summary:** `summary.json` records the inputs used.
+  - **Download attempts:** each gets its own exclusively created directory, so
+    one in the same second can no longer reuse or overwrite a previous one.
+    The completion record is written only after success.
+  - **Not claimed:** completeness of the output rows, accuracy or edge.
+
 - **Historical Data: clearer CSV exports** (`historical_exports.py`,
   `pages/1_Historical_Data.py`). "Export Filtered Data" downloaded only the
   visible page (typically 50 rows) although its label suggested every

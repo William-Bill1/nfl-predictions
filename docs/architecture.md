@@ -890,6 +890,78 @@ of the 5B workflow order. Going live still needs:
 4. A first live, supervised run with containment kept until stage 6
    evaluation.
 
+**Real-data compatibility rehearsal (2026-10-25; isolated, not deployed).**
+The same rehearsal now also runs on real nflverse data, in two separate steps:
+
+1. **Download** (network, writes only under the workspace):
+   `python player_props/rehearsal_real.py --workspace DIR --seasons 2020-2026`
+   fetches each season's play-by-play with the source refresh's own
+   `nflverse_fetch`, plus the nflverse schedule
+   (`nflverse/nfldata/.../games.csv`).
+   - **One directory per attempt:** each attempt writes to its own
+     `downloads/<UTC time>-<token>/`, created exclusively, so a previous
+     attempt is never reused or overwritten, even within the same second.
+   - **Completion record:** `downloads.json` holds each file's URL, size,
+     SHA-256 and the TLS trust source. It is written only after the attempt
+     succeeds, so a failed attempt has none and can't be used. TLS is verified
+   against the operating system's trust store (`truststore`), because a local
+   security product here re-signs HTTPS with a root only Windows trusts.
+2. **Rehearse** (offline, network blocked):
+   `python player_props/rehearsal.py --workspace DIR --real-inputs DOWNLOADS
+   --players PLAYERS_CSV --train-seasons 2020-2025 --target 2026:7`. Every
+   downloaded file is re-verified against its recorded hash. The players
+   reference isn't part of the source-refresh contract, so it's named
+   explicitly (the committed `data_files/players.csv`) and its hash recorded.
+   `summary.json` now records the inputs used.
+
+*First run (real data, 2026 week 7):*
+- **Source:** 2020-2026 validated by `refresh_source`, judged against
+  today's date (2026-10-25).
+  - **Downloaded:** 1,787 games and 311,540 plays, from 2020-09-10 to
+    2026-10-22, postseason included.
+  - **Eligible as completed:** every downloaded game (1,787), each with an
+    `END GAME` score matching the schedule. Eligible means a recorded score
+    corroborated by that score, dated before the judging day.
+  - **2026:** 272 games scheduled, of which 94 were downloaded, all
+    eligible. The other 178 were not yet completed, including 3 already
+    scored on the judging day, which therefore count as unfinished.
+  - **The cancelled 2022 BUF-CIN game** (week 17) is in neither the nflverse
+    schedule nor the play-by-play: 2022 lists 271 regular-season and 13
+    postseason games, and BUF and CIN 16 regular-season games each. It is
+    never required as completed and contributes no evidence.
+- **Stage 2:** provenance and freshness passed for 2026 week 7, with a
+  feature cutoff of 2026-10-22. The 4 week-7 games already scored were
+  excluded.
+- **Training:** 26 models were trained on 2020-2024 and evaluated on 2025.
+  Two were skipped by the imbalance rule. The bundle exported and restored
+  byte-identically.
+- **Prediction:** 750 rows for 14 games. All of them were verified, and the
+  frozen snapshot matched.
+- **Publishing:** run `20261025T201417Z-e7d13275` published its week-7
+  snapshot. A later run on the final code (`20261025T202042Z-7afa9654`)
+  verified its own 750 rows, then correctly refused to replace that
+  snapshot, because it came from a different bundle. Nothing was
+  overwritten.
+- **Run cost:** about 4 minutes wall time, about 1,700 CPU-seconds and a
+  peak working set of about 760 MB.
+
+*Found and fixed:* real `players.csv` repeats display names (retired
+namesakes), and the prediction output carries names, not player IDs. The
+verifier's name-to-ID lookup therefore rebuilt 34 rows for the wrong player
+and failed. It now resolves a shared name to the one candidate with stats for
+the row's team, and refuses anything ambiguous. **Proposed:** add `player_id`
+to the prediction output so identity needs no name lookup at all.
+
+*Still not established:*
+- **Output completeness:** unverified. The verifier checks each row present;
+  there is no independent expected-row check, so missing eligible
+  predictions wouldn't be detected.
+- **Rookies:** missing 2026 rookies are unverified. The players reference has
+  none, so they get no position and no props.
+- **Deployment readiness:** unverified. A GitHub runner, artifact or cache
+  storage, the workflow steps, and injury, weather and market adjustments
+  were not exercised.
+
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
    runner, aggregate from the prop source, rebuild the stats with their
