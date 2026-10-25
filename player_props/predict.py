@@ -606,7 +606,29 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
 
 def generate_predictions(season=None, week=None, freeze=True,
                          skip_injuries=False, skip_weather=False,
-                         skip_market_odds=False):
+                         skip_market_odds=False, data_dir=None, models_dir=None):
+    """generate_predictions, optionally against explicit directories.
+
+    ``data_dir`` (stats, manifest, schedules, players, predictions output) and
+    ``models_dir`` (the verified model bundle) replace DATA_DIR / MODELS_DIR
+    for this call only and are restored afterwards; every helper here reads
+    them. Used by the Stage 5B rehearsal; omitted, nothing changes."""
+    global DATA_DIR, MODELS_DIR
+    saved = DATA_DIR, MODELS_DIR
+    try:
+        if data_dir is not None:
+            DATA_DIR = Path(data_dir)
+        if models_dir is not None:
+            MODELS_DIR = Path(models_dir)
+        return _generate_predictions(season, week, freeze, skip_injuries, skip_weather,
+                                     skip_market_odds)
+    finally:
+        DATA_DIR, MODELS_DIR = saved
+
+
+def _generate_predictions(season=None, week=None, freeze=True,
+                          skip_injuries=False, skip_weather=False,
+                          skip_market_odds=False):
     """Main pipeline to generate all prop predictions.
 
     Writes data_files/player_props_predictions.csv (always, the 'latest' feed)

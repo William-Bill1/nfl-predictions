@@ -8,6 +8,31 @@ bottom.
 
 ## October 2026
 
+- **Player props: Stage 5B preparation, an isolated end-to-end rehearsal**
+  (`player_props/rehearsal.py`, `player_props/rehearsal_fixtures.py`,
+  `predict.py`). Offline only: synthetic downloads, network blocked; no
+  workflow, dependency or production change; generation stays blocked.
+  - **Pipeline:** the real production functions run in order: source refresh
+    (separate training and inference sources), aggregation with the stats
+    manifest, training under the production minimums, a verified bundle,
+    export, restore into an empty runtime, input validation, prediction,
+    independent verification, and snapshot-immutable publishing.
+  - **Output verification:** before publishing, every row of both the latest
+    feed and the frozen snapshot is recomputed from the raw score and the
+    permitted clamp: final probability, complement, confidence, side, exact
+    adjustment label, tier, model, line and bundle ID. The two files must
+    match each other, and a file changed after verification is not published.
+  - **Paths:** everything lives under an explicit workspace. Paths that
+    resolve into or around the repository or production data are refused,
+    including via symlinks and junctions.
+  - **Failures:** a failure stops later stages and keeps diagnostics. A
+    different frozen snapshot is never overwritten.
+  - **Summary:** a machine-readable summary records stage statuses, artifact
+    hashes, coverage, training and evaluation windows, the bundle identity,
+    exclusions and limitations. No accuracy is claimed.
+  - **`predict.generate_predictions`** accepts explicit `data_dir` /
+    `models_dir` for one call; default behaviour is unchanged.
+
 - **Player props: Stage 5A source refresh and bundle storage (mechanisms;
   not deployed)** (`player_props/source_refresh.py`,
   `player_props/bundle_store.py`, `model_bundle.py`). No live data fetched,

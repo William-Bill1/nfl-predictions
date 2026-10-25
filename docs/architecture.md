@@ -799,6 +799,97 @@ against real nflverse downloads, a GitHub runner, or artifact storage.
   too large to commit nightly without LFS. Plan to re-download it, or cache
   it and verify it on restore.
 
+**Stage 5B preparation: isolated end-to-end rehearsal (offline; not
+deployed).** `python player_props/rehearsal.py --workspace DIR` runs the real
+production functions in order on a synthetic league, with the network blocked:
+
+1. **Fixture downloads** (`rehearsal_fixtures.py`): eight teams, five seasons,
+   nflverse-style plays, and `END GAME` rows matching the schedule's scores.
+2. **Source refresh** (`source_refresh.refresh_source`), run twice: a
+   **training** source through the last training season, and a newer
+   **inference** source through the weeks already played in the target season.
+3. **Aggregation** (`build_player_stats`, `write_player_stats` with
+   `stats_manifest`) for each source.
+4. **Training** (`models.train_all_models`) with the production minimums and
+   out-of-time evaluation unchanged. It publishes a verified bundle.
+5. **Export** (`bundle_store.export_bundle`), then **restore**
+   (`import_bundle`) into an empty runtime models directory. Prediction is
+   pointed only there; the training folder can be deleted after restore.
+6. **Input validation** (`provenance.check_inputs`), then **prediction**
+   (`predict.generate_predictions`, now taking explicit `data_dir` /
+   `models_dir`, restored after the call).
+7. **Independent verification**, of the latest feed **and** the frozen
+   snapshot, before anything is published:
+   - each row is recomputed: the tier and model production would pick, the
+     restored model's raw score, the one permitted clamp (star floor 0.75 or
+     low-average cap 0.25, restated in `rehearsal.py` rather than imported),
+     its exact label (`none` when unclamped; any other label is refused), and
+     `prob_over`, `prob_under`, `confidence` and `recommendation`;
+   - the line, model, tier, recent averages, season, week and this run's
+     bundle ID must match; weather must read `Skipped` and every market field
+     must be empty;
+   - the snapshot must hold exactly the latest feed's rows and values;
+   - every model's stored metrics equal a recomputation with the restored
+     model on its evaluation rows.
+
+   The verified files' hashes are recorded, and publishing refuses a file
+   that changed afterwards.
+8. **Publish** to `<workspace>/published/`. A week's frozen snapshot is never
+   overwritten: a different one makes the run `conflict` and publishes
+   nothing, while an identical one is accepted. `snapshots.json` records which
+   run and bundle froze each snapshot.
+
+*Guarantees:*
+- **Paths:** everything lives under `<workspace>/runs/<run_id>/`. The
+  workspace, and each directory a run creates, is resolved (symlinks and
+  Windows junctions included) and refused if it is, contains or lies inside
+  the repository, `data_files/`, `player_props/models/` or another protected
+  path.
+- **Training cutoff:** the training source must end strictly before the
+  target week's first game, and prediction refuses a bundle trained on that
+  week anyway (Stage 4).
+- **Failure handling:** a failure stops every later stage. The run keeps its
+  partial outputs, a `summary.json` with status `failed`, and
+  `diagnostics/traceback.txt`; nothing is published. A retry is a new run.
+- **Summary:** `summary.json` (machine-readable) records:
+  - stage statuses;
+  - every artifact's SHA-256;
+  - training and inference source coverage;
+  - the feature cutoff and training end date;
+  - per-model training and evaluation windows;
+  - the bundle ID, feature contract and scorer;
+  - skipped models and skipped external inputs;
+  - the output and verification counts, and the limitations.
+
+  It claims no accuracy or edge.
+
+*What it does not cover:*
+- **External inputs:** injury, weather and market-odds inputs are skipped, so
+  only the model clamps can appear in `adjustments`, and their rules are not
+  verified here.
+- **Which rows exist:** each row present is verified, but the rehearsal does
+  not re-derive which players and props production should have included.
+- **Label order:** under these rules at most one clamp applies, so label order
+  is enforced only as an exact string.
+- **Synthetic only:** the data is synthetic, so real nflverse formats and
+  volumes, real schedules, a GitHub runner, and artifact or cache storage are
+  untested.
+- **Real date at prediction:** Stage 2's completion check at prediction uses
+  the real current date.
+- **Training volume:** one full run takes about 20 seconds locally (26 of 28
+  models train; 2 are skipped by the real imbalance rule).
+
+*Deployment implications (nothing enabled):* the rehearsal is the rehearsal
+of the 5B workflow order. Going live still needs:
+1. Live verification of the source refresh against real nflverse downloads
+   and the real schedule, including postseason, 0-0 and `gameday` vs
+   `game_date` edge cases.
+2. A decision on where the inference stats and the bundle persist between
+   runs (see Stage 5A).
+3. Workflow steps with `concurrency`, permissions and artifact retention.
+4. A first live, supervised run with containment kept until stage 6
+   evaluation.
+
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
    runner, aggregate from the prop source, rebuild the stats with their
