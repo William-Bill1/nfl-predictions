@@ -628,7 +628,8 @@ longer trained for props; the spread pipeline is unchanged.
   0.7.
 - **Weather:** wind and cold penalties.
 - **Market:** the market edge is computed from the final P.
-- **Recorded in outputs:** `raw_model_prob_over` (the scorer's output,
+- **Recorded in outputs:** `player_id` (the stable ID that was scored; see
+  "Stable player identity" below), `raw_model_prob_over` (the scorer's output,
   untouched by every later step), `prob_over` (after adjustments),
   `adjustments`, `model_name` and `model_bundle`.
   - `adjustments` lists, in order, each step that changed the probability:
@@ -946,11 +947,46 @@ The same rehearsal now also runs on real nflverse data, in two separate steps:
   peak working set of about 760 MB.
 
 *Found and fixed:* real `players.csv` repeats display names (retired
-namesakes), and the prediction output carries names, not player IDs. The
+namesakes), and the prediction output carried names, not player IDs. The
 verifier's name-to-ID lookup therefore rebuilt 34 rows for the wrong player
-and failed. It now resolves a shared name to the one candidate with stats for
-the row's team, and refuses anything ambiguous. **Proposed:** add `player_id`
-to the prediction output so identity needs no name lookup at all.
+and failed. Interim fix: resolve a shared name by team. Since superseded by
+`player_id` in the outputs (below).
+
+**Stable player identity (`player_id` in prediction outputs).**
+- **Source of the ID:** each new prediction row carries `player_id`, the
+  stats ID that selected its feature row and scored its model (from
+  `predict.candidate_players`). It is written as text in the latest feed and
+  in newly frozen snapshots, and is never derived from a name.
+- **Rehearsal verifier** (fails closed, no name lookup). A row's own
+  `player_id` must:
+  - be present, and appear in the player reference exactly once (production
+    uses only an ID's single record);
+  - be one of the team's candidates under production's rule;
+  - agree with the row's short name, display name, position and prop
+    eligibility (`POSITION_MAP`).
+- **Duplicates and file comparison:**
+  - duplicates are found on `(player_id, team, opponent, prop_type,
+    line_value)`, so different players sharing a name are not duplicates;
+  - the latest feed and the snapshot must carry the same identities.
+- **A file without a `player_id` column** is refused as unverifiable.
+- **Compatibility:**
+  - Existing production feeds and frozen snapshots are unchanged (none has
+    `player_id`; they already vary between 23 and 29 columns).
+  - They remain readable: the Player Props and Parlay Builder pages show
+    named columns, and backtest grading joins on `player_name`, so an extra or
+    absent `player_id` changes nothing for them.
+  - IDs are not backfilled by name, and historical files are not treated as
+    identity-verified.
+  - New production snapshots would carry `player_id` once generation is
+    unblocked (it stays blocked). A week's frozen snapshot is never rewritten,
+    so older weeks keep their original schema.
+- **Not changed:** probabilities, selection rules, the feature contract,
+  bundle checks and the generation gates.
+- **Limitations:**
+  - Backtest grading still matches by `player_name`; using `player_id` there
+    needs ID-keyed actual results.
+  - Output completeness and 2026 rookie coverage remain separate, unverified
+    tasks.
 
 *Still not established:*
 - **Output completeness:** unverified. The verifier checks each row present;

@@ -394,8 +394,14 @@ def expected_post_processing(raw: float, tier: str, recent_avg: float, line: flo
 
 
 def read_predictions(path: Path) -> pd.DataFrame:
-    # Only empty cells are missing: 'none' and 'None' stay text.
-    return pd.read_csv(path, float_precision='round_trip', keep_default_na=False, na_values=[''])
+    # Only empty cells are missing: 'none' and 'None' stay text. player_id is
+    # text exactly as written (an ID must never become a number).
+    return pd.read_csv(path, float_precision='round_trip', keep_default_na=False, na_values=[''],
+                       dtype={'player_id': str})
+
+
+# A row's identity: the stable player plus the game, prop and line it is for.
+IDENTITY_FIELDS = ['player_id', 'team', 'opponent', 'prop_type', 'line_value']
 
 
 def _same(a, b) -> bool:
@@ -407,48 +413,71 @@ class _Expectations:
     tier and model it would pick, the raw score, and the post-processed fields."""
 
     def __init__(self, run: Run):
-        from player_props.predict import get_player_performance_tier
+        from player_props.predict import POSITION_MAP, candidate_players, get_player_performance_tier
         self.tier_of = get_player_performance_tier
+        self.candidate_players = candidate_players
+        self.position_map = POSITION_MAP
         self.cfg = run.config
         self.models = run.info['bundle']['models']
-        players = pd.read_csv(run.paths['runtime_data'] / 'players.csv', low_memory=False)
-        # The output names players, not IDs, and a display name can belong to
-        # several players (the real players.csv has retired namesakes), so a
-        # name maps to every ID carrying it.
-        self.ids = {n: list(dict.fromkeys(g)) for n, g in players.groupby('display_name')['gsis_id']}
+        players = pd.read_csv(run.paths['runtime_data'] / 'players.csv', low_memory=False,
+                              dtype={'gsis_id': str})
+        # The player reference by stable ID. Production uses an ID's record only
+        # when it is the ID's only one (predict.get_player_position).
+        counts = players['gsis_id'].value_counts()
+        self.repeated_ids = set(counts[counts > 1].index)
+        self.reference = players.drop_duplicates('gsis_id', keep=False).set_index('gsis_id')
         self.games = load_games(run.paths['runtime_data'])
         self.feature = run.info['check'].feature_tables
-        # Production picks players by ID from the team's stats, so a shared
-        # name is resolved to the one candidate with stats for the row's team.
-        self.team_ids: Dict[str, set] = {}
-        for table in self.feature.values():
-            for team, ids in table.groupby('team')['player_id']:
-                self.team_ids.setdefault(team, set()).update(ids)
+        self._candidates: Dict[str, dict] = {}
         self.cache: Dict[tuple, dict] = {}
 
-    def player_id(self, r: dict) -> tuple:
-        """(player_id, None), or (None, problem) when the row's player can't be
-        identified uniquely. Never guesses."""
-        ids = self.ids.get(r['display_name'], [])
-        if not ids:
-            return None, f"unknown player {r['display_name']!r}"
-        if len(ids) > 1:
-            on_team = [i for i in ids if i in self.team_ids.get(r['team'], ())]
-            if len(on_team) != 1:
-                return None, (f"player {r['display_name']!r} is ambiguous: {len(ids)} players share the name "
-                              f"and {len(on_team)} of them have stats for {r['team']}")
-            ids = on_team
-        return ids[0], None
+    def candidates(self, team: str) -> dict:
+        """{player_id: player_name} production would consider for ``team``
+        (predict.candidate_players: recent appearance, latest team)."""
+        if team not in self._candidates:
+            self._candidates[team] = self.candidate_players(self.feature, team)[0]
+        return self._candidates[team]
+
+    def identity(self, r: dict) -> tuple:
+        """(player_id, None), or (None, problem). The row's own player_id must
+        be in the player reference exactly once and be one of the team's
+        candidates, and the row's names, position and prop must be what
+        production derives for that ID. Names are never used to find the ID."""
+        pid = r.get('player_id')
+        if pid is None or pd.isna(pid) or not str(pid).strip():
+            return None, "no player_id"
+        pid = str(pid)
+        if pid in self.repeated_ids:
+            return None, f"player_id {pid!r} has several player-reference records"
+        if pid not in self.reference.index:
+            return None, f"unknown player_id {pid!r}: not in the player reference"
+        team = r['team']
+        cands = self.candidates(team)
+        if pid not in cands:
+            return None, f"player_id {pid!r} is not a {team} candidate (no eligible recent {team} history)"
+        if r['player_name'] != cands[pid]:
+            return None, f"player_name {r['player_name']!r} is not {pid!r}'s ({cands[pid]!r})"
+        ref = self.reference.loc[pid]
+        position = ref['position'] if isinstance(ref['position'], str) else None
+        display = ref['display_name'] if isinstance(ref['display_name'], str) else None
+        if r['display_name'] != (display or cands[pid]):
+            return None, f"display_name {r['display_name']!r} is not {pid!r}'s ({display or cands[pid]!r})"
+        if r['position'] != (position or 'Unknown'):
+            return None, f"position {r['position']!r} is not {pid!r}'s ({position or 'Unknown'!r})"
+        if r['prop_type'] not in self.position_map.get(position, []):
+            return None, f"prop {r['prop_type']!r} is not eligible for {pid!r} (position {position!r})"
+        return pid, None
 
     def for_row(self, r: dict) -> dict:
-        key = (r['display_name'], r['player_name'], r['team'], r['opponent'], r['is_home'], r['prop_type'])
+        key = (r.get('player_id'), r['display_name'], r['player_name'], r['position'], r['team'],
+               r['opponent'], r['is_home'], r['prop_type'])
         if key not in self.cache:
             self.cache[key] = self._compute(r)
         return self.cache[key]
 
     def _compute(self, r: dict) -> dict:
         cfg, prop_type = self.cfg, r['prop_type']
-        player_id, problem = self.player_id(r)
+        player_id, problem = self.identity(r)
         if problem:
             return {'problem': problem}
         tier = self.tier_of(player_id, prop_type, self.feature)
@@ -490,11 +519,14 @@ def prediction_problems(frame: pd.DataFrame, label: str, run: Run, expect: _Expe
     problems = []
     if frame.empty:
         return [f"{label}: no predictions"]
-    keys = frame[['player_name', 'team', 'prop_type']].apply(tuple, axis=1)
+    if 'player_id' not in frame.columns:
+        # Fail closed: identity is never reconstructed from names.
+        return [f"{label}: no player_id column, so no row's player can be verified"]
+    keys = frame[IDENTITY_FIELDS].apply(tuple, axis=1)
     if keys.duplicated().any():
-        problems.append(f"{label}: duplicate predictions {sorted(set(keys[keys.duplicated()]))[:3]}")
+        problems.append(f"{label}: duplicate predictions {sorted(set(keys[keys.duplicated()]), key=str)[:3]}")
     for r in frame.to_dict('records'):
-        tag = f"{label}: {r['player_name']} {r['prop_type']}"
+        tag = f"{label}: {r['player_name']} [{r.get('player_id')}] {r['prop_type']}"
         if r['season'] != cfg.target_season or r['week'] != cfg.target_week:
             problems.append(f"{tag}: season/week {r['season']}/{r['week']} is not the target")
         if r['model_bundle'] != bundle_id or r['model_bundle'] != trained_id:
@@ -520,10 +552,15 @@ def prediction_problems(frame: pd.DataFrame, label: str, run: Run, expect: _Expe
 def _stage_verify_outputs(run: Run) -> dict:
     """Independent checks before anything is published:
 
-    * every row of the latest feed AND of the frozen snapshot is recomputed: the
-      tier and model production would pick, the restored model's raw score, the
-      permitted clamp and its exact label, prob_over / prob_under / confidence /
-      recommendation, the skipped inputs, the line and this run's bundle ID;
+    * every row of the latest feed AND of the frozen snapshot is recomputed from
+      its own player_id (never a name): the ID must be in the player reference
+      once and be one of the team's candidates, with the row's names, position
+      and prop agreeing with it; then the tier and model production would pick,
+      the restored model's raw score, the permitted clamp and its exact label,
+      prob_over / prob_under / confidence / recommendation, the skipped inputs,
+      the line and this run's bundle ID;
+    * duplicates are found on (player_id, team, opponent, prop, line), and the
+      two files' player identities must agree;
     * the snapshot holds exactly the latest feed's rows and values;
     * each model's stored metrics equal a recomputation with the restored model
       on its evaluation rows.
@@ -535,6 +572,11 @@ def _stage_verify_outputs(run: Run) -> dict:
     expect = _Expectations(run)
     problems = (prediction_problems(latest, 'latest feed', run, expect)
                 + prediction_problems(snapshot, 'frozen snapshot', run, expect))
+    if all('player_id' in f.columns for f in (latest, snapshot)):
+        ids = [f[IDENTITY_FIELDS].astype(str).apply(tuple, axis=1).tolist() for f in (latest, snapshot)]
+        if ids[0] != ids[1]:
+            diff = sorted(set(ids[0]) ^ set(ids[1]))[:3]
+            problems.append(f"the frozen snapshot's player identities differ from the latest feed's: {diff}")
     if list(latest.columns) != list(snapshot.columns) or not latest.equals(snapshot):
         problems.append("the frozen snapshot does not hold exactly the latest feed's predictions")
     train_tables = {s: pd.read_csv(run.paths['train_stats'] / f, float_precision='round_trip')

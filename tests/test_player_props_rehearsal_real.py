@@ -230,35 +230,6 @@ class TestRealInputs:
             real.RealInputs(tmp_path, downloaded[2])
 
 
-class TestPlayerIdentity:
-    """The verifier's name -> ID resolution (outputs carry names, not IDs)."""
-
-    def expect(self, ids, team_ids):
-        e = object.__new__(rh._Expectations)
-        e.ids, e.team_ids = ids, team_ids
-        return e
-
-    def test_unique_name(self):
-        assert self.expect({"A B": ["1"]}, {}).player_id({"display_name": "A B", "team": "KC"}) == ("1", None)
-
-    def test_namesake_resolved_by_team(self):
-        e = self.expect({"A B": ["old", "1"]}, {"KC": {"1"}, "BUF": {"old"}})
-        assert e.player_id({"display_name": "A B", "team": "KC"}) == ("1", None)
-
-    def test_namesakes_on_the_same_team_are_refused(self):
-        e = self.expect({"A B": ["1", "2"]}, {"KC": {"1", "2"}})
-        pid, problem = e.player_id({"display_name": "A B", "team": "KC"})
-        assert pid is None and "ambiguous" in problem and "2 of them have stats for KC" in problem
-
-    def test_no_namesake_on_the_team_is_refused(self):
-        pid, problem = self.expect({"A B": ["1", "2"]}, {"KC": set()}).player_id(
-            {"display_name": "A B", "team": "KC"})
-        assert pid is None and "0 of them" in problem
-
-    def test_unknown(self):
-        assert self.expect({}, {}).player_id({"display_name": "Nobody", "team": "KC"})[1] == "unknown player 'Nobody'"
-
-
 @pytest.fixture(scope="module")
 def result(downloaded):
     ws, dest, players, _ = downloaded
@@ -300,9 +271,9 @@ class TestRehearsalWithRealInputs:
         assert s["status"] == "failed"
         assert "explicit players file" in next(x for x in s["stages"] if x["stage"] == "workspace")["error"]["message"]
 
-    def test_shared_display_name_is_resolved_by_team(self, downloaded, tmp_path):
-        # Real players.csv has retired namesakes. One listed AFTER the real player
-        # (so a name -> last ID lookup picks it) must not break verification.
+    def test_retired_namesake_is_irrelevant(self, downloaded, tmp_path):
+        # Real players.csv has retired namesakes. Rows carry their own player_id,
+        # so a namesake listed after the real player changes nothing.
         _, dest, players, _ = downloaded
         p = pd.read_csv(players)
         namesake = p.iloc[[0]].assign(gsis_id="00-0000001", position="DE")
@@ -311,6 +282,37 @@ class TestRehearsalWithRealInputs:
         s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest,
                                                 players_file=with_namesake))
         assert s["status"] == "succeeded", s["stages"]
+
+    def test_id_repeated_in_the_reference_gets_no_rows(self, downloaded, tmp_path):
+        # Production uses an ID's record only when it is the only one, so a
+        # repeated ID gets no position, no props and no rows; the run still verifies.
+        _, dest, players, _ = downloaded
+        p = pd.read_csv(players)
+        pid = fixtures.player_id("KC", "WR1")
+        doubled = tmp_path / "players.csv"
+        pd.concat([p, p[p["gsis_id"] == pid]]).to_csv(doubled, index=False)
+        s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=doubled))
+        assert s["status"] == "succeeded", s["stages"]
+        out = pd.read_csv(Path(tmp_path / "ws").resolve() / "runs" / s["run_id"] / "runtime" / "data"
+                          / "player_props_predictions.csv", dtype={"player_id": str})
+        assert pid not in set(out["player_id"])
+
+    def test_same_display_name_different_ids(self, downloaded, tmp_path):
+        # Two active players on different teams given one display name: each row
+        # verifies against its own ID, and neither is taken for a duplicate.
+        _, dest, players, _ = downloaded
+        p = pd.read_csv(players)
+        a, b = fixtures.player_id("KC", "WR1"), fixtures.player_id("BUF", "WR1")
+        shared = p.loc[p["gsis_id"] == a, "display_name"].iloc[0]
+        p.loc[p["gsis_id"] == b, "display_name"] = shared
+        renamed = tmp_path / "players.csv"
+        p.to_csv(renamed, index=False)
+        s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=renamed))
+        assert s["status"] == "succeeded", s["stages"]
+        out = pd.read_csv(Path(tmp_path / "ws").resolve() / "runs" / s["run_id"] / "runtime" / "data"
+                          / "player_props_predictions.csv", dtype={"player_id": str})
+        both = out[out["display_name"] == shared]
+        assert set(both["player_id"]) == {a, b} and set(both["team"]) == {"KC", "BUF"}
 
     def test_synthetic_default_unchanged(self, tmp_path):
         s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws"))
