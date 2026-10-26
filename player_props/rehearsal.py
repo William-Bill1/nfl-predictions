@@ -83,7 +83,8 @@ REAL_LIMITATION = ("real nflverse downloads made beforehand, run offline; no Git
 LIMITATIONS = [
     SYNTHETIC_LIMITATION,
     "injury, weather and market-odds inputs skipped: those adjustments are not exercised",
-    "output verification checks every row present, not which players/props should have been included",
+    "completeness is checked against the expected rows derived from the inputs and inclusion rules; players "
+    "absent from those inputs (for example rookies missing from the player reference) are a separate coverage limit",
     "at most one clamp applies under these rules, so adjustment-label order is only checked as an exact string",
     "Stage 2 completion checks at prediction use the real current date",
     "no accuracy, calibration or betting edge is measured or claimed",
@@ -562,16 +563,43 @@ def _stage_verify_outputs(run: Run) -> dict:
     * duplicates are found on (player_id, team, opponent, prop, line), and the
       two files' player identities must agree;
     * the snapshot holds exactly the latest feed's rows and values;
+    * completeness: the rows production should have written are derived
+      independently from the inputs (rehearsal_expected), BEFORE either file
+      is read, and each file must hold exactly that set: no missing,
+      unexpected or duplicate (player_id, team, opponent, prop, line), with
+      the home/away side the schedule gives;
     * each model's stored metrics equal a recomputation with the restored model
       on its evaluation rows.
 
     The verified files' hashes are recorded; publish refuses files that changed."""
     from sklearn.metrics import accuracy_score, brier_score_loss, log_loss, roc_auc_score
+    from player_props.rehearsal_expected import (ExpectedSetError, completeness_problems, completeness_status,
+                                                 expected_rows)
     models, manifest = run.info['bundle']['models'], run.info['bundle']['manifest']
+    cfg = run.config
+    data = run.paths['runtime_data']
+    try:
+        expected = expected_rows(data, run.info['check'].feature_tables, models, load_games(data),
+                                 cfg.target_season, cfg.target_week, expected_post_processing,
+                                 pd.read_csv(data / 'players.csv', low_memory=False, dtype={'gsis_id': str}))
+    except ExpectedSetError as exc:
+        run.info['completeness'] = {'status': 'expected set not derived', 'problems': exc.problems[:20]}
+        raise RehearsalError("completeness can't be checked: " + "; ".join(exc.problems[:10])) from exc
+    completeness = {'status': 'checked', **expected.summary()}
+    run.info['completeness'] = completeness
     latest, snapshot = read_predictions(run.info['latest']), read_predictions(run.info['snapshot'])
+    problems = []
+    # Completeness first: a missing or extra row is the headline finding.
+    for frame, label in ((latest, 'latest feed'), (snapshot, 'frozen snapshot')):
+        found, counts = completeness_problems(frame, label, expected)
+        completeness[label] = counts
+        problems += found
+    # Decided now, so a later check that raises can't leave a stale status.
+    completeness['status'] = completeness_status(
+        {f: completeness[f] for f in ('latest feed', 'frozen snapshot')})
     expect = _Expectations(run)
-    problems = (prediction_problems(latest, 'latest feed', run, expect)
-                + prediction_problems(snapshot, 'frozen snapshot', run, expect))
+    problems += (prediction_problems(latest, 'latest feed', run, expect)
+                 + prediction_problems(snapshot, 'frozen snapshot', run, expect))
     if all('player_id' in f.columns for f in (latest, snapshot)):
         ids = [f[IDENTITY_FIELDS].astype(str).apply(tuple, axis=1).tolist() for f in (latest, snapshot)]
         if ids[0] != ids[1]:
@@ -600,6 +628,7 @@ def _stage_verify_outputs(run: Run) -> dict:
         raise RehearsalError("output verification failed: " + "; ".join(problems[:10]) + more)
     run.info['verified'] = {k: _sha256_file(run.info[k]) for k in ('latest', 'snapshot')}
     return {'predictions_verified': int(len(latest)), 'snapshot_rows_verified': int(len(snapshot)),
+            'completeness': completeness,
             'models_metric_parity': parity,
             'adjustments': {k: int(v) for k, v in latest['adjustments'].value_counts().sort_index().items()},
             'latest_sha256': run.info['verified']['latest'],
@@ -700,6 +729,8 @@ def _summary(run: Run, status: str) -> dict:
         'exclusions': {'skipped_models': stage.get('train', {}).get('detail', {}).get('skipped', {}),
                        'external_inputs_skipped': ['injuries', 'weather', 'market_odds']},
         'outputs': {k: stage.get(k, {}).get('detail') for k in ('predict', 'verify_outputs', 'publish')},
+        # Expected / observed / missing / unexpected counts, also on failure.
+        'completeness': run.info.get('completeness'),
         'artifacts': _artifacts(run),
         'limitations': ([REAL_LIMITATION] + LIMITATIONS[1:]) if run.info.get('real') else LIMITATIONS,
     }

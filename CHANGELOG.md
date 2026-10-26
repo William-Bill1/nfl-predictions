@@ -8,6 +8,29 @@ bottom.
 
 ## October 2026
 
+- **Player props: expected-row completeness check in the rehearsal**
+  (`player_props/rehearsal_expected.py`, `player_props/rehearsal.py`).
+  - **Expected set:** before either prediction file is read, the rows
+    production should write for the target week are derived independently
+    from the inputs, by restating production's inclusion rules rather than
+    calling them. The latest feed and the frozen snapshot are each checked
+    against it.
+  - **Fails on:** missing, unexpected or duplicate identities, or a wrong
+    home/away side. Nothing is published.
+  - **Ambiguous inputs** fail instead of shrinking the set (schedules that
+    disagree, including a prediction-schedule date that is missing,
+    malformed or different from the game's; a repeated reference ID; two
+    games on one date; the roster filter on).
+  - **Status:** `complete` only when both files were checked and have no
+    missing, unexpected, duplicate or wrong-side identity. An unchecked file
+    is `not checked`, never complete.
+  - **Summary:** `summary.json` records expected, observed, missing and
+    unexpected counts and exclusions by rule, failures included.
+  - **Unchanged:** production selection and every existing check.
+  - **Limits:** completeness covers the players in the inputs, under those
+    rules. Players missing from the reference, such as 2026 rookies, remain a
+    separate coverage limitation.
+
 - **Player props: stable `player_id` in prediction outputs** (`player_props/predict.py`,
   `player_props/rehearsal.py`).
   - **New rows:** each carries the stats ID that selected its features and

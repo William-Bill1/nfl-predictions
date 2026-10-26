@@ -662,6 +662,333 @@ class TestPlayerId:
         assert tree(ws / "published") == before
 
 
+# ---------------------------------------------------------------------------
+# Completeness: the expected rows, derived independently from the inputs
+# ---------------------------------------------------------------------------
+
+from player_props import rehearsal_expected as rx  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def expected(success):
+    r = SUCCESS_RUN["run"]
+    data = r.paths["runtime_data"]
+    return rx.expected_rows(data, r.info["check"].feature_tables, r.info["bundle"]["models"],
+                            fx_load_games(data), r.config.target_season, r.config.target_week,
+                            rh.expected_post_processing,
+                            pd.read_csv(data / "players.csv", dtype={"gsis_id": str}))
+
+
+def fx_load_games(data):
+    from player_props.provenance import load_games
+    return load_games(data)
+
+
+def key_of(row):
+    return rx.identity(row["player_id"], row["team"], row["opponent"], row["prop_type"], row["line_value"])
+
+
+class TestCompletenessUnit:
+    """The comparison against the success run's real output, one change at a time."""
+
+    def check(self, expected, df):
+        return rx.completeness_problems(df, "latest feed", expected)
+
+    def test_valid_output_matches_exactly(self, verified, expected, success):
+        df = verified[1]
+        problems, counts = self.check(expected, df)
+        assert problems == [] and set(map(key_of, df.to_dict("records"))) == set(expected.rows)
+        assert counts == {"checked": True, "observed": len(df), "distinct": len(df), "missing": 0,
+                          "unexpected": 0, "duplicates": 0, "wrong_side": 0}
+        s = success[1]["completeness"]
+        assert s["status"] == "complete" and s["expected"] == len(df) == s["latest feed"]["observed"]
+        assert s["frozen snapshot"]["missing"] == s["frozen snapshot"]["unexpected"] == 0
+
+    def test_exclusions_are_accounted_for(self, expected):
+        # 8 teams x (QB 2 + RB 3 + WR1 3 + WR2 3 + TE 3) props; each one either
+        # expected or excluded under a named rule.
+        assert len(expected.rows) + sum(expected.exclusions.values()) == 8 * 14
+        assert set(expected.exclusions) <= {"confidence_band", "no_model", "no_history",
+                                            "position_not_eligible", "not_in_player_reference",
+                                            "latest_appearance_elsewhere"}
+
+    def test_one_row_missing(self, verified, expected):
+        problems, counts = self.check(expected, verified[1].drop(index=[5]))
+        assert counts["missing"] == 1 and "1 expected prediction(s) missing" in problems[0]
+
+    @pytest.mark.parametrize("what", ["player", "prop", "game"])
+    def test_everything_for_a_player_prop_or_game_missing(self, verified, expected, what):
+        df = verified[1]
+        first = df.iloc[0]
+        if what == "player":
+            gone = df["player_id"] == first["player_id"]
+        elif what == "prop":
+            gone = df["prop_type"] == first["prop_type"]
+        else:
+            gone = df["team"].isin([first["team"], first["opponent"]])
+        problems, counts = self.check(expected, df[~gone])
+        assert counts["missing"] == int(gone.sum()) > 0 and "missing" in problems[0]
+
+    def test_extra_row(self, verified, expected):
+        df = verified[1]
+        extra = df.iloc[[0]].assign(line_value=999.5)
+        problems, counts = self.check(expected, pd.concat([df, extra], ignore_index=True))
+        assert counts["unexpected"] == 1 and any("unexpected prediction" in p for p in problems)
+
+    def test_duplicate_identity(self, verified, expected):
+        df = verified[1]
+        problems, counts = self.check(expected, pd.concat([df, df.iloc[[3]]], ignore_index=True))
+        assert counts["duplicates"] == 1 and any("listed more than once" in p for p in problems)
+
+    def test_wrong_home_away_side(self, verified, expected):
+        df = verified[1].copy()
+        df["is_home"] = df["is_home"].astype(object)
+        df.loc[0, "is_home"] = not bool(df.loc[0, "is_home"])
+        problems, counts = self.check(expected, df)
+        assert counts["wrong_side"] == 1 and any("home/away side" in p for p in problems)
+
+    def test_no_player_id_column(self, verified, expected):
+        problems, _ = self.check(expected, verified[1].drop(columns="player_id"))
+        assert problems == ["latest feed: no player_id column, so completeness can't be checked"]
+
+
+class TestExpectedSetFailsClosed:
+    """Ambiguous or invalid inputs raise instead of shrinking the expected set."""
+
+    def table(self, rows):
+        return pd.DataFrame(rows, columns=["player_id", "player_name", "team", "game_id", "game_date"])
+
+    def test_tie_deciding_the_recent_games(self):
+        t = self.table([("a", "A", "KC", f"g{i}", d) for i, d in
+                        enumerate(["2026-09-01", "2026-09-08", "2026-09-15", "2026-09-15"])])
+        with pytest.raises(rx.ExpectedSetError, match="most recent games are ambiguous"):
+            rx._team_candidates({"receiving": t}, "KC", rx.Counter())
+
+    def test_ambiguous_latest_team(self):
+        t = self.table([("a", "A", "KC", "g1", "2026-09-15"), ("a", "A", "BUF", "g1", "2026-09-15")])
+        with pytest.raises(rx.ExpectedSetError, match="latest appearance is ambiguous"):
+            rx._team_candidates({"receiving": t}, "KC", rx.Counter())
+
+    def test_three_most_recent_games_window(self):
+        # "a" last played in the team's 3rd most recent game (a candidate);
+        # "b" only in the 4th (not one).
+        t = self.table([("x", "X", "KC", "g4", "2026-09-29"), ("x", "X", "KC", "g3", "2026-09-22"),
+                        ("a", "A", "KC", "g2", "2026-09-15"), ("b", "B", "KC", "g1", "2026-09-08")])
+        assert rx._team_candidates({"receiving": t}, "KC", rx.Counter()) == {"x": "X", "a": "A"}
+
+    def test_latest_team_elsewhere_is_counted_not_silent(self):
+        t = self.table([("a", "A", "KC", "g1", "2026-09-08"), ("a", "A", "BUF", "g2", "2026-09-15")])
+        seen = rx.Counter()
+        assert rx._team_candidates({"receiving": t}, "KC", seen) == {}
+        assert seen == {"latest_appearance_elsewhere": 1}
+
+    def test_roster_filter_is_refused(self, monkeypatch, tmp_path):
+        monkeypatch.setenv("PROP_ROSTER_FILTER", "1")
+        with pytest.raises(rx.ExpectedSetError, match="PROP_ROSTER_FILTER"):
+            rx.expected_rows(tmp_path, {}, {}, pd.DataFrame(), 2026, 3, None, pd.DataFrame())
+
+    def test_missing_feature_table(self, tmp_path):
+        with pytest.raises(rx.ExpectedSetError, match="feature table"):
+            rx.expected_rows(tmp_path, {"passing": pd.DataFrame()}, {}, pd.DataFrame(), 2026, 3, None,
+                             pd.DataFrame())
+
+    def test_game_listed_twice(self, tmp_path):
+        pd.DataFrame({"week": [3, 3], "date": ["2026-09-20"] * 2, "home_team": ["KC"] * 2,
+                      "away_team": ["BUF"] * 2}).to_csv(tmp_path / "nfl_schedule_2026.csv", index=False)
+        games = pd.DataFrame({"game_id": ["2026_03_BUF_KC"], "season": [2026], "week": [3],
+                              "home_team": ["KC"], "away_team": ["BUF"], "gameday": ["2026-09-20"]})
+        with pytest.raises(rx.ExpectedSetError, match="lists a week-3 game twice"):
+            rx._week_games(tmp_path, games, 2026, 3)
+
+    GAMES = pd.DataFrame({"game_id": ["2026_03_BUF_KC"], "season": [2026], "week": [3],
+                          "home_team": ["KC"], "away_team": ["BUF"], "gameday": ["2026-09-20"]})
+
+    def schedule(self, tmp_path, date):
+        path = tmp_path / "nfl_schedule_2026.csv"
+        path.write_text(f"week,date,home_team,away_team,venue,status\n3,{date},KC,BUF,Field,REG\n",
+                        encoding="utf-8")
+
+    def test_matching_date_is_accepted(self, tmp_path):
+        self.schedule(tmp_path, "2026-09-20")
+        assert [g["game_id"] for g in rx._week_games(tmp_path, self.GAMES, 2026, 3)] == ["2026_03_BUF_KC"]
+
+    def test_wrong_date_for_matching_teams(self, tmp_path):
+        self.schedule(tmp_path, "2026-09-21")
+        with pytest.raises(rx.ExpectedSetError, match="BUF @ KC is dated 2026-09-21, but the schedule has "
+                                                      "'2026-09-20' for 2026_03_BUF_KC"):
+            rx._week_games(tmp_path, self.GAMES, 2026, 3)
+
+    @pytest.mark.parametrize("date", ["", "2026-9-20", "20/09/2026", "2026-13-01", "2026-09-20T13:00", "soon"])
+    def test_missing_or_malformed_date(self, tmp_path, date):
+        self.schedule(tmp_path, date)
+        with pytest.raises(rx.ExpectedSetError, match="has a missing or malformed date"):
+            rx._week_games(tmp_path, self.GAMES, 2026, 3)
+
+    def test_no_date_column(self, tmp_path):
+        (tmp_path / "nfl_schedule_2026.csv").write_text("week,home_team,away_team\n3,KC,BUF\n", encoding="utf-8")
+        with pytest.raises(rx.ExpectedSetError, match="has no date column"):
+            rx._week_games(tmp_path, self.GAMES, 2026, 3)
+
+
+class TestCompletenessStatus:
+    ok = {"checked": True, "missing": 0, "unexpected": 0, "duplicates": 0, "wrong_side": 0}
+
+    def test_complete(self):
+        assert rx.completeness_status({"a": dict(self.ok), "b": dict(self.ok)}) == "complete"
+
+    @pytest.mark.parametrize("field", ["missing", "unexpected", "duplicates", "wrong_side"])
+    def test_any_failure_count_is_incomplete(self, field):
+        assert rx.completeness_status({"a": dict(self.ok), "b": {**self.ok, field: 1}}) == "incomplete"
+
+    def test_unchecked_file_is_never_complete(self):
+        assert rx.completeness_status({"a": dict(self.ok), "b": {"checked": False, "observed": 9}}) == "not checked"
+        assert rx.completeness_status({"a": {**self.ok, "checked": False}}) == "not checked"
+        assert rx.completeness_status({}) == "not checked"
+
+
+class TestCompletenessEndToEnd:
+    """Each failure blocks publication and leaves published files byte-identical."""
+
+    @pytest.fixture
+    def published_copy(self, success, tmp_path):
+        ws, _, _ = success
+        copy = tmp_path / "ws"
+        shutil.copytree(Path(ws).resolve() / "published", copy / "published")
+        return copy, tree(copy / "published")
+
+    def blocked(self, ws, before, s, text):
+        assert_failed_at(s, "verify_outputs", ws, text)
+        assert tree(ws / "published") == before
+        return s["completeness"]
+
+    def both(self, change):
+        def tamper(name, r):
+            if name == "predict":
+                for f in (r.info["latest"], r.info["snapshot"]):
+                    edit_predictions(f, change)
+        return tamper
+
+    def test_row_dropped_from_both_files(self, published_copy):
+        ws, before = published_copy
+        c = self.blocked(ws, before, run(ws, self.both(lambda df: df.drop(index=[7], inplace=True))),
+                         "expected prediction(s) missing")
+        assert c["status"] == "incomplete" and c["latest feed"]["missing"] == c["frozen snapshot"]["missing"] == 1
+        assert c["expected"] == c["latest feed"]["observed"] + 1
+
+    def test_all_rows_for_a_player_dropped_from_both(self, published_copy):
+        ws, before = published_copy
+
+        def drop_player(df):
+            df.drop(index=df.index[df["player_id"] == df.loc[0, "player_id"]], inplace=True)
+        c = self.blocked(ws, before, run(ws, self.both(drop_player)), "expected prediction(s) missing")
+        assert c["latest feed"]["missing"] >= 1
+
+    def test_extra_row_injected_into_both(self, published_copy):
+        ws, before = published_copy
+
+        def inject(df):
+            df.loc[len(df)] = df.iloc[0].copy()
+            df.loc[len(df) - 1, "line_value"] = 999.5
+        c = self.blocked(ws, before, run(ws, self.both(inject)), "unexpected prediction")
+        assert c["latest feed"]["unexpected"] == c["frozen snapshot"]["unexpected"] == 1
+
+    def saved(self, ws, s):
+        """The failed run's summary.json as written to disk."""
+        return json.loads((run_dir(s, ws) / "summary.json").read_text())
+
+    def test_wrong_side_marks_the_saved_summary_incomplete(self, published_copy):
+        ws, before = published_copy
+
+        def flip(df):
+            df["is_home"] = df["is_home"].astype(object)
+            df.loc[0, "is_home"] = not bool(df.loc[0, "is_home"])
+        s = run(ws, self.both(flip))
+        # The row checks also object (they look up the swapped game), so the
+        # message varies; the saved summary must still say incomplete.
+        self.blocked(ws, before, s, None)
+        c = self.saved(ws, s)["completeness"]
+        assert c["status"] == "incomplete"
+        for f in ("latest feed", "frozen snapshot"):
+            assert c[f]["wrong_side"] == 1 and c[f]["missing"] == c[f]["unexpected"] == c[f]["duplicates"] == 0
+
+    def test_unchecked_files_are_never_complete_in_the_saved_summary(self, published_copy):
+        ws, before = published_copy
+        s = run(ws, self.both(lambda df: df.drop(columns="player_id", inplace=True)))
+        self.blocked(ws, before, s, "completeness can't be checked")
+        c = self.saved(ws, s)["completeness"]
+        assert c["status"] == "not checked"
+        assert c["latest feed"]["checked"] is False and c["frozen snapshot"]["checked"] is False
+
+    def test_wrong_schedule_date_blocks_publication(self, published_copy):
+        ws, before = published_copy
+
+        def redate(name, r):
+            if name == "predict":
+                p = r.paths["runtime_data"] / f"nfl_schedule_{r.config.target_season}.csv"
+                sched = pd.read_csv(p, dtype={"date": str})
+                i = sched.index[sched["week"] == r.config.target_week][0]
+                sched.loc[i, "date"] = "2026-12-25"
+                sched.to_csv(p, index=False)
+        s = run(ws, redate)
+        self.blocked(ws, before, s, "is dated 2026-12-25, but the schedule has")
+        c = self.saved(ws, s)["completeness"]
+        assert c["status"] == "expected set not derived" and "2026-12-25" in c["problems"][0]
+
+    def test_production_omits_a_candidate(self, published_copy, monkeypatch):
+        # A slip in production's selection (one eligible player silently dropped).
+        # The row checks see nothing wrong with the rows that exist; completeness does.
+        from player_props import predict
+        real = predict.candidate_players
+        dropped = []
+
+        def omit_one(all_stats, team, n_games=3, roster_ids=None):
+            names, report = real(all_stats, team, n_games, roster_ids)
+            if not dropped and names:
+                dropped.append(sorted(names)[0])
+                names = {k: v for k, v in names.items() if k != dropped[0]}
+            return names, report
+        monkeypatch.setattr(predict, "candidate_players", omit_one)
+        ws, before = published_copy
+        s = run(ws)
+        c = self.blocked(ws, before, s, "expected prediction(s) missing")
+        err = json.dumps(next(x for x in s["stages"] if x["stage"] == "verify_outputs")["error"])
+        assert dropped[0] in err and c["latest feed"]["missing"] >= 1
+
+    def test_production_tier_rule_changed(self, published_copy, monkeypatch):
+        # A changed tier rule moves rows to other models and lines. The row
+        # checks reuse production's tier function and agree; completeness
+        # restates the rule and catches it.
+        from player_props import predict
+        monkeypatch.setattr(predict, "get_player_performance_tier",
+                            lambda pid, prop, stats: predict.TIER_RULES[prop][2])
+        ws, before = published_copy
+        c = self.blocked(ws, before, run(ws), "expected prediction(s) missing")
+        assert c["latest feed"]["missing"] > 0 and c["latest feed"]["unexpected"] > 0
+
+    def test_production_confidence_band_changed(self, published_copy, monkeypatch):
+        from player_props import predict
+        monkeypatch.setattr(predict, "MIN_CONFIDENCE", 0.5)          # admits rows the band excludes
+        ws, before = published_copy
+        c = self.blocked(ws, before, run(ws), "unexpected prediction")
+        assert c["latest feed"]["unexpected"] > 0
+
+    def test_schedules_disagree(self, published_copy):
+        # The prediction schedule loses a game the schedule lists (after
+        # prediction, which refuses this itself): invalid input, so the check
+        # fails rather than shrinking the expected set.
+        ws, before = published_copy
+
+        def drop_game(name, r):
+            if name == "predict":
+                p = r.paths["runtime_data"] / f"nfl_schedule_{r.config.target_season}.csv"
+                sched = pd.read_csv(p)
+                wk = sched[sched["week"] == r.config.target_week].index[0]
+                sched.drop(index=[wk]).to_csv(p, index=False)
+        s = run(ws, drop_game)
+        c = self.blocked(ws, before, s, "completeness can't be checked")
+        assert c["status"] == "expected set not derived" and "disagree" in c["problems"][0]
+
+
 class TestHistoricalFeeds:
     """Files written before player_id stay readable as they are, and are never
     given an ID by name or treated as identity-verified."""

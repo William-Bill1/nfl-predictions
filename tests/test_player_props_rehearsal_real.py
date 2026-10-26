@@ -283,19 +283,58 @@ class TestRehearsalWithRealInputs:
                                                 players_file=with_namesake))
         assert s["status"] == "succeeded", s["stages"]
 
-    def test_id_repeated_in_the_reference_gets_no_rows(self, downloaded, tmp_path):
+    def test_id_repeated_in_the_reference_fails_completeness(self, downloaded, tmp_path):
         # Production uses an ID's record only when it is the only one, so a
-        # repeated ID gets no position, no props and no rows; the run still verifies.
+        # repeated ID silently gets no rows. That is ambiguous input: the
+        # completeness check fails instead of shrinking the expected set.
         _, dest, players, _ = downloaded
         p = pd.read_csv(players)
         pid = fixtures.player_id("KC", "WR1")
         doubled = tmp_path / "players.csv"
         pd.concat([p, p[p["gsis_id"] == pid]]).to_csv(doubled, index=False)
         s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=doubled))
-        assert s["status"] == "succeeded", s["stages"]
+        assert s["status"] == "failed"
+        err = next(x for x in s["stages"] if x["stage"] == "verify_outputs")["error"]["message"]
+        assert f"player_id {pid} has 2 player-reference records" in err
+        assert s["completeness"]["status"] == "expected set not derived"
         out = pd.read_csv(Path(tmp_path / "ws").resolve() / "runs" / s["run_id"] / "runtime" / "data"
                           / "player_props_predictions.csv", dtype={"player_id": str})
         assert pid not in set(out["player_id"])
+
+    def test_prop_without_history_is_excluded(self, downloaded, tmp_path):
+        # A receiver relabelled QB has no passing history, so production gives him
+        # no passing rows (has_history); the expected set agrees and counts it.
+        _, dest, players, _ = downloaded
+        p = pd.read_csv(players)
+        pid = fixtures.player_id("KC", "WR1")
+        p.loc[p["gsis_id"] == pid, "position"] = "QB"
+        edited = tmp_path / "players.csv"
+        p.to_csv(edited, index=False)
+        s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=edited))
+        assert s["status"] == "succeeded", s["stages"]
+        c = s["completeness"]
+        assert c["status"] == "complete" and c["exclusions"].get("no_history", 0) >= 2
+        out = pd.read_csv(Path(tmp_path / "ws").resolve() / "runs" / s["run_id"] / "runtime" / "data"
+                          / "player_props_predictions.csv", dtype={"player_id": str})
+        assert pid not in set(out["player_id"])
+
+    @pytest.mark.parametrize("change,reason", [("position", "position_not_eligible"),
+                                               ("absent", "not_in_player_reference")])
+    def test_legitimately_ineligible_player_is_excluded(self, downloaded, tmp_path, change, reason):
+        # Under the existing rules a kicker, or a player missing from the
+        # reference (as a rookie would be), gets no rows: expected and observed
+        # agree, and the exclusion is counted.
+        _, dest, players, _ = downloaded
+        p = pd.read_csv(players)
+        pid = fixtures.player_id("KC", "WR1")
+        p = p.assign(position=p["position"].where(p["gsis_id"] != pid, "K")) if change == "position"             else p[p["gsis_id"] != pid]
+        edited = tmp_path / "players.csv"
+        p.to_csv(edited, index=False)
+        s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=edited))
+        assert s["status"] == "succeeded", s["stages"]
+        c = s["completeness"]
+        assert c["status"] == "complete" and c["exclusions"].get(reason, 0) >= 1
+        assert c["latest feed"]["observed"] == c["expected"]
 
     def test_same_display_name_different_ids(self, downloaded, tmp_path):
         # Two active players on different teams given one display name: each row

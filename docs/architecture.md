@@ -868,8 +868,7 @@ production functions in order on a synthetic league, with the network blocked:
 - **External inputs:** injury, weather and market-odds inputs are skipped, so
   only the model clamps can appear in `adjustments`, and their rules are not
   verified here.
-- **Which rows exist:** each row present is verified, but the rehearsal does
-  not re-derive which players and props production should have included.
+- **Which rows exist:** now checked; see "Expected-row completeness" below.
 - **Label order:** under these rules at most one clamp applies, so label order
   is enforced only as an exact string.
 - **Synthetic only:** the data is synthetic, so real nflverse formats and
@@ -989,14 +988,102 @@ and failed. Interim fix: resolve a shared name by team. Since superseded by
     tasks.
 
 *Still not established:*
-- **Output completeness:** unverified. The verifier checks each row present;
-  there is no independent expected-row check, so missing eligible
-  predictions wouldn't be detected.
+- **Output completeness:** now checked in the rehearsal, relative to its inputs
+  and rules (see "Expected-row completeness" below).
 - **Rookies:** missing 2026 rookies are unverified. The players reference has
   none, so they get no position and no props.
 - **Deployment readiness:** unverified. A GitHub runner, artifact or cache
   storage, the workflow steps, and injury, weather and market adjustments
   were not exercised.
+
+**Expected-row completeness (rehearsal verifier).**
+`player_props/rehearsal_expected.py` derives, from the inputs alone and before
+either prediction file is read, the rows production should write for the
+target week. Rows are identified by `(player_id, team, opponent, prop_type,
+line_value)`. The latest feed and the frozen snapshot are then each compared
+with that set separately, so a missing or extra prediction is caught even
+when the two files agree.
+
+*Inclusion rules,* as production applies them, with injury, weather and
+market inputs disabled:
+1. **Games:** the target week's rows of `nfl_schedule_<season>.csv`. Each
+   must resolve to exactly one game in `nfl_games_historical.csv`, with its
+   own date a valid `YYYY-MM-DD` equal to that game's calendar date. The two
+   schedules must list the same games. A missing, malformed or different date
+   fails; the authoritative date is never substituted.
+2. **Candidates per team:** players appearing in any feature table in one of
+   the team's 3 most recent games, whose latest appearance in any table (by
+   date, then `game_id`) was for this team.
+3. **Reference:** exactly one `players.csv` record for the ID, with a position
+   in `POSITION_MAP` (QB, RB, WR, TE).
+4. **Props:** that position's props.
+5. **History:** an earlier appearance in the prop's stat table.
+6. **Tier:** the mean of the last 8 appearances in that table (every team), or
+   the lowest tier with fewer than 3.
+7. **Model:** the first restored bundle model for (prop, tier).
+8. **Confidence:** the final probability (after the permitted clamp) is at
+   least 0.55 or at most 0.45.
+
+*Independence:*
+- **Restated, not called:** the rules above are restated in the module.
+  Production's `candidate_players`, `get_player_performance_tier`,
+  `get_player_position` and its inclusion loop are not used, and the expected
+  set is never derived from either output.
+- **Shared, and why:** the constants `POSITION_MAP`, `TIER_RULES` and
+  `PROP_STAT`; the Stage 2-validated feature tables; and the feature builder
+  and scorer (`inference_rows`, `model_matrix`, `score_probabilities`), which
+  produce the probability the confidence band applies to. A slip in one of
+  these shared pieces would not be caught here.
+
+*Results:*
+- **Failing rows:** a missing, unexpected or duplicate identity, or a wrong
+  home/away side, fails verification. Nothing is published, and previously
+  published files stay byte-identical.
+- **Summary:** `summary.json` records `completeness`: expected and per-file
+  observed, distinct, missing, unexpected, duplicate and wrong-side counts,
+  plus the exclusions by rule. On a derivation failure it records the
+  problems.
+- **Status values:**
+  - `complete`: both files were checked and have zero missing, unexpected,
+    duplicate and wrong-side identities;
+  - `not checked`: a file couldn't be checked (no `player_id` column);
+  - `incomplete`: any other failure;
+  - `expected set not derived`: the inputs were invalid or ambiguous.
+
+  The status is decided before the row checks run, so a later failure
+  can't leave it stale.
+- **Existing checks:** every existing identity, probability, bundle,
+  feed/snapshot and publication-hash check is unchanged.
+
+*Exclusions:* the existing rules are unchanged, and each exclusion is counted:
+- `latest_appearance_elsewhere`;
+- `not_in_player_reference`;
+- `position_not_eligible`;
+- `no_history`;
+- `no_model` (for example, a model skipped at training);
+- `confidence_band`.
+
+*Invalid or ambiguous input fails* rather than shrinking the set:
+- a game that doesn't resolve, schedules that disagree, a game listed twice,
+  or a prediction-schedule date that is missing, malformed or different from
+  the game's;
+- a missing feature table;
+- two games for one team on one date;
+- an ambiguous latest team;
+- a player ID repeated in the reference (production silently gives such a
+  player no rows);
+- the `PROP_ROSTER_FILTER` roster rule switched on (not restated).
+
+*What completeness covers:* every eligible prediction for the players in the
+inputs, under these rules. It does **not** cover players missing from the
+inputs:
+- **Not in the stats:** players without recent stats.
+- **Not in the reference:** for example 2026 rookies, who are absent from the
+  current `players.csv` and are counted as `not_in_player_reference`.
+- **Rosters and depth charts:** no real NFL roster or depth-chart coverage is
+  claimed.
+
+That reference and rookie coverage remains a separate limitation.
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
