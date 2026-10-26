@@ -8,6 +8,23 @@ bottom.
 
 ## October 2026
 
+- **Player props: stable `player_id` in prediction outputs** (`player_props/predict.py`,
+  `player_props/rehearsal.py`).
+  - **New rows:** each carries the stats ID that selected its features and
+    scored its model, as text, in the latest feed and newly frozen snapshots.
+  - **Rehearsal verifier:** uses that ID directly, with no name lookup. It
+    fails closed on a missing, unknown, repeated or inconsistent ID (names,
+    team, position or prop eligibility). Duplicates and feed/snapshot
+    comparisons include the ID.
+  - **Existing files:** production feeds and snapshots are unchanged and still
+    readable. Historical files are not backfilled by name or treated as
+    identity-verified.
+  - **Unchanged:** probabilities, selection, the feature contract, bundle
+    checks and generation gates. Generation stays blocked.
+  - **Limitations:** historical grading (`backtest.calculate_hit_rate`) still
+    joins predictions to results by `player_name`. Output completeness and
+    2026 rookie coverage remain separate and unverified.
+
 - **Player props: real-data compatibility rehearsal** (`player_props/rehearsal_real.py`,
   `player_props/rehearsal.py`). Isolated; not deployed. Generation stays blocked
   and the containment warnings are unchanged.

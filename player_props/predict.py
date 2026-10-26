@@ -497,6 +497,9 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             'season': game_season,
                             'game_date': game_date,
                             'player_name': player_name,
+                            # The stable ID that selected this feature row and
+                            # scored the model (never derived from a name).
+                            'player_id': str(player_id),
                             'display_name': player_display_name or player_name,  # Use display_name if available, fallback to short_name
                             'position': player_position or 'Unknown',
                             'team': team,

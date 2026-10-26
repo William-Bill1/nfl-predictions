@@ -454,7 +454,7 @@ class TestOutputVerification:
         df.loc[i, field] = value
         assert any(f in p for p in self.problems(verified, df)
                    for f in (f"{field} is", "not this run's bundle", "is not the target",
-                             "unknown player"))
+                             f"{field} {value!r} is not"))
 
     def test_row_production_would_exclude(self, verified, monkeypatch):
         # A row whose final probability is inside the no-recommendation band
@@ -528,6 +528,176 @@ class TestOutputVerification:
         s = run(ws, tamper)
         assert_failed_at(s, "publish", ws, "changed after verification")
         assert tree(ws / "published") == before
+
+
+# ---------------------------------------------------------------------------
+# Stable player identity: rows carry the player_id that scored them
+# ---------------------------------------------------------------------------
+
+class TestPlayerId:
+    def problems(self, verified, df):
+        r, _, _ = verified
+        return rh.prediction_problems(df, "latest feed", r, rh._Expectations(r))
+
+    def found(self, verified, df, text):
+        return [p for p in self.problems(verified, df) if text in p]
+
+    def test_rows_carry_the_scoring_id(self, verified):
+        r, df, _ = verified
+        assert df["player_id"].notna().all() and df["player_id"].map(type).eq(str).all()
+        # Every ID is a synthetic player of the row's own team (fixtures: "<TEAM>-<ROLE>").
+        assert (df["player_id"].str.split("-").str[0] == df["team"]).all()
+        assert self.problems(verified, df) == []
+
+    @pytest.mark.parametrize("value,text", [(None, "no player_id"), ("", "no player_id"),
+                                            ("ZZ-NOPE", "unknown player_id 'ZZ-NOPE'")])
+    def test_missing_or_unknown_id(self, verified, value, text):
+        df = verified[1].copy()
+        df.loc[0, "player_id"] = value
+        assert self.found(verified, df, text)
+
+    def test_substituted_id(self, verified):
+        # Another real player's ID on this row: names no longer match that ID.
+        df = verified[1].copy()
+        i = 0
+        other = df.loc[(df["team"] == df.loc[i, "team"]) & (df["player_id"] != df.loc[i, "player_id"]),
+                       "player_id"].iloc[0]
+        df.loc[i, "player_id"] = other
+        assert self.found(verified, df, "is not")
+
+    def test_id_from_another_team(self, verified):
+        df = verified[1].copy()
+        df.loc[0, "player_id"] = df.loc[df["team"] != df.loc[0, "team"], "player_id"].iloc[0]
+        assert self.found(verified, df, f"is not a {df.loc[0, 'team']} candidate")
+
+    @pytest.mark.parametrize("field,value,text", [
+        ("display_name", "Someone Else", "display_name 'Someone Else' is not"),
+        ("player_name", "S.Else", "player_name 'S.Else' is not"),
+        ("position", "TE", "position 'TE' is not"),
+    ])
+    def test_id_inconsistent_with_the_row(self, verified, field, value, text):
+        df = verified[1].copy()
+        i = df.index[df[field] != value][0]
+        df.loc[i, field] = value
+        assert self.found(verified, df, text)
+
+    def test_prop_not_eligible_for_the_ids_position(self, verified):
+        df = verified[1].copy()
+        i = df.index[df["position"] == "QB"][0]
+        df.loc[i, "prop_type"] = "receptions"
+        assert self.found(verified, df, "prop 'receptions' is not eligible")
+
+    def test_team_changed_under_the_same_id(self, verified):
+        df = verified[1].copy()
+        df.loc[0, "team"] = df.loc[0, "opponent"]
+        assert self.found(verified, df, "candidate")
+
+    def test_no_player_id_column_fails_closed(self, verified):
+        df = verified[1].drop(columns="player_id")
+        assert self.problems(verified, df) == ["latest feed: no player_id column, so no row's player can be verified"]
+
+    def test_same_name_different_ids_are_not_duplicates(self, verified):
+        # Row a takes row b's names (same prop, different ID): identity checks may
+        # object to a's names, but the two rows must not count as duplicates.
+        df = verified[1].copy()
+        same = df.groupby(["team", "prop_type"])["player_id"].transform("nunique") > 1
+        b = df.index[same][0]
+        a = df.index[(df["team"] == df.loc[b, "team"]) & (df["prop_type"] == df.loc[b, "prop_type"])
+                     & (df["player_id"] != df.loc[b, "player_id"])][0]
+        df.loc[a, ["player_name", "display_name"]] = df.loc[b, ["player_name", "display_name"]].values
+        assert not self.found(verified, df, "duplicate predictions")
+
+    def test_id_repeated_in_the_reference(self, verified):
+        r, df, _ = verified
+        e = rh._Expectations(r)
+        e.repeated_ids = {df.loc[0, "player_id"]}
+        assert any("several player-reference records" in p
+                   for p in rh.prediction_problems(df, "latest feed", r, e))
+
+    def test_duplicate_identity(self, verified):
+        df = verified[1]
+        dup = pd.concat([df, df.iloc[[0]]], ignore_index=True)
+        assert self.found(verified, dup, "duplicate predictions")
+
+    @pytest.mark.parametrize("ids", [["00-0012345", "0012345", "KC-QB", "1e5"],
+                                     # every ID numeric-looking: a plain read would make numbers
+                                     ["0012345", "00987", "1e5", "42"]])
+    def test_csv_round_trip_keeps_ids_exact(self, tmp_path, ids):
+        path = tmp_path / "p.csv"
+        pd.DataFrame({"player_id": ids, "x": range(len(ids))}).to_csv(path, index=False)
+        assert rh.read_predictions(path)["player_id"].tolist() == ids
+
+    @pytest.fixture
+    def published_copy(self, success, tmp_path):
+        ws, _, _ = success
+        copy = tmp_path / "ws"
+        shutil.copytree(Path(ws).resolve() / "published", copy / "published")
+        return copy, tree(copy / "published")
+
+    def test_snapshot_id_mismatch_blocks_publication(self, published_copy):
+        ws, before = published_copy
+
+        def swap(df):
+            df.loc[[0, 1], "player_id"] = df.loc[[1, 0], "player_id"].values
+
+        def tamper(name, r):
+            if name == "predict":
+                edit_predictions(r.info["snapshot"], swap)
+        s = run(ws, tamper)
+        assert_failed_at(s, "verify_outputs", ws, "player identities differ from the latest feed")
+        assert tree(ws / "published") == before
+
+    def test_substituted_id_in_both_files_blocks_publication(self, published_copy):
+        ws, before = published_copy
+
+        def substitute(df):
+            df.loc[0, "player_id"] = df.loc[df["player_id"] != df.loc[0, "player_id"], "player_id"].iloc[0]
+
+        def tamper(name, r):
+            if name == "predict":
+                for f in (r.info["latest"], r.info["snapshot"]):
+                    edit_predictions(f, substitute)
+        s = run(ws, tamper)
+        assert_failed_at(s, "verify_outputs", ws, "is not")
+        assert tree(ws / "published") == before
+
+
+class TestHistoricalFeeds:
+    """Files written before player_id stay readable as they are, and are never
+    given an ID by name or treated as identity-verified."""
+
+    def old_feed(self, verified, tmp_path):
+        old = verified[1].drop(columns="player_id")
+        path = tmp_path / "player_props_predictions_week3_2026.csv"
+        old.to_csv(path, index=False)
+        return path
+
+    def test_readable_without_modification(self, verified, tmp_path):
+        from player_props import backtest
+        path = self.old_feed(verified, tmp_path)
+        raw = path.read_bytes()
+        df = rh.read_predictions(path)
+        assert "player_id" not in df.columns and len(df) == len(verified[1])
+        assert backtest.prediction_week_problem(pd.read_csv(path), 3, 2026) is None
+        assert path.read_bytes() == raw
+
+    def test_never_verified_by_name(self, verified, tmp_path):
+        r = verified[0]
+        df = rh.read_predictions(self.old_feed(verified, tmp_path))
+        assert rh.prediction_problems(df, "historical", r, rh._Expectations(r)) == [
+            "historical: no player_id column, so no row's player can be verified"]
+
+    def test_grading_is_unchanged_by_the_new_column(self, verified):
+        from player_props import backtest
+        new = verified[1]
+        actual = pd.DataFrame({"player_name": new["player_name"].unique()})
+        for c in ("passing_yards", "rushing_yards", "receiving_yards", "passing_tds", "rushing_tds",
+                  "receiving_tds", "receptions"):
+            actual[c] = 50.0
+        with_id = backtest.calculate_hit_rate(new, actual)
+        without = backtest.calculate_hit_rate(new.drop(columns="player_id"), actual)
+        assert with_id["total_predictions"] == without["total_predictions"] > 0
+        assert with_id["overall_accuracy"] == without["overall_accuracy"]
 
 
 # ---------------------------------------------------------------------------
