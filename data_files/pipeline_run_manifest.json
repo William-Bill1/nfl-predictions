@@ -1,15 +1,15 @@
 {
   "artifact": {
     "path": "nfl_games_historical_with_predictions.csv",
-    "sha256": "c8e1894cbc05adb528444bdbc18f0d1aad6c1c9f50524b6394fb42c70e9d6ebd"
+    "sha256": "ac6ec5c02b8a16f12c35fe1f52ac0d553e4c08a3633d6371c50c87a2bcb4d3e4"
   },
   "ci_run": {
     "GITHUB_RUN_ATTEMPT": "1",
-    "GITHUB_RUN_ID": "40174794710",
+    "GITHUB_RUN_ID": "40291576248",
     "GITHUB_WORKFLOW": "Nightly NFL Data Update"
   },
   "code_dirty": false,
-  "code_revision": "212c31b9783bca564de23efe3fde1b899ccd7081",
+  "code_revision": "a40de2e46b779fd1b8973782a7b0081ec32d7a61",
   "code_sha256": "a6c222a5591da6f7049b7d756d59e6d86cda29f337c463179ed44870e17388e7",
   "config": {
     "lgbm_available": true,
@@ -105,8 +105,8 @@
   },
   "config_id": "6a5f60a60640b03e",
   "data_cutoff": {
-    "gameday": "2026-10-22",
-    "games": 1787,
+    "gameday": "2026-10-25",
+    "games": 1799,
     "season": 2026,
     "week": 7
   },
@@ -121,21 +121,21 @@
     "homeTeamWinPct",
     "spread_line"
   ],
-  "generated_at": "2026-10-25T08:01:04Z",
+  "generated_at": "2026-10-26T08:22:31Z",
   "platform": {
     "python": "3.12.15"
   },
-  "run_id": "20261025T080104Z-40aa37405037",
+  "run_id": "20261026T082231Z-b3e6970d7768",
   "schedule": {
     "path": "nfl_games_historical.csv",
-    "sha256": "61ab52ed6485d0d19f754c03a2bee80d0c07615d08a908a77bda148b72044d96"
+    "sha256": "ec56813d7ee15a36f964146e61d0531116cd5a94254c71b7ed424188ca9e5f9b"
   },
   "schema_version": 1,
-  "spread_threshold": 0.5438443628726364,
+  "spread_threshold": 0.5438758378163302,
   "training_cutoff": {
-    "gameday": "2023-12-24",
-    "games": 1071,
+    "gameday": "2023-12-28",
+    "games": 1079,
     "season": 2023,
-    "week": 16
+    "week": 17
   }
 }
