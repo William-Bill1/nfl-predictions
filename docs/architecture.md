@@ -990,8 +990,9 @@ and failed. Interim fix: resolve a shared name by team. Since superseded by
 *Still not established:*
 - **Output completeness:** now checked in the rehearsal, relative to its inputs
   and rules (see "Expected-row completeness" below).
-- **Rookies:** missing 2026 rookies are unverified. The players reference has
-  none, so they get no position and no props.
+- **Rookies:** the committed players reference has no 2026 rookies, so they
+  get no position and no props. A candidate reference that adds them is built
+  offline (see "Players-reference candidate builder" below) but not adopted.
 - **Deployment readiness:** unverified. A GitHub runner, artifact or cache
   storage, the workflow steps, and injury, weather and market adjustments
   were not exercised.
@@ -1084,6 +1085,118 @@ inputs:
   claimed.
 
 That reference and rookie coverage remains a separate limitation.
+
+**Players-reference candidate builder** (`player_props/reference_builder.py`,
+offline). Builds a *candidate* players reference and reports; nothing is
+adopted and `data_files/players.csv` is never written.
+
+*Why:* the committed `players.csv` is a one-time nflverse snapshot (blob
+`9572b3d`, committed 2025-10-26) that no workflow refreshes. Its newest
+`rookie_season` is 2025, and 6,391 of its `gsis_id` values are not GSIS IDs
+at all: they equal the record's `esb_id` (placeholders nflverse used before
+a GSIS ID was assigned). Play-by-play uses GSIS IDs, so those players can
+never match. In the 2026 Week 7 real-data rehearsal, 57 of 355 candidates
+were `not_in_player_reference`.
+
+*Inputs:* the existing reference, and a downloads directory whose
+`manifest.json` records each file's URL, size and SHA-256 (`players.csv`
+from the nflverse `players` release; optionally `roster_weekly_<season>.csv`
+from the `weekly_rosters` release). Every file is checked against the
+manifest before use. The output directory must be outside the repository and
+production paths. It must also not be, contain or lie inside the downloads
+directory, and must not be or contain the existing-reference or candidates
+file, since replacing an output removes it. Paths are compared fully
+resolved, with symlinks and Windows junctions followed, and the check runs
+before anything is read.
+
+*Policy:*
+1. **Fresh records** are taken as they are, in the existing column order,
+   every value as text (no numeric re-formatting).
+2. **Historical IDs** absent from the fresh source are retained unchanged.
+3. **Placeholder correction:** a placeholder ID is replaced by a GSIS ID only
+   when its `esb_id` and its `smart_id` each match exactly one fresh record,
+   both the same one, whose `gsis_id` is GSIS-format, is not already an
+   existing ID, and is claimed by no other placeholder. Otherwise the result
+   is `no_match` or `rejected_*` (ambiguous, single ID only, conflicting,
+   target not GSIS, target already existing, shared target), and the
+   placeholder is retained.
+4. **No roster filtering:** records are never dropped for roster membership
+   or status (traded, injured, inactive, reserve, cut). The weekly roster is
+   evidence only, for one explicit season and week; rows from other weeks
+   are counted and not used.
+5. **No name joins:** records sharing an `esb_id` or `smart_id` are reported
+   as source aliases (one person, several records), never merged.
+
+*Refused:* a missing required column (`gsis_id`, `display_name`,
+`short_name`, `last_name`, `position`, `esb_id`, `smart_id`), a fresh file
+lacking an existing column, a download that differs from its manifest, and:
+- a `gsis_id` that is missing, blank, padded, malformed or repeated;
+- a `position` that is missing, blank or padded.
+
+*Definitions:*
+- **Blank:** empty or whitespace-only.
+- **Padded:** leading or trailing whitespace. A canonical ID and its padded
+  spelling are therefore refused, not treated as two people.
+- **Valid `gsis_id`:** either a GSIS ID (`00-00NNNNN`) or a supported legacy
+  placeholder, which is three capital letters and six digits equal to the
+  record's own `esb_id`. Every non-GSIS ID in the 2025 and 2026 nflverse
+  files has that form. Anything else is malformed.
+
+These checks run on the existing reference, the fresh source and the
+assembled candidate, as written: no value is trimmed or rewritten.
+
+Because a supported placeholder is its own `esb_id`, validated inputs can't
+reach two of the crosswalk outcomes: a non-GSIS target, and two placeholders
+claiming one target. The crosswalk still refuses both. As a backstop, the
+candidate may not lose any existing ID except a documented correction.
+Output is written to a staging directory and swapped in only when complete,
+so a failure leaves any previous output unchanged.
+
+*Outputs:*
+- `players_candidate.csv`: the candidate reference;
+- `crosswalk.csv`: every placeholder the source no longer has, with its
+  result;
+- `identities.csv`: each record's category (retained in source, added,
+  corrected placeholder, retained historical) and its alias group;
+- `field_changes.csv`: every changed field for retained and corrected
+  identities, `meaningful` or `format_only` (whitespace, numeric form, or a
+  listed equivalent such as the headshot URL template);
+- `candidates.csv`: with `--candidates`, each week candidate's coverage and
+  eligibility before and after, and the week's roster evidence;
+- `report.json`: source hashes, the counts above as records and as people,
+  field changes with the consumers that read each field, and eligibility
+  flips.
+
+*First run (2026-10-26, offline, on hashed downloads from 17:45 UTC):*
+- **Sources:**
+  - existing: committed `players.csv` at `1a16695`, `f3fd7d45…`;
+  - fresh players: `72b6b09c…`;
+  - roster: `46cff94a…`, 2026 weeks 1–7, with only Week 7 used.
+- **Identities (records / people):**
+  - retained in source: 24,133 / 24,133;
+  - added: 513 / 512;
+  - corrected placeholders: 215 / 215, all through both crosswalk IDs;
+  - retained historical: 161 / 161 (59 GSIS-format IDs, plus 102
+    placeholders without any crosswalk match);
+  - one source alias: `00-0040793` and `EKE080143`.
+- **Week 7 candidates:**
+  - in the reference: 298 → 355 of 355;
+  - eligible: 291 → 347, which is 291 + 57 newly covered (43 added, 14
+    corrected) − 2 lost + 1 gained;
+  - lost: `00-0036727` RB→FB and `00-0037304` TE→FB;
+  - gained: `00-0033376` FB→RB.
+  - The Week 7 roster lists all three as `position` RB with
+    `depth_chart_position` FB. That disagreement is reported, not resolved.
+- **Field changes:** the consumers of the changed fields are:
+  - `position`, 276 meaningful: prediction eligibility and the pages;
+  - `display_name`, 16: prediction output and the pages;
+  - `short_name`, 253: the pages' name-merge key;
+  - `last_name`, 1: read, not used.
+
+  No other changed field is read by a consumer.
+
+*Not done:* adoption, a rerun of the rehearsal with the candidate, and the
+pages' `short_name` merges (which already duplicate rows).
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
