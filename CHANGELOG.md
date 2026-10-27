@@ -8,6 +8,44 @@ bottom.
 
 ## October 2026
 
+- **Player props: players-reference candidate builder**
+  (`player_props/reference_builder.py`, offline).
+  - **What it does:** builds a candidate players reference from the
+    committed `players.csv` and a hashed nflverse download, with reports.
+    Nothing is adopted; `data_files/players.csv` is unchanged.
+  - **Policy:**
+    - historical IDs absent from the source are retained;
+    - a placeholder ID is corrected only when its `esb_id` and `smart_id`
+      each match one record, the same GSIS ID;
+    - ambiguous or conflicting mappings are rejected;
+    - no record is dropped for roster membership or status;
+    - people are never merged by name; shared crosswalk IDs are reported as
+      source aliases.
+  - **Refuses:**
+    - missing required columns;
+    - IDs that are missing, blank (empty or whitespace-only), padded
+      (surrounding whitespace), malformed or repeated. A valid ID is a GSIS
+      ID or a supported legacy placeholder: the record's own `esb_id`, three
+      capitals and six digits;
+    - positions that are missing, blank or padded. Values are never trimmed;
+    - downloads that differ from their manifest;
+    - output inside the repository;
+    - output that is, contains or lies inside the downloads directory, or
+      that would replace the existing-reference or candidates file. Paths
+      are compared fully resolved, links and junctions included.
+  - **Safe output:** a failure leaves a previous output unchanged.
+  - **Reports:**
+    - added, retained, corrected and alias identities, as records and as
+      people;
+    - field changes, meaningful versus formatting, with the consumers of
+      each field;
+    - week-candidate coverage and eligibility, with that week's roster
+      evidence.
+  - **First run (2026 Week 7):** candidates in the reference go from 298 to
+    355 of 355, and eligible candidates from 291 to 347. Three position
+    changes flip eligibility and disagree with the Week 7 roster; they are
+    reported, not resolved.
+
 - **Player props: expected-row completeness check in the rehearsal**
   (`player_props/rehearsal_expected.py`, `player_props/rehearsal.py`).
   - **Expected set:** before either prediction file is read, the rows
