@@ -1,25 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-26T08:22:39.926612+00:00",
+    "generated_at": "2026-10-27T08:34:14.283867+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-10-27"
   },
-  "bets": [
-    {
-      "game_date": "2026-10-26",
-      "game_time": "20:15",
-      "game": "DAL @ PHI",
-      "home_team": "PHI",
-      "away_team": "DAL",
-      "bet_type": "Spread",
-      "pick": "PHI +4.5",
-      "confidence": 0.5698261709849507,
-      "edge": 0.0415242841924978,
-      "tier": "Strong",
-      "odds": -112,
-      "line": 4.5,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
