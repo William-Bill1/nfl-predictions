@@ -14,6 +14,8 @@ import xgboost as xgb
 sys.path.append(str(Path(__file__).parent.parent))
 
 from footer import add_betting_oracle_footer
+from player_props.reference_join import (enrich, enrichment_summary, load_reference, player_rows,
+                                         season_totals as season_totals_by_id, status_label, unique_labels)
 
 # Page config
 
@@ -29,7 +31,7 @@ def load_player_passing_stats():
     if not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -47,7 +49,7 @@ def load_player_rushing_stats():
     if not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -65,7 +67,7 @@ def load_player_receiving_stats():
     if not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -77,12 +79,15 @@ def load_player_receiving_stats():
 
 
 @st.cache_data(ttl=3600)
+def load_reference_cached():
+    """The players reference (IDs as text, duplicate IDs flagged), or None."""
+    return load_reference(Path('data_files/players.csv'))
+
+
 def load_players():
-    """Load player metadata with full names."""
-    file_path = Path('data_files/players.csv')
-    if not file_path.exists():
-        return None
-    return pd.read_csv(file_path)[['gsis_id', 'short_name', 'display_name', 'last_name', 'position']]
+    """Player metadata: every reference record, values as text (or None)."""
+    ref = load_reference_cached()
+    return None if ref is None else ref.records
 
 
 @st.cache_data(ttl=3600)
@@ -92,7 +97,7 @@ def load_player_props_predictions():
     if not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype={'player_id': str})
     
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
@@ -103,54 +108,11 @@ def load_player_props_predictions():
     if 'game_date' in df.columns:
         df['game_date'] = pd.to_datetime(df['game_date'], errors='coerce')
     
-    # Add position and display_name information by joining with players data (only if not already present)
-    if 'display_name' not in df.columns or 'position' not in df.columns:
-        players_df = load_players()
-        if players_df is not None:
-            df = df.merge(
-                players_df[['short_name', 'display_name', 'position']], 
-                left_on='player_name', 
-                right_on='short_name', 
-                how='left'
-            )
-            # Use display_name for display, keep short_name for data operations
-            if 'display_name' in df.columns:
-                df['display_name'] = df['display_name'].fillna(df['player_name'])  # Fallback to short_name if no display_name
-            df = df.drop('short_name', axis=1, errors='ignore')
-    
-@st.cache_data(ttl=3600)
-def load_player_props_predictions():
-    """Load player prop predictions with memory optimization."""
-    file_path = Path('data_files/player_props_predictions.csv')
-    if not file_path.exists():
-        return None
-    
-    df = pd.read_csv(file_path)
-    
-    # Memory optimization
-    for col in df.select_dtypes(include=['float64']).columns:
-        df[col] = df[col].astype('float32')
-    
-    # Parse game_date. An unparseable value becomes NaT instead of raising, so
-    # the predictions stay visible and the remaining-games banner flags it.
-    if 'game_date' in df.columns:
-        df['game_date'] = pd.to_datetime(df['game_date'], errors='coerce')
-    
-    # Add position and display_name information by joining with players data (only if not already present)
-    if 'display_name' not in df.columns or 'position' not in df.columns:
-        players_df = load_players()
-        if players_df is not None:
-            df = df.merge(
-                players_df[['short_name', 'display_name', 'position']], 
-                left_on='player_name', 
-                right_on='short_name', 
-                how='left'
-            )
-            # Use display_name for display, keep short_name for data operations
-            if 'display_name' in df.columns:
-                df['display_name'] = df['display_name'].fillna(df['player_name'])  # Fallback to short_name if no display_name
-            df = df.drop('short_name', axis=1, errors='ignore')
-    
+    # Classify every row's identity against the players reference (by stable
+    # ID; see player_props/reference_join.py) and fill only blank display_name
+    # / position cells from a permitted match. Stored values are kept.
+    df = enrich(df, load_reference_cached())
+
     # opponent_def_rank was removed (leaky, constant). Older snapshots may still
     # carry it; newer ones carry model_reliable instead.
     if 'model_reliable' not in df.columns:
@@ -257,6 +219,10 @@ def main():
     rushing_stats = load_player_rushing_stats()
     receiving_stats = load_player_receiving_stats()
     players = load_players()
+    reference = load_reference_cached()
+    _reference_notes = enrichment_summary(predictions, reference)
+    if _reference_notes:
+        st.warning("Player details: " + "; ".join(_reference_notes) + ".")
     
     # Check if stats are available
     stats_available = all([
@@ -588,22 +554,34 @@ def main():
                         # Sort by relevance (exact matches first)
                         matches['exact_match'] = matches['display_name'].str.lower() == search_lower
                         matches = matches.sort_values(['exact_match', 'display_name'], ascending=[False, True])
-                        
-                        # Create display options with team info
-                        player_options = {}
-                        for _, row in matches.head(20).iterrows():
-                            display = f"{row['display_name']} - {row['position']}"
-                            player_options[display] = row['gsis_id']
-                        
+
+                        # One option per reference record, valued by player ID; labels are
+                        # made unique so two players sharing a name and position stay distinct.
+                        top = matches.head(20)
+                        labels = unique_labels([f"{r['display_name']} - {r['position']}" for _, r in top.iterrows()],
+                                               top['gsis_id'].fillna(''))
+                        player_options = dict(zip(labels, top['gsis_id']))
+
                         selected_display = st.selectbox(
                             "Select Player",
                             options=list(player_options.keys()),
                             key="dk_player_select"
                         )
                         selected_player_id = player_options[selected_display]
-                        selected_player_name = matches[matches['gsis_id'] == selected_player_id].iloc[0]['short_name']
-                        selected_player_full = matches[matches['gsis_id'] == selected_player_id].iloc[0]['display_name']
-                        selected_position = matches[matches['gsis_id'] == selected_player_id].iloc[0]['position']
+                        by_id = reference.by_id if reference is not None else None
+                        if by_id is not None and selected_player_id in by_id.index:
+                            rec = by_id.loc[selected_player_id]
+                            selected_player_name = rec['short_name']
+                            selected_player_full = rec['display_name']
+                            selected_position = rec['position']
+                        else:
+                            # A repeated or missing reference ID: the details are ambiguous.
+                            st.warning(f"Player ID {selected_player_id} is repeated or missing in the players "
+                                       "reference, so its details are not shown.")
+                            selected_player_id = None
+                            selected_player_name = None
+                            selected_player_full = None
+                            selected_position = None
                     else:
                         st.info("No players found. Try a different search.")
                         selected_player_id = None
@@ -667,7 +645,7 @@ def main():
                     lambda v: str(v).strip().lower() in ('true', '1')
                 )
                 _match = predictions[
-                    (predictions['display_name'] == selected_player_full)
+                    player_rows(predictions, reference, selected_player_id)
                     & (predictions['prop_type'] == _prop_type)
                     & _avail
                 ]
@@ -938,14 +916,14 @@ def main():
             
             if not season_stats.empty:
                 # Aggregate to season totals per player
-                season_totals = season_stats.groupby(['player_name', 'team'], observed=True).agg({
+                season_totals = season_totals_by_id(season_stats, {
                     'passing_yards': 'sum',
                     'pass_tds': 'sum',
                     'completions': 'sum',
                     'attempts': 'sum',
                     'interceptions': 'sum',
                     'game_id': 'count'  # Games played
-                }).reset_index()
+                })
                 
                 season_totals.rename(columns={'game_id': 'games_played'}, inplace=True)
                 
@@ -954,15 +932,8 @@ def main():
                 season_totals['completion_pct'] = (season_totals['completions'] / season_totals['attempts'] * 100).round(1)
                 
                 # Add position information
-                players_df = load_players()
-                if players_df is not None:
-                    season_totals = season_totals.merge(
-                        players_df[['short_name', 'position']], 
-                        left_on='player_name', 
-                        right_on='short_name', 
-                        how='left'
-                    )
-                    season_totals = season_totals.drop('short_name', axis=1)
+                # Position by player ID (one reference record each; never a name merge)
+                season_totals = enrich(season_totals, reference, fields=('position',))
                 # Ensure `position` exists for downstream display (fallback to empty string)
                 if 'position' not in season_totals.columns:
                     season_totals['position'] = ''
@@ -988,6 +959,11 @@ def main():
                     'TDs', 'INT', 'Comp', 'Att', 'Comp%'
                 ]
                 
+                # Rows not verified by player ID say so (inferred, ambiguous, unknown...)
+                _identity = status_label(season_totals.loc[display_df.index, 'reference_match'])
+                if (_identity != '').any():
+                    display_df['Identity'] = _identity.values
+
                 # Format numbers
                 display_df['Total Yds'] = display_df['Total Yds'].astype(int)
                 display_df['Yds/G'] = display_df['Yds/G'].round(1)
@@ -1017,12 +993,12 @@ def main():
             
             if not season_stats.empty:
                 # Aggregate to season totals per player
-                season_totals = season_stats.groupby(['player_name', 'team'], observed=True).agg({
+                season_totals = season_totals_by_id(season_stats, {
                     'rushing_yards': 'sum',
                     'rush_tds': 'sum',
                     'rush_attempts': 'sum',
                     'game_id': 'count'
-                }).reset_index()
+                })
                 
                 season_totals.rename(columns={'game_id': 'games_played'}, inplace=True)
                 
@@ -1032,15 +1008,8 @@ def main():
                 season_totals['att_per_game'] = (season_totals['rush_attempts'] / season_totals['games_played']).round(1)
                 
                 # Add position information
-                players_df = load_players()
-                if players_df is not None:
-                    season_totals = season_totals.merge(
-                        players_df[['short_name', 'position']], 
-                        left_on='player_name', 
-                        right_on='short_name', 
-                        how='left'
-                    )
-                    season_totals = season_totals.drop('short_name', axis=1)
+                # Position by player ID (one reference record each; never a name merge)
+                season_totals = enrich(season_totals, reference, fields=('position',))
                 
                 # Sort by total yards
                 season_totals = season_totals.sort_values('rushing_yards', ascending=False).head(30)
@@ -1057,6 +1026,11 @@ def main():
                     'TDs', 'Attempts', 'YPC', 'Att/G'
                 ]
                 
+                # Rows not verified by player ID say so (inferred, ambiguous, unknown...)
+                _identity = status_label(season_totals.loc[display_df.index, 'reference_match'])
+                if (_identity != '').any():
+                    display_df['Identity'] = _identity.values
+
                 # Format numbers
                 display_df['Total Yds'] = display_df['Total Yds'].astype(int)
                 display_df['Yds/G'] = display_df['Yds/G'].round(1)
@@ -1086,13 +1060,13 @@ def main():
             
             if not season_stats.empty:
                 # Aggregate to season totals per player
-                season_totals = season_stats.groupby(['player_name', 'team'], observed=True).agg({
+                season_totals = season_totals_by_id(season_stats, {
                     'receiving_yards': 'sum',
                     'receptions': 'sum',
                     'rec_tds': 'sum',
                     'targets': 'sum',
                     'game_id': 'count'
-                }).reset_index()
+                })
                 
                 season_totals.rename(columns={'game_id': 'games_played'}, inplace=True)
                 
@@ -1103,15 +1077,8 @@ def main():
                 season_totals['catch_rate'] = (season_totals['receptions'] / season_totals['targets'] * 100).round(1)
                 
                 # Add position information
-                players_df = load_players()
-                if players_df is not None:
-                    season_totals = season_totals.merge(
-                        players_df[['short_name', 'position']], 
-                        left_on='player_name', 
-                        right_on='short_name', 
-                        how='left'
-                    )
-                    season_totals = season_totals.drop('short_name', axis=1)
+                # Position by player ID (one reference record each; never a name merge)
+                season_totals = enrich(season_totals, reference, fields=('position',))
                 
                 # Sort by total yards
                 season_totals = season_totals.sort_values('receiving_yards', ascending=False).head(40)
@@ -1128,6 +1095,11 @@ def main():
                     'Rec', 'TDs', 'Targets', 'YPR', 'Catch%'
                 ]
                 
+                # Rows not verified by player ID say so (inferred, ambiguous, unknown...)
+                _identity = status_label(season_totals.loc[display_df.index, 'reference_match'])
+                if (_identity != '').any():
+                    display_df['Identity'] = _identity.values
+
                 # Format numbers
                 display_df['Total Yds'] = display_df['Total Yds'].astype(int)
                 display_df['Yds/G'] = display_df['Yds/G'].round(1)
@@ -1162,26 +1134,21 @@ def main():
         
         all_player_ids = list(set(all_player_ids))
         
-        # Build player options with full names
-        if players is not None and len(all_player_ids) > 0:
-            player_options = []
+        # Build player options with full names: one per player ID, with labels
+        # made unique so a namesake can't be selected by mistake.
+        by_id = reference.by_id if reference is not None else None
+        player_options = []
+        if by_id is not None and len(all_player_ids) > 0:
             for player_id in all_player_ids:
-                match = players[players['gsis_id'] == player_id]
-                if not match.empty:
-                    display_name = match.iloc[0]['display_name']
-                    last_name = match.iloc[0]['last_name']
-                    # Only add if we found a valid display name
-                    if pd.notna(display_name) and display_name:
-                        player_options.append((display_name, player_id, last_name))
-            
-            # Sort by last name
-            player_options = sorted(player_options, key=lambda x: x[2] if pd.notna(x[2]) else '')
-            display_names = [opt[0] for opt in player_options]
-            player_ids = [opt[1] for opt in player_options]
-        else:
-            display_names = []
-            player_ids = []
-        
+                if player_id in by_id.index:
+                    rec = by_id.loc[player_id]
+                    if pd.notna(rec['display_name']) and rec['display_name']:
+                        player_options.append((rec['display_name'], player_id, rec['last_name']))
+            # Sort by last name (then ID, so the order is stable)
+            player_options = sorted(player_options, key=lambda x: (x[2] if pd.notna(x[2]) else '', x[1]))
+        display_names = unique_labels([opt[0] for opt in player_options], [opt[1] for opt in player_options])
+        player_ids = [opt[1] for opt in player_options]
+
         if display_names:
             # Add search filter
             search_term = st.text_input("Search for a player (type to filter)", "", key="player_search_filter")
@@ -1208,9 +1175,8 @@ def main():
             
             if selected_player_id:
                 # Get player position
-                player_info = players[players['gsis_id'] == selected_player_id]
-                if not player_info.empty:
-                    player_position = player_info.iloc[0]['position']
+                if by_id is not None and selected_player_id in by_id.index:
+                    player_position = by_id.at[selected_player_id, 'position']
                     st.markdown(f"**Position:** {player_position}")
                 
                 col1, col2, col3 = st.columns(3)

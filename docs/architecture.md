@@ -1195,8 +1195,90 @@ so a failure leaves any previous output unchanged.
 
   No other changed field is read by a consumer.
 
-*Not done:* adoption, a rerun of the rehearsal with the candidate, and the
-pages' `short_name` merges (which already duplicate rows).
+*Not done:* adoption. The candidate rehearsal (2026-10-27) and the pages'
+`short_name` merges (see below) are done.
+
+**Player-reference joins in the pages** (`player_props/reference_join.py`;
+`pages/2_Player_Props.py`, `pages/3_Parlay_Builder.py`).
+
+*Why:* the pages attached display name and position by merging on
+`short_name`, which is not unique. Several players share a name (for
+example "J.Smith"), so the merge could multiply prediction or season-total
+rows, or attach another player's details. Several pickers had the same
+weakness:
+- the Pick 6 search keyed its options by "name - position";
+- the Player Search tab mapped a chosen name back with `.index(name)`;
+- the Parlay Builder mapped a chosen label back with `.index(label)`.
+
+Each of these silently resolved two players to the first.
+
+*Join rules:*
+- **IDs are text:** the predictions, stats and reference files are read with
+  `player_id` / `gsis_id` as text.
+- **Many-to-one by ID:** rows are matched `player_id` → `gsis_id`. A row is
+  never multiplied, and row count, order and existing values are kept.
+- **Repeated reference IDs:** a `gsis_id` on more than one reference record
+  is reported on the page and never used. Its records are kept, not dropped.
+- **Unknown IDs:** a row whose ID is not in the reference stays unenriched.
+  It never falls back to its name.
+- **Rows without an ID (older files):** only these may use their name, and
+  only when exactly one reference record has that `short_name` and its ID is
+  unambiguous. Such matches are labelled as inferred, not verified.
+- **Stored values kept:** fields are only filled where the input lacks them.
+  When nothing can be attached, `display_name` falls back to the row's own
+  `player_name`.
+
+Every enriched row carries `reference_match`, with one of these values:
+- `id`;
+- `name_unique`;
+- `unknown_id`;
+- `duplicate_reference_id`;
+- `ambiguous_name`;
+- `name_not_found`;
+- `no_identity`;
+- `reference_unavailable`: the reference is absent, unreadable or lacks
+  columns. This is kept distinct from a legacy name that simply isn't in a
+  usable reference.
+
+The pages show a warning summarising reference problems and rows that are
+inferred or left unenriched.
+
+*Where it applies:*
+- **Prediction loaders (both pages):** every row's identity is classified,
+  even when `display_name` and `position` are stored. Stored non-blank values
+  are kept. Blank cells are filled only from an ID match (or, for rows
+  without an ID, a unique-name match); otherwise `display_name` shows the
+  row's own `player_name`. Unknown and repeated IDs are reported without any
+  name fallback.
+- **Pick 6 market-line prefill:** this player's rows by ID. Rows without an
+  ID match only through an unambiguous display name.
+- **Season leaders** (`reference_join.season_totals`):
+  - rows with a `player_id` are totalled per ID (with name and team);
+  - rows without one are totalled per name and team on their own. They are
+    never merged into an identified player, even with the same name, and no
+    row is lost.
+  - Position is attached by ID, and only inferred for an ID-less group whose
+    name is unique.
+  - An `Identity` column appears when any row isn't verified by ID ("inferred
+    by name", "ambiguous name", "not in reference", ...).
+  - Season filters are unchanged.
+- **Pick 6 search and Player Search:** one option per ID, labels made unique
+  (the ID is appended to shared labels), and details looked up by ID. A
+  repeated reference ID is shown with a warning instead of details.
+- **Parlay Builder:**
+  - leg labels are made unique, so each maps to exactly one row;
+  - the same-player correlation warning is keyed by ID, so namesakes aren't
+    treated as one player.
+
+*Unchanged:* probabilities, calculations, filters, selections and stored
+files. The dead first copy of `load_player_props_predictions` (replaced at
+import by the second) was removed.
+
+*Limits:*
+- `get_recent_form` (unused) still filters by name.
+- A season leader's `player_name` is still the stats file's short name.
+- Older prediction files without IDs can only be enriched where a name is
+  unique.
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
