@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 
 from footer import add_betting_oracle_footer
+from player_props.reference_join import enrich, enrichment_summary, load_reference, player_key, unique_labels
 
 st.title("🎲 Parlay Builder")
 
@@ -14,7 +15,7 @@ def load_player_props_predictions():
     if not file_path.exists():
         return None
 
-    df = pd.read_csv(file_path)
+    df = pd.read_csv(file_path, dtype={'player_id': str})
 
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
@@ -24,20 +25,10 @@ def load_player_props_predictions():
     if 'game_date' in df.columns:
         df['game_date'] = pd.to_datetime(df['game_date'])
 
-    # Add position and display_name information by joining with players data (only if not already present)
-    if 'display_name' not in df.columns or 'position' not in df.columns:
-        players_df = load_players()
-        if players_df is not None:
-            df = df.merge(
-                players_df[['short_name', 'display_name', 'position']],
-                left_on='player_name',
-                right_on='short_name',
-                how='left'
-            )
-            # Use display_name for display, keep short_name for data operations
-            if 'display_name' in df.columns:
-                df['display_name'] = df['display_name'].fillna(df['player_name'])  # Fallback to short_name if no display_name
-            df = df.drop('short_name', axis=1, errors='ignore')
+    # Classify every row's identity against the players reference (by stable
+    # ID; see player_props/reference_join.py) and fill only blank display_name
+    # / position cells from a permitted match. Stored values are kept.
+    df = enrich(df, load_reference_cached())
 
     # opponent_def_rank was removed (leaky, constant); newer snapshots carry
     # model_reliable instead.
@@ -51,13 +42,9 @@ def load_player_props_predictions():
     return df
 
 @st.cache_data
-def load_players():
-    """Load players data for display names and positions."""
-    try:
-        players_df = pd.read_csv('data_files/players.csv')
-        return players_df
-    except FileNotFoundError:
-        return None
+def load_reference_cached():
+    """The players reference (IDs as text, duplicate IDs flagged), or None."""
+    return load_reference(Path('data_files/players.csv'))
 
 def detect_correlations(props_df):
     """
@@ -84,11 +71,13 @@ def detect_correlations(props_df):
             'warning': "Legs contain opposing teams - outcomes may be negatively correlated"
         })
 
-    # Check for same player multiple props
-    player_counts = props_df['player_name'].value_counts()
+    # Check for same player multiple props (by player ID where present, so two
+    # players sharing a name aren't treated as one)
+    keys = player_key(props_df)
+    player_counts = keys.value_counts()
     for player, count in player_counts.items():
         if count > 1:
-            player_props = props_df[props_df['player_name'] == player]
+            player_props = props_df[keys == player]
             warnings.append({
                 'warning': f"Multiple props for {player_props.iloc[0]['display_name']} - outcomes are highly correlated"
             })
@@ -137,6 +126,10 @@ if predictions_df is None or predictions_df.empty:
     st.error("❌ No player prop predictions found. Please generate predictions first.")
     st.stop()
 
+_reference_notes = enrichment_summary(predictions_df, load_reference_cached())
+if _reference_notes:
+    st.warning("Player details: " + "; ".join(_reference_notes) + ".")
+
 # Props with a model output of at least 55% (a filter, not validated confidence)
 high_conf_predictions = predictions_df[predictions_df['confidence'] >= 0.55].copy()
 
@@ -157,6 +150,8 @@ for idx, row in high_conf_predictions.iterrows():
     option = create_prop_option(row)
     prop_options.append(option)
     prop_indices.append(idx)
+# Two rows can share a label (e.g. namesakes on one team): make each unique.
+prop_options = unique_labels(prop_options, player_key(high_conf_predictions.loc[prop_indices]))
 
 # Multiselect for parlay legs
 st.subheader("Build Your Parlay")

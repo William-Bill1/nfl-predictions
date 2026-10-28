@@ -8,6 +8,35 @@ bottom.
 
 ## October 2026
 
+- **Player props pages: player details joined by stable ID**
+  (`player_props/reference_join.py`, `pages/2_Player_Props.py`,
+  `pages/3_Parlay_Builder.py`).
+  - **Problem:** the pages merged the players reference on `short_name`,
+    which several players share, so rows could multiply or show another
+    player's name and position.
+  - **Joins by ID:** joins are `player_id` → `gsis_id`, many-to-one, with IDs
+    read as text; row count, order and stored values are kept.
+  - **Repeated reference IDs:** reported and never used.
+  - **Unknown IDs:** never fall back to the row's name.
+  - **Older files without IDs:** enriched only where the name is unique,
+    and labelled as inferred, not verified.
+  - **Identity always classified:** every prediction row is classified, even
+    when display name and position are stored. Stored values are kept, and
+    only blank cells are filled from a permitted match. A missing or
+    unreadable reference is reported as "unavailable", not as an unmatched
+    name.
+  - **Season leaders:** totals are per player ID. Rows without an ID are
+    totalled separately (never merged into a same-name identified player,
+    none lost) and labelled in an `Identity` column. Position is attached by
+    ID.
+  - **Pickers:** the player search, Player Search and Parlay Builder pickers
+    use unique labels per ID, so a namesake can't be selected by mistake.
+  - **Correlation warning:** the Parlay Builder's same-player warning is
+    keyed by ID.
+  - **Warnings:** a page warning lists reference problems and rows left
+    unenriched.
+  - **Unchanged:** probabilities, calculations, filters and stored files.
+
 - **Player props: players-reference candidate builder**
   (`player_props/reference_builder.py`, offline).
   - **What it does:** builds a candidate players reference from the
