@@ -16,8 +16,10 @@ import pytest
 from player_props import reference_builder as rb
 
 ROOT = Path(__file__).resolve().parents[1]
-COLUMNS = ['gsis_id', 'display_name', 'short_name', 'last_name', 'position', 'latest_team', 'status',
-           'esb_id', 'smart_id', 'draft_year']
+COLUMNS = ['gsis_id', 'display_name', 'short_name', 'last_name', 'position', 'position_group', 'latest_team',
+           'status', 'esb_id', 'smart_id', 'draft_year']
+# nflverse position_group for a label (a fullback is in RB); other labels a non-eligible group.
+GROUP = {'QB': 'QB', 'RB': 'RB', 'FB': 'RB', 'WR': 'WR', 'TE': 'TE', 'K': 'SPEC', 'P': 'SPEC', 'DT': 'DL'}
 
 
 @pytest.fixture(autouse=True)
@@ -28,11 +30,13 @@ def blocked(monkeypatch):
     monkeypatch.setattr(socket, "create_connection", refuse)
 
 
-def rec(gsis, pos='WR', esb=None, smart=None, name=None, team='AAA', status='ACT', draft='2020'):
+def rec(gsis, pos='WR', esb=None, smart=None, name=None, team='AAA', status='ACT', draft='2020', group='auto'):
     name = name or f"Player {gsis}"
+    if group == 'auto':
+        group = GROUP.get(pos, 'OTHER') if isinstance(pos, str) else 'WR'
     return {'gsis_id': gsis, 'display_name': name, 'short_name': name[0] + '.' + name.split()[-1],
-            'last_name': name.split()[-1], 'position': pos, 'latest_team': team, 'status': status,
-            'esb_id': esb, 'smart_id': smart, 'draft_year': draft}
+            'last_name': name.split()[-1], 'position': pos, 'position_group': group, 'latest_team': team,
+            'status': status, 'esb_id': esb, 'smart_id': smart, 'draft_year': draft}
 
 
 def write(path, rows, columns=COLUMNS):
@@ -279,7 +283,20 @@ class TestFieldChanges:
         assert fc['draft_year'] == {'meaningful': 0, 'format_only': 1, 'consumers': []}
         assert fc['position']['consumers'] and fc['display_name']['consumers']
         assert 'short_name' not in fc                                   # "A.Lee" either way
-        assert r['eligibility_flips'] == [{'gsis_id': '00-0000001', 'old': 'RB', 'new': 'FB'}]
+        # RB -> FB is a label change only: both are position_group RB, same props.
+        assert r['eligibility_flips'] == []
+        assert r['position_label_changes_same_group'] == {'records': 1, 'pairs': {'RB->FB': 1}}
+        assert r['eligibility_group_changes'] == {'records': 0, 'changing_prop_families': 0}
+
+    def test_group_change_is_an_eligibility_flip(self, tmp_path):
+        ex, dl = setup(tmp_path, [rec('00-0000001', pos='TE'), rec('00-0000002', pos='WR'), rec('00-0000003', pos='RB')],
+                       [rec('00-0000001', pos='FB'), rec('00-0000002', pos='TE'), rec('00-0000003', pos='DT')])
+        r = rb.build(ex, dl, tmp_path / 'out')
+        # TE/TE -> FB/RB swaps prop families; WR -> TE keeps them; RB -> DT/DL loses them.
+        assert sorted((f['gsis_id'], f['old'], f['new']) for f in r['eligibility_flips']) == [
+            ('00-0000001', 'TE', 'RB'), ('00-0000003', 'RB', 'DL')]
+        assert r['eligibility_group_changes'] == {'records': 3, 'changing_prop_families': 2}
+        assert r['field_changes']['position_group']['consumers']
 
     def test_headshot_template_fill_is_format_only(self, tmp_path):
         cols = COLUMNS + ['headshot']
@@ -341,13 +358,16 @@ class TestRosterEvidence:
 
     def test_eligibility_flip_reports_roster_disagreement_without_resolving(self, tmp_path):
         roster = roster_rows(7, [('00-0000001', 'AAA', 'RB', 'ACT')])
-        ex, dl = setup(tmp_path, [rec('00-0000001', pos='RB')], [rec('00-0000001', pos='FB')], roster)
+        ex, dl = setup(tmp_path, [rec('00-0000001', pos='TE')], [rec('00-0000001', pos='FB')], roster)
         c = self.candidates(tmp_path, [{'player_id': '00-0000001', 'team': 'AAA'}])
         r = rb.build(ex, dl, tmp_path / 'out', c, (2026, 7))
         cr = r['candidates']
-        assert cr['eligibility_lost'] == ['00-0000001'] and cr['roster_position_disagrees'] == ['00-0000001']
-        assert cr['candidate_eligibility_flips'][0]['roster_position'] == 'RB'
-        assert built(tmp_path / 'out').loc[0, 'position'] == 'FB'     # source value kept, not overridden
+        # TE/TE -> FB/RB: still eligible (group RB), with different prop families.
+        assert cr['eligibility_lost'] == [] and cr['roster_position_disagrees'] == ['00-0000001']
+        flip = cr['candidate_eligibility_flips'][0]
+        assert (flip['before_group'], flip['after_group'], flip['roster_position']) == ('TE', 'RB', 'RB')
+        out = built(tmp_path / 'out')
+        assert (out.loc[0, 'position'], out.loc[0, 'position_group']) == ('FB', 'RB')   # source values kept
 
     def test_eligible_count_is_explained(self, tmp_path):
         existing = [rec('00-0000001', pos='RB'), rec('00-0000002', pos='FB'), rec('00-0000003', pos='P')]
@@ -356,8 +376,10 @@ class TestRosterEvidence:
         ex, dl = setup(tmp_path, existing, fresh)
         c = self.candidates(tmp_path, [{'player_id': f'00-000000{i}', 'team': 'AAA'} for i in range(1, 6)])
         cr = rb.build(ex, dl, tmp_path / 'out', c)['candidates']
-        assert cr['eligible']['before'] == 1 and cr['eligible']['after'] == 2
+        # By position_group: RB/RB and FB/RB are eligible either way; P and K (SPEC) never.
+        assert cr['eligible']['before'] == 2 and cr['eligible']['after'] == 3
         assert cr['newly_covered'] == {'total': 2, 'by_identity': {'added': 2}, 'eligible': 1}
+        assert cr['eligibility_lost'] == [] and cr['eligibility_gained_existing'] == []
         assert cr['eligible']['explained'] == cr['eligible']['after']
 
 
@@ -635,3 +657,56 @@ class TestPaddedAndMalformed:
         with pytest.raises(rb.ReferenceBuildError, match=r"candidate: 1 position\(s\) with surrounding whitespace"):
             rb.build(ex, dl, out)
         assert snapshot(tmp_path) == before
+
+
+class TestPositionGroup:
+    """position_group (the eligibility field) is required, unpadded and
+    consistent with the position label; never repaired or replaced."""
+
+    def bad(self, tmp_path, which, record, match):
+        rows = [rec('00-0000001'), record]
+        label = 'existing reference' if which == 'existing' else 'fresh source'
+        return TestPaddedAndMalformed.refused_after_good_build(
+            self, tmp_path, rows if which == 'existing' else [rec('00-0000001')],
+            rows if which == 'fresh' else [rec('00-0000001')], f"{label}: 1 {match}")
+
+    @pytest.mark.parametrize('which', ['existing', 'fresh'])
+    @pytest.mark.parametrize('group', [None, '', '  '])
+    def test_missing_or_blank_group_refused(self, tmp_path, which, group):
+        self.bad(tmp_path, which, rec('00-0000002', pos='FB', group=group),
+                 r"record\(s\) with a missing or blank position_group")
+
+    @pytest.mark.parametrize('which', ['existing', 'fresh'])
+    @pytest.mark.parametrize('group', [' RB', 'RB ', '\tRB'])
+    def test_padded_group_refused(self, tmp_path, which, group):
+        self.bad(tmp_path, which, rec('00-0000002', pos='FB', group=group),
+                 r"position_group\(s\) with surrounding whitespace")
+
+    @pytest.mark.parametrize('which', ['existing', 'fresh'])
+    @pytest.mark.parametrize('pos, group', [('TE', 'RB'), ('FB', 'TE'), ('RB', 'WR'), ('DT', 'RB'), ('K', 'QB')])
+    def test_inconsistent_group_refused(self, tmp_path, which, pos, group):
+        problems = self.bad(tmp_path, which, rec('00-0000002', pos=pos, group=group),
+                            r"record\(s\) whose position_group contradicts the position label")
+        assert f"00-0000002 ({pos}/{group})" in problems[0]
+
+    def test_missing_group_column_refused(self, tmp_path):
+        cols = [c for c in COLUMNS if c != 'position_group']
+        ex, dl = setup(tmp_path, [rec('00-0000001')],
+                       [{k: v for k, v in rec('00-0000001').items() if k != 'position_group'}], fresh_columns=cols)
+        with pytest.raises(rb.ReferenceBuildError, match=r"missing required column\(s\) \['position_group'\]"):
+            rb.build(ex, dl, tmp_path / 'out')
+
+    def test_fb_with_group_rb_accepted_and_kept_as_written(self, tmp_path):
+        ex, dl = setup(tmp_path, [rec('00-0000001', pos='FB')], [rec('00-0000001', pos='FB'), rec('00-0000002', pos='TE')])
+        rb.build(ex, dl, tmp_path / 'out')
+        out = built(tmp_path / 'out').set_index('gsis_id')
+        assert out.loc['00-0000001', ['position', 'position_group']].tolist() == ['FB', 'RB']   # label not relabelled
+        assert out.loc['00-0000002', ['position', 'position_group']].tolist() == ['TE', 'TE']
+
+    def test_group_and_label_changes_reported_separately(self, tmp_path):
+        ex, dl = setup(tmp_path, [rec('00-0000001', pos='RB'), rec('00-0000002', pos='TE')],
+                       [rec('00-0000001', pos='FB'), rec('00-0000002', pos='FB')])
+        r = rb.build(ex, dl, tmp_path / 'out')
+        assert r['position_label_changes_same_group'] == {'records': 1, 'pairs': {'RB->FB': 1}}
+        assert r['eligibility_group_changes'] == {'records': 1, 'changing_prop_families': 1}
+        assert r['eligibility_flips'] == [{'gsis_id': '00-0000002', 'old': 'TE', 'new': 'RB'}]

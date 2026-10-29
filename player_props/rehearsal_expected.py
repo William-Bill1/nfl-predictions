@@ -34,7 +34,11 @@ disabled, as in the rehearsal):
     ``not_in_player_reference`` (rookies or anyone else missing from the
     reference; a coverage limit, not a completeness check). More than one:
     invalid input, the check fails.
- 4. Props: POSITION_MAP[position]. Other positions: excluded,
+ 4. Props (policy position-group-v1): POSITION_MAP[position_group]; the
+    position label is not used to select props. The group must be present,
+    unpadded and consistent with the label (QB/RB/WR/TE their own group, FB
+    group RB, any other label not an eligible group); otherwise the input is
+    invalid and the check fails. An ineligible group: excluded,
     ``position_not_eligible``.
  5. History: an earlier appearance in that prop's stat table. None: excluded,
     ``no_history``.
@@ -48,8 +52,9 @@ disabled, as in the rehearsal):
 Invalid or ambiguous input raises ExpectedSetError instead of shrinking the
 set: a game that doesn't resolve, schedules that disagree, a missing feature
 table, a tie deciding a team's recent games or a player's latest team, a
-repeated reference ID, or the roster filter switched on (its rule isn't
-restated here).
+repeated reference ID, an unusable eligibility group (missing, padded or
+inconsistent with the position label), or the roster filter switched on (its
+rule isn't restated here).
 
 Completeness is relative to these inputs and rules. It says nothing about
 players absent from the inputs: no NFL roster, depth chart or rookie coverage
@@ -74,6 +79,31 @@ RECENT_GAMES = 3            # predict.candidate_players(n_games=3)
 TIER_WINDOW = 8             # the last 8 appearances set the tier
 TIER_MIN_APPEARANCES = 3    # fewer: the lowest tier
 EXAMPLES = 5
+
+# Restated eligibility policy (production: predict.ELIGIBILITY_POLICY). The
+# rehearsal refuses to verify when the two versions differ.
+RESTATED_POLICY = 'position-group-v1'
+# The group each skill label must carry, restated (not imported).
+SKILL_LABEL_GROUPS = {'QB': 'QB', 'RB': 'RB', 'FB': 'RB', 'WR': 'WR', 'TE': 'TE'}
+
+
+def restated_group(position, group):
+    """(group, None) or (None, problem), restating the policy's checks on a
+    reference record as written (no trimming, no fall back to position)."""
+    if not isinstance(group, str) or group.strip() == '':
+        return None, "no position_group"
+    if group.strip() != group:
+        return None, f"position_group {group!r} is padded"
+    if not isinstance(position, str) or position.strip() == '':
+        return None, "no position"
+    if position.strip() != position:
+        return None, f"position {position!r} is padded"
+    want = SKILL_LABEL_GROUPS.get(position)
+    if want is not None and group != want:
+        return None, f"position {position!r} has position_group {group!r}, not {want!r}"
+    if want is None and group in POSITION_MAP:
+        return None, f"position {position!r} has the eligible position_group {group!r}"
+    return group, None
 
 Identity = Tuple[str, str, str, str, float]
 
@@ -216,6 +246,9 @@ def expected_rows(data_dir: Path, tables: Dict[str, pd.DataFrame], models: Dict[
     missing = [s for s in needed if s not in tables]
     if missing:
         raise ExpectedSetError([f"feature table(s) {missing} missing"])
+    if 'position_group' not in players.columns:
+        raise ExpectedSetError(["players reference has no position_group; eligibility (policy "
+                                f"{RESTATED_POLICY}) can't be derived"])
     result = ExpectedSet(games=_week_games(data_dir, games, season, week))
 
     reference = players.assign(gsis_id=players['gsis_id'].astype(str))
@@ -233,11 +266,14 @@ def expected_rows(data_dir: Path, tables: Dict[str, pd.DataFrame], models: Dict[
                 if pid not in reference.index:
                     result.exclusions['not_in_player_reference'] += 1
                     continue
-                position = reference.at[pid, 'position']
-                if position not in POSITION_MAP:
+                group, problem = restated_group(reference.at[pid, 'position'],
+                                                reference.at[pid, 'position_group'])
+                if problem:
+                    raise ExpectedSetError([f"player_id {pid}: {problem}"])
+                if group not in POSITION_MAP:
                     result.exclusions['position_not_eligible'] += 1
                     continue
-                for prop_type in POSITION_MAP[position]:
+                for prop_type in POSITION_MAP[group]:
                     stat_type = PROP_STAT[prop_type][0]
                     t = tables[stat_type]
                     hist = t[t['player_id'] == pid]

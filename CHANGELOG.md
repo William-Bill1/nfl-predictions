@@ -8,6 +8,44 @@ bottom.
 
 ## October 2026
 
+- **Player props: prop eligibility by position group**
+  (`position-group-v1`; `player_props/predict.py`,
+  `player_props/rehearsal_expected.py`, `player_props/rehearsal.py`,
+  `player_props/reference_builder.py`).
+  - **New rule:** a player's prop families now come from the players
+    reference's `position_group` (by GSIS ID), not the position label. NFL
+    labels some fullbacks FB and others RB, so label-based eligibility
+    included some fullbacks and excluded others; every fullback is group RB.
+  - **Unchanged display:** the label stays as shown (FB stays FB). Each row
+    records the group that selected it (`eligibility_group`).
+  - **Fails closed:** missing, padded or contradictory group data never
+    falls back to position.
+    - Production gives that player no props and says why.
+    - The rehearsal's independent restatement refuses, so nothing is
+      published.
+    - A reference without the column is refused.
+  - **Verification:** the verifier checks the recorded label and group
+    against the reference. The run summary records the policy version and the
+    reference hash.
+  - **Early failures:** summary generation can no longer replace the
+    original error, for example after invalid training seasons, a directory
+    setup failure, or a missing or unreadable reference. `summary.json` is
+    always saved, and an unavailable reference hash is recorded as such, with
+    the reason.
+  - **Verified reference:** the summary keeps the reference hash that
+    verification read, and reports the file's current state separately.
+    Publication is refused if the reference changed, or became unreadable,
+    during or after verification. These are checkpoints, not atomic
+    protection: a concurrent writer that changes the reference between the
+    pre-publish check and the copy isn't detected.
+  - **Builder:** it now requires a valid `position_group`, and reports group
+    changes apart from label-only changes.
+  - **Unchanged:** model features, probabilities, trained artifacts, UI
+    safeguards and containment warnings.
+  - **No subgroup claim:** this doesn't establish subgroup accuracy,
+    calibration or betting value.
+  - **Not yet run on real data:** no real-data rehearsal under this policy.
+
 - **Player props pages: player details joined by stable ID**
   (`player_props/reference_join.py`, `pages/2_Player_Props.py`,
   `pages/3_Parlay_Builder.py`).

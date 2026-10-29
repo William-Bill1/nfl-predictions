@@ -852,6 +852,16 @@ production functions in order on a synthetic league, with the network blocked:
 - **Failure handling:** a failure stops every later stage. The run keeps its
   partial outputs, a `summary.json` with status `failed`, and
   `diagnostics/traceback.txt`; nothing is published. A retry is a new run.
+  Writing the summary never replaces the stage's own error:
+  - **Early failures:** a run that stops before `runtime/data` exists (for
+    example invalid `train_seasons`) still saves `summary.json`.
+  - **Reference hash:** if the runtime players reference is missing or can't
+    be read, the hash is recorded as unavailable, with the reason. No other
+    file is substituted.
+  - **Unreadable files:** any other file that can't be hashed is listed under
+    `artifacts_unreadable`.
+  - **Diagnostics:** if the traceback can't be saved, the error records
+    `traceback_not_saved`.
 - **Summary:** `summary.json` (machine-readable) records:
   - stage statuses;
   - every artifact's SHA-256;
@@ -1015,9 +1025,12 @@ market inputs disabled:
 2. **Candidates per team:** players appearing in any feature table in one of
    the team's 3 most recent games, whose latest appearance in any table (by
    date, then `game_id`) was for this team.
-3. **Reference:** exactly one `players.csv` record for the ID, with a position
-   in `POSITION_MAP` (QB, RB, WR, TE).
-4. **Props:** that position's props.
+3. **Reference:** exactly one `players.csv` record for the ID, with an
+   eligibility group (`position_group`) in `POSITION_MAP` (QB, RB, WR, TE).
+   The group must be present, unpadded and consistent with the position label
+   (see "Prop eligibility by position group" below), or the check fails.
+4. **Props:** that group's props. The position label isn't used to select
+   props.
 5. **History:** an earlier appearance in the prop's stat table.
 6. **Tier:** the mean of the last 8 appearances in that table (every team), or
    the lowest tier with fewer than 3.
@@ -1128,10 +1141,19 @@ before anything is read.
    as source aliases (one person, several records), never merged.
 
 *Refused:* a missing required column (`gsis_id`, `display_name`,
-`short_name`, `last_name`, `position`, `esb_id`, `smart_id`), a fresh file
-lacking an existing column, a download that differs from its manifest, and:
+`short_name`, `last_name`, `position`, `position_group`, `esb_id`,
+`smart_id`), a fresh file lacking an existing column, a download that differs
+from its manifest, and:
 - a `gsis_id` that is missing, blank, padded, malformed or repeated;
-- a `position` that is missing, blank or padded.
+- a `position` that is missing, blank or padded;
+- a `position_group` that is missing, blank, padded, or contradicts the
+  position label (QB, RB, WR and TE must have their own group, FB must have
+  RB, and any other label must not have an eligible group).
+
+The report lists eligibility-group changes (`eligibility_group_changes`,
+`eligibility_flips`) separately from label-only changes within one group
+(`position_label_changes_same_group`). Candidate eligibility is counted by
+group.
 
 *Definitions:*
 - **Blank:** empty or whitespace-only.
@@ -1197,6 +1219,95 @@ so a failure leaves any previous output unchanged.
 
 *Not done:* adoption. The candidate rehearsal (2026-10-27) and the pages'
 `short_name` merges (see below) are done.
+
+**Prop eligibility by position group** (policy `position-group-v1`;
+`player_props/predict.py`, restated in `player_props/rehearsal_expected.py`).
+
+*Why:* NFL's position label is inconsistent for fullbacks. Of the 17 Week 7
+depth-chart fullbacks in 2026, nflverse's `position` labels 7 as FB and 10 as
+RB, so eligibility by label included some fullbacks and excluded others.
+`position_group` puts every fullback (all 210 FB records) in RB, and it is
+the only field where position and group disagree. The prop models are
+trained and evaluated on every row of their stat table regardless of
+position, so the policy changes which (player, prop) pairs are predicted,
+not the models.
+
+*Rule:*
+- **Eligibility source:** prop families come from the players reference's
+  `position_group`, found by `gsis_id`, through `POSITION_MAP`:
+  - QB → passing;
+  - RB → rushing and receptions;
+  - WR and TE → receiving and receptions.
+- **Fullbacks:** an FB (group RB) gets the RB families, subject to every
+  existing history, tier, model and confidence check.
+- **Labels:** `position` stays the source label, shown as written (FB stays
+  FB) and recorded in the output.
+- **Recorded group:** each row records the group that selected it, as
+  `eligibility_group`.
+- **No other inputs:** no roster or depth-chart filtering and no per-player
+  overrides.
+
+*Fails closed:*
+- **Reference without the column:** a reference without `position_group` is
+  refused (`load_players` raises).
+- **Unusable record in production:** a missing, blank or padded group or
+  label, or a group that contradicts the label, gives that player no props,
+  and the run prints which IDs and why. It never falls back to the position.
+- **Unusable record in the rehearsal's restatement:** the expected set isn't
+  derived, so verification fails and nothing is published.
+
+*Rehearsal:* the restatement implements its own group check
+(`restated_group`, `SKILL_LABEL_GROUPS`), importing only the shared
+`POSITION_MAP` and `TIER_RULES`. The verifier checks, for each row:
+- the recorded `position` against the reference label;
+- `eligibility_group` against the reference's group;
+- the prop against that group's families.
+
+Verification refuses to run if production's `ELIGIBILITY_POLICY` and the
+restated `RESTATED_POLICY` differ. `summary.json` records `eligibility`:
+the policy, the restated policy, the field and the SHA-256 of the players
+reference used (`runtime/data/players.csv`).
+- **One read:** verification reads that file once and checks those exact
+  bytes.
+- **Re-checked:** the file's hash is checked again at the end of verification
+  and before publishing. If it has changed or become unreadable, publication
+  is refused and already-published files are untouched.
+- **Not atomic (concurrent-writer race):** these are checkpoints, not a lock.
+  A process that rewrites the reference after the pre-publish check, while
+  the files are being copied, isn't detected. Nothing locks or snapshots the
+  file, and the reference isn't published with the predictions. The
+  protection assumes that nothing else writes into the run directory during
+  a run.
+- **What's recorded:** the summary records the hash verification read
+  (`players_reference_source` `verification`; `verified` says whether
+  verification passed), and separately the file's state when the summary is
+  written (`players_reference_current_sha256` or
+  `players_reference_current_unavailable`).
+- **After publication:** a reference that becomes unreadable keeps the
+  verified hash and doesn't change the run's status.
+- **No verification:** a run that never reached verification hashes the
+  file as it is (`current file`). If the file doesn't exist yet or can't be
+  read, the SHA-256 is `None` and `players_reference_unavailable` says why;
+  the fixtures copy and the configured source are never used instead.
+
+*Unchanged:* model features, probabilities, trained artifacts, the UI's
+identity safeguards (`reference_join`, which shows the label) and the
+containment warnings. Older prediction files without `eligibility_group`
+stay readable and are never rewritten.
+
+*Not established:* unchanged model features don't establish accuracy,
+calibration or betting value for any position subgroup, fullbacks included.
+Prospective evaluation should report results by eligibility group.
+
+*Effect (2026 Week 7 candidates, offline, with the candidate reference):*
+- **Eligible players:** 351, against 347 when eligibility was by the
+  candidate's label.
+- **Newly eligible:** four players, all FB-labelled: Juszczyk, Burton,
+  Prentice and Heyward.
+- **Reference-wide:** the change report shows 5 real prop-family changes. A
+  label-based rule would also count 6 pure FB/RB relabellings.
+- **Not yet confirmed:** no real-data rehearsal has been run under this
+  policy.
 
 **Player-reference joins in the pages** (`player_props/reference_join.py`;
 `pages/2_Player_Props.py`, `pages/3_Parlay_Builder.py`).

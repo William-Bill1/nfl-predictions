@@ -449,7 +449,7 @@ class TestCompatibility:
 
 def _players(data):
     rows = [dict(gsis_id=f"{t}-{pos}", short_name=f"{t}.{pos}", display_name=f"{t} {pos}",
-                 last_name=pos, position=pos)
+                 last_name=pos, position=pos, position_group=pos)
             for t in ("KC", "BUF", "DEN", "LV") for pos in ("QB", "RB", "WR")]
     pd.DataFrame(rows).to_csv(data / "players.csv", index=False)
 

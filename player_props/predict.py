@@ -64,25 +64,45 @@ class _SkipWeather(Exception):
 # Minimum confidence threshold for recommendations
 MIN_CONFIDENCE = 0.55  # 55% probability for a recommendation
 
-# Position mapping for prop types
-POSITION_MAP = {
+# Prop eligibility (policy 'position-group-v1'): a player's prop families come
+# from the players reference's position_group, looked up by gsis_id. The
+# position field stays the displayed label (a fullback is shown as FB), but it
+# no longer selects props: nflverse/NFL label some fullbacks FB and others RB,
+# while position_group puts every one of them in RB. The models are trained on
+# every row of their stat table regardless of position, so this changes which
+# (player, prop) pairs are predicted, not the models.
+ELIGIBILITY_POLICY = 'position-group-v1'
+ELIGIBILITY_FIELD = 'position_group'
+POSITION_MAP = {            # keys are position_group values
     'QB': ['passing_yards', 'passing_tds'],
     'RB': ['rushing_yards', 'rushing_tds', 'receptions'],
     'WR': ['receiving_yards', 'receiving_tds', 'receptions'],
     'TE': ['receiving_yards', 'receiving_tds', 'receptions']
 }
+# The group each skill label must carry; any other label must not carry an
+# eligible group. A record breaking this is inconsistent and gets no props.
+LABEL_GROUP = {'QB': 'QB', 'RB': 'RB', 'FB': 'RB', 'WR': 'WR', 'TE': 'TE'}
 
 # ============================================================================
 # DATA LOADING
 # ============================================================================
 
+PLAYER_COLUMNS = ['gsis_id', 'short_name', 'display_name', 'last_name', 'position', 'position_group']
+
+
 def load_players():
-    """Load player metadata with full names."""
+    """Load player metadata with full names. A reference without the
+    eligibility field is refused (never a silent fall back to position)."""
     players_path = DATA_DIR / 'players.csv'
     if not players_path.exists():
         print(f"❌ Players data not found: {players_path}")
         return None
-    return pd.read_csv(players_path)[['gsis_id', 'short_name', 'display_name', 'last_name', 'position']]
+    df = pd.read_csv(players_path, dtype={'gsis_id': str})
+    missing = [c for c in PLAYER_COLUMNS if c not in df.columns]
+    if missing:
+        raise ValueError(f"{players_path.name} lacks column(s) {missing}; prop eligibility "
+                         f"({ELIGIBILITY_POLICY}) needs {ELIGIBILITY_FIELD}, so no props are generated")
+    return df[PLAYER_COLUMNS]
 
 
 def load_schedule(season=None, week=None):
@@ -279,18 +299,53 @@ def calculate_trend(player_stats, stat_col):
 def get_player_position(player_id):
     """Position and display name by stable ID (players.csv gsis_id); short
     names are not unique (e.g. several 'J.Smith')."""
+    identity = get_player_identity(player_id)
+    return identity['position'], identity['display_name']
+
+
+def eligibility_group(position, group):
+    """(group, None) for a usable record, else (None, problem). The group is
+    used exactly as written: a missing, blank or padded value, or one that
+    contradicts the position label (LABEL_GROUP), is a problem - never
+    repaired and never replaced by the position."""
+    def text(v):
+        return v if isinstance(v, str) else None
+    position, group = text(position), text(group)
+    if group is None or not group.strip():
+        return None, f"missing {ELIGIBILITY_FIELD}"
+    if group != group.strip():
+        return None, f"{ELIGIBILITY_FIELD} {group!r} has surrounding whitespace"
+    if position is None or not position.strip():
+        return None, "missing position"
+    if position != position.strip():
+        return None, f"position {position!r} has surrounding whitespace"
+    if position in LABEL_GROUP and group != LABEL_GROUP[position]:
+        return None, f"position {position!r} with {ELIGIBILITY_FIELD} {group!r} (expected {LABEL_GROUP[position]!r})"
+    if position not in LABEL_GROUP and group in POSITION_MAP:
+        return None, f"position {position!r} with eligible {ELIGIBILITY_FIELD} {group!r}"
+    return group, None
+
+
+def get_player_identity(player_id):
+    """{'position', 'display_name', 'group', 'problem'} for one stable ID.
+    position is the displayed label; group (position_group) selects props.
+    A missing, repeated or unusable record has group None and says why."""
+    out = {'position': None, 'display_name': None, 'group': None, 'problem': None}
     players_df = load_players()
-    if players_df is not None:
-        player_record = players_df[players_df['gsis_id'] == player_id]
-        if len(player_record) == 1:
-            record = player_record.iloc[0]
-            position = record['position']
-            display_name = record['display_name']
-            # Ensure we return strings or None, not NaN
-            position = position if isinstance(position, str) else None
-            display_name = display_name if isinstance(display_name, str) else None
-            return position, display_name
-    return None, None
+    if players_df is None:
+        out['problem'] = 'no players reference'
+        return out
+    player_record = players_df[players_df['gsis_id'] == str(player_id)]
+    if len(player_record) != 1:
+        out['problem'] = ('not in the players reference' if player_record.empty
+                          else 'several players-reference records')
+        return out
+    record = player_record.iloc[0]
+    # Ensure we return strings or None, not NaN
+    out['position'] = record['position'] if isinstance(record['position'], str) else None
+    out['display_name'] = record['display_name'] if isinstance(record['display_name'], str) else None
+    out['group'], out['problem'] = eligibility_group(record['position'], record['position_group'])
+    return out
 
 
 # Tier thresholds on the player's last 8 appearances (raw stat mean): the
@@ -427,17 +482,21 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
         for stat_type, stats_df in all_stats.items() if stats_df is not None
     }
 
+    ineligible = []          # reference records that can't select props, with why
     for team in teams:
         opponent = teams[1] if team == teams[0] else teams[0]
         is_home = team == game_row['home_team']
 
         for player_id, player_name in rosters[team].items():
-            # Position and display name by stable ID (players.csv gsis_id).
-            player_position, player_display_name = get_player_position(player_id)
+            # Position label, display name and eligibility group by stable ID
+            # (players.csv gsis_id). Props come from the group, never the label.
+            identity = get_player_identity(player_id)
+            player_position, player_display_name = identity['position'], identity['display_name']
+            player_group = identity['group']
+            if identity['problem'] and identity['problem'] != 'not in the players reference':
+                ineligible.append(f"{player_id} ({identity['problem']})")
 
-            eligible_props = []
-            if player_position and player_position in POSITION_MAP:
-                eligible_props = POSITION_MAP[player_position]
+            eligible_props = POSITION_MAP.get(player_group, []) if player_group else []
 
             for prop_type in eligible_props:
                 player_tier = get_player_performance_tier(player_id, prop_type, all_stats)
@@ -502,6 +561,9 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                             'player_id': str(player_id),
                             'display_name': player_display_name or player_name,  # Use display_name if available, fallback to short_name
                             'position': player_position or 'Unknown',
+                            # The position_group that selected this prop (policy
+                            # ELIGIBILITY_POLICY); position above is the label.
+                            'eligibility_group': player_group,
                             'team': team,
                             'opponent': opponent,
                             'is_home': is_home,
@@ -599,7 +661,10 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                     # inputs and the model call above fail loudly.
                     print(f"⚠️  Post-processing failed for {player_name} {prop_type}: {e}")
                     continue
-    
+
+    if ineligible:
+        print(f"   {len(ineligible)} candidate(s) get no props: their players-reference record can't "
+              f"select an eligibility group ({ELIGIBILITY_POLICY}): " + "; ".join(ineligible[:10]))
     return predictions
 
 

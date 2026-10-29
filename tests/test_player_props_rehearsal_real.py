@@ -307,7 +307,8 @@ class TestRehearsalWithRealInputs:
         _, dest, players, _ = downloaded
         p = pd.read_csv(players)
         pid = fixtures.player_id("KC", "WR1")
-        p.loc[p["gsis_id"] == pid, "position"] = "QB"
+        # Label and eligibility group together (a label alone would contradict its group).
+        p.loc[p["gsis_id"] == pid, ["position", "position_group"]] = ["QB", "QB"]
         edited = tmp_path / "players.csv"
         p.to_csv(edited, index=False)
         s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=edited))
@@ -327,7 +328,8 @@ class TestRehearsalWithRealInputs:
         _, dest, players, _ = downloaded
         p = pd.read_csv(players)
         pid = fixtures.player_id("KC", "WR1")
-        p = p.assign(position=p["position"].where(p["gsis_id"] != pid, "K")) if change == "position"             else p[p["gsis_id"] != pid]
+        p = p.assign(position=p["position"].where(p["gsis_id"] != pid, "K"),
+                     position_group=p["position_group"].where(p["gsis_id"] != pid, "SPEC")) if change == "position"             else p[p["gsis_id"] != pid]
         edited = tmp_path / "players.csv"
         p.to_csv(edited, index=False)
         s = rh.run_rehearsal(rh.RehearsalConfig(workspace=tmp_path / "ws", real_inputs=dest, players_file=edited))

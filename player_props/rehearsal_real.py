@@ -54,7 +54,7 @@ SCHEDULE_URL = 'https://github.com/nflverse/nfldata/raw/master/data/games.csv'
 SCHEDULE_NAME = 'games.csv'
 DOWNLOADS_NAME = 'downloads.json'
 DOWNLOADS_KIND = 'player_props_rehearsal_downloads'
-PLAYER_COLUMNS = ['gsis_id', 'short_name', 'display_name', 'last_name', 'position']
+PLAYER_COLUMNS = ['gsis_id', 'short_name', 'display_name', 'last_name', 'position', 'position_group']
 ATTEMPT_TRIES = 20
 
 
