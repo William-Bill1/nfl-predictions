@@ -23,7 +23,8 @@ Policy (approved 2026-10-26):
     are reported as source aliases (one person, several records), not merged.
 
 Invalid input (a missing required column; a missing, blank, padded,
-malformed or repeated gsis_id; a missing, blank or padded position; a hash
+malformed or repeated gsis_id; a missing, blank or padded position or
+position_group, or a position_group inconsistent with the position label; a hash
 that differs from the downloads manifest) raises ReferenceBuildError. A
 gsis_id is valid only as a GSIS ID (00-00NNNNN) or a supported legacy
 placeholder (its record's own esb_id, AAANNNNNN). Values are checked as
@@ -59,13 +60,14 @@ ROOT = Path(__file__).parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from player_props.predict import POSITION_MAP  # noqa: E402
+from player_props.predict import LABEL_GROUP, POSITION_MAP  # noqa: E402
 from player_props.rehearsal import RehearsalError, _overlaps, _real, check_workspace  # noqa: E402
 
 PLAYERS_NAME = 'players.csv'
 ROSTER_NAME = 'roster_weekly_{season}.csv'
 MANIFEST_NAME = 'manifest.json'
-REQUIRED_COLUMNS = ('gsis_id', 'display_name', 'short_name', 'last_name', 'position', 'esb_id', 'smart_id')
+REQUIRED_COLUMNS = ('gsis_id', 'display_name', 'short_name', 'last_name', 'position', 'position_group',
+                    'esb_id', 'smart_id')
 ROSTER_COLUMNS = ('season', 'week', 'gsis_id', 'team', 'position', 'status')
 GSIS = re.compile(r'^00-00\d{5}$')
 # nflverse's legacy placeholder: the record's own esb_id (three capitals, six
@@ -79,9 +81,11 @@ EXAMPLES = 10
 CONSUMERS = {
     'gsis_id': ['player_props/predict.py (lookup key)', 'player_props/rehearsal*.py (lookup key)',
                 'pages/2_Player_Props.py (player search)'],
-    'position': ['player_props/predict.py (prop eligibility; output position)',
-                 'player_props/rehearsal_expected.py (expected-row eligibility)',
+    'position': ['player_props/predict.py (output position label)',
                  'pages/2_Player_Props.py', 'pages/3_Parlay_Builder.py'],
+    'position_group': ['player_props/predict.py (prop eligibility, position-group-v1)',
+                       'player_props/rehearsal_expected.py (expected-row eligibility)',
+                       'player_props/rehearsal.py (identity verification)'],
     'display_name': ['player_props/predict.py (output display_name)', 'pages/2_Player_Props.py',
                      'pages/3_Parlay_Builder.py'],
     'short_name': ['pages/2_Player_Props.py (name merge key)', 'pages/3_Parlay_Builder.py (name merge key)'],
@@ -163,6 +167,24 @@ def validate(df: pd.DataFrame, label: str) -> List[str]:
     if pad_pos.any():
         problems.append(f"{label}: {int(pad_pos.sum())} position(s) with surrounding whitespace: "
                         f"{_examples(df.loc[pad_pos, 'gsis_id'].fillna('?'))}")
+    # The eligibility group (position-group-v1): present, unpadded, and
+    # consistent with the label. Never repaired, never replaced by position.
+    nogrp = blank(df['position_group'])
+    if nogrp.any():
+        problems.append(f"{label}: {int(nogrp.sum())} record(s) with a missing or blank position_group: "
+                        f"{_examples(df.loc[nogrp, 'gsis_id'].fillna('?'))}")
+    pad_grp = padded(df['position_group'])
+    if pad_grp.any():
+        problems.append(f"{label}: {int(pad_grp.sum())} position_group(s) with surrounding whitespace: "
+                        f"{_examples(df.loc[pad_grp, 'gsis_id'].fillna('?'))}")
+    usable = ~blank(df['position']) & ~padded(df['position']) & ~nogrp & ~pad_grp
+    pos, grp = df['position'], df['position_group']
+    clash = usable & ((pos.isin(LABEL_GROUP) & (grp != pos.map(LABEL_GROUP)))
+                      | (~pos.isin(LABEL_GROUP) & grp.isin(ELIGIBLE)))
+    if clash.any():
+        ex = [f"{i} ({p}/{g})" for i, p, g in zip(df.loc[clash, 'gsis_id'].fillna('?'), pos[clash], grp[clash])]
+        problems.append(f"{label}: {int(clash.sum())} record(s) whose position_group contradicts the position "
+                        f"label: {_examples(ex)}")
     return problems
 
 
@@ -419,8 +441,14 @@ def build(existing_path: Path, fresh_dir: Path, out_dir: Path, candidates_path: 
         summary_changes[col] = {'meaningful': int((g['change'] == 'meaningful').sum()),
                                 'format_only': int((g['change'] == 'format_only').sum()),
                                 'consumers': CONSUMERS.get(col, [])}
-    pos = changes[(changes['field'] == 'position') & (changes['change'] == 'meaningful')]
-    flips = pos[pos['old'].isin(ELIGIBLE) != pos['new'].isin(ELIGIBLE)]
+    # Eligibility follows position_group: a flip is a group change that adds,
+    # removes or swaps prop families. Label-only changes are reported apart.
+    grp = changes[(changes['field'] == 'position_group') & (changes['change'] == 'meaningful')]
+    fam = lambda g: tuple(POSITION_MAP.get(g, ()))
+    flips = grp.loc[pd.Series([fam(a) != fam(b) for a, b in zip(grp['old'], grp['new'])],
+                              index=grp.index, dtype=bool)]
+    label = changes[(changes['field'] == 'position') & (changes['change'] == 'meaningful')]
+    label_only = label[~label['gsis_id'].isin(set(grp['gsis_id']))]
 
     report = {
         'kind': 'player_reference_candidate', 'version': 1,
@@ -432,7 +460,14 @@ def build(existing_path: Path, fresh_dir: Path, out_dir: Path, candidates_path: 
         'crosswalk': walk['result'].value_counts().to_dict(),
         'retained_historical_gsis_sharing_a_crosswalk_id_with_a_fresh_record': shared,
         'field_changes': summary_changes,
+        'eligibility_policy': 'position-group-v1 (position_group selects prop families; position is the label)',
         'eligibility_flips': flips[['gsis_id', 'old', 'new']].to_dict('records'),
+        'eligibility_group_changes': {'records': int(len(grp)), 'changing_prop_families': int(len(flips))},
+        'position_label_changes_same_group': {
+            'records': int(len(label_only)),
+            'pairs': pd.Series([f"{a if isinstance(a, str) else '∅'}->{b if isinstance(b, str) else '∅'}"
+                                for a, b in zip(label_only['old'], label_only['new'])], dtype=object)
+            .value_counts().head(12).to_dict()},
     }
     files = {'players_candidate.csv': candidate, 'crosswalk.csv': walk, 'field_changes.csv': changes,
              'identities.csv': candidate[['gsis_id']].assign(identity=cat.values, person=person.values,
@@ -457,17 +492,19 @@ def _candidates(cands: pd.DataFrame, existing: pd.DataFrame, candidate: pd.DataF
     """Coverage and eligibility of the week's candidates, before and after."""
     if 'player_id' not in cands.columns or 'team' not in cands.columns:
         raise ReferenceBuildError(["candidates file needs player_id and team columns"])
-    before = existing.set_index('gsis_id')['position']
-    after = candidate.set_index('gsis_id')['position']
+    old, new = existing.set_index('gsis_id'), candidate.set_index('gsis_id')
     category = pd.Series(cat.values, index=candidate['gsis_id'])
     c = cands[['player_id', 'team']].copy()
-    c['before_position'] = c['player_id'].map(before)
-    c['after_position'] = c['player_id'].map(after)
+    c['before_position'] = c['player_id'].map(old['position'])
+    c['after_position'] = c['player_id'].map(new['position'])
+    c['before_group'] = c['player_id'].map(old['position_group'])
+    c['after_group'] = c['player_id'].map(new['position_group'])
     c['identity'] = c['player_id'].map(category)
-    c['before_in_reference'] = c['before_position'].notna()
-    c['after_in_reference'] = c['after_position'].notna()
-    c['before_eligible'] = c['before_position'].isin(ELIGIBLE)
-    c['after_eligible'] = c['after_position'].isin(ELIGIBLE)
+    c['before_in_reference'] = c['player_id'].isin(old.index)
+    c['after_in_reference'] = c['player_id'].isin(new.index)
+    # Eligible by the eligibility group (position-group-v1), not the label.
+    c['before_eligible'] = c['before_group'].isin(ELIGIBLE)
+    c['after_eligible'] = c['after_group'].isin(ELIGIBLE)
     if roster_rows is not None:
         g = roster_rows.groupby('gsis_id')
         c['roster_team'] = c['player_id'].map(g['team'].agg(_join))
@@ -497,7 +534,8 @@ def _candidates(cands: pd.DataFrame, existing: pd.DataFrame, candidate: pd.DataF
         out['roster_team_differs'] = c.loc[c['roster_team_differs'], 'player_id'].tolist()
         out['roster_position_disagrees'] = c.loc[c['roster_position_disagrees'], 'player_id'].tolist()
         flip_ids = set(flips['gsis_id'])
-        cols = [x for x in ('player_id', 'team', 'before_position', 'after_position', 'roster_position',
+        cols = [x for x in ('player_id', 'team', 'before_position', 'after_position', 'before_group',
+                            'after_group', 'roster_position',
                             'roster_depth_chart_position', 'roster_status', 'roster_team')
                 if x in c.columns]
         out['candidate_eligibility_flips'] = c.loc[c['player_id'].isin(flip_ids), cols].fillna('').to_dict('records')

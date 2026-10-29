@@ -23,6 +23,8 @@ TEAMS = ['KC', 'BUF', 'DEN', 'LV', 'NE', 'NYJ', 'MIA', 'BAL']
 WEEKS = 8
 ROLES = ['QB', 'RB', 'WR1', 'WR2', 'TE']
 POSITION = {'QB': 'QB', 'RB': 'RB', 'WR1': 'WR', 'WR2': 'WR', 'TE': 'TE'}
+# nflverse position_group for each label (a fullback's group is RB).
+POSITION_GROUP = {'QB': 'QB', 'RB': 'RB', 'FB': 'RB', 'WR': 'WR', 'TE': 'TE'}
 TARGET_SHARE = {'WR1': 0.35, 'WR2': 0.25, 'TE': 0.2, 'RB': 0.2}
 
 
@@ -126,7 +128,8 @@ def season_download(plays: pd.DataFrame) -> bytes:
 
 def players() -> pd.DataFrame:
     return pd.DataFrame([dict(gsis_id=player_id(t, r), short_name=f"{t}.{r}",
-                              display_name=f"{t} {r}", last_name=r, position=POSITION[r])
+                              display_name=f"{t} {r}", last_name=r, position=POSITION[r],
+                              position_group=POSITION_GROUP[POSITION[r]])
                          for t in TEAMS for r in ROLES])
 
 

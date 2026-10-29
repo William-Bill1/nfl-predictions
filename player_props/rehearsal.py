@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import os
 import secrets
@@ -209,6 +210,8 @@ class Run:
 
 def _stage_workspace(run: Run) -> dict:
     cfg = run.config
+    if not cfg.train_seasons:
+        raise RehearsalError("train_seasons is empty")
     if cfg.train_seasons != list(range(cfg.train_seasons[0], cfg.train_seasons[-1] + 1)):
         raise RehearsalError(f"train_seasons {cfg.train_seasons} must be consecutive")
     if len(cfg.train_seasons) < 2:
@@ -413,15 +416,16 @@ class _Expectations:
     """Recomputes, per prediction, what production should have written: the
     tier and model it would pick, the raw score, and the post-processed fields."""
 
-    def __init__(self, run: Run):
+    def __init__(self, run: Run, players: Optional[pd.DataFrame] = None):
         from player_props.predict import POSITION_MAP, candidate_players, get_player_performance_tier
         self.tier_of = get_player_performance_tier
         self.candidate_players = candidate_players
         self.position_map = POSITION_MAP
         self.cfg = run.config
         self.models = run.info['bundle']['models']
-        players = pd.read_csv(run.paths['runtime_data'] / 'players.csv', low_memory=False,
-                              dtype={'gsis_id': str})
+        if players is None:
+            players = pd.read_csv(run.paths['runtime_data'] / 'players.csv', low_memory=False,
+                                  dtype={'gsis_id': str})
         # The player reference by stable ID. Production uses an ID's record only
         # when it is the ID's only one (predict.get_player_position).
         counts = players['gsis_id'].value_counts()
@@ -465,8 +469,19 @@ class _Expectations:
             return None, f"display_name {r['display_name']!r} is not {pid!r}'s ({display or cands[pid]!r})"
         if r['position'] != (position or 'Unknown'):
             return None, f"position {r['position']!r} is not {pid!r}'s ({position or 'Unknown'!r})"
-        if r['prop_type'] not in self.position_map.get(position, []):
-            return None, f"prop {r['prop_type']!r} is not eligible for {pid!r} (position {position!r})"
+        # Eligibility (position-group-v1): the recorded group must be the
+        # reference's, checked by the restated rule, and must allow the prop.
+        from player_props.rehearsal_expected import restated_group
+        group, problem = restated_group(ref['position'], ref.get('position_group'))
+        if problem:
+            return None, f"{pid!r} has no usable eligibility group: {problem}"
+        recorded = r.get('eligibility_group')
+        if recorded is None or (not isinstance(recorded, str) and pd.isna(recorded)):
+            return None, f"no eligibility_group recorded for {pid!r}"
+        if recorded != group:
+            return None, f"eligibility_group {recorded!r} is not {pid!r}'s ({group!r})"
+        if r['prop_type'] not in self.position_map.get(group, []):
+            return None, f"prop {r['prop_type']!r} is not eligible for {pid!r} (position_group {group!r})"
         return pid, None
 
     def for_row(self, r: dict) -> dict:
@@ -578,10 +593,23 @@ def _stage_verify_outputs(run: Run) -> dict:
     models, manifest = run.info['bundle']['models'], run.info['bundle']['manifest']
     cfg = run.config
     data = run.paths['runtime_data']
+    from player_props.predict import ELIGIBILITY_FIELD, ELIGIBILITY_POLICY
+    from player_props.rehearsal_expected import RESTATED_POLICY
+    # The reference is read once: both checks below parse these bytes, and
+    # their hash is what the summary records (re-checked before publishing).
+    ref_bytes = (data / 'players.csv').read_bytes()
+    run.info['eligibility'] = {'policy': ELIGIBILITY_POLICY, 'restated_policy': RESTATED_POLICY,
+                               'field': ELIGIBILITY_FIELD,
+                               'players_reference_sha256': hashlib.sha256(ref_bytes).hexdigest(),
+                               'verified': False}
+    if ELIGIBILITY_POLICY != RESTATED_POLICY:
+        raise RehearsalError(f"production eligibility policy {ELIGIBILITY_POLICY!r} differs from the restated "
+                             f"policy {RESTATED_POLICY!r}; completeness can't be checked")
+    players = pd.read_csv(io.BytesIO(ref_bytes), low_memory=False, dtype={'gsis_id': str})
     try:
         expected = expected_rows(data, run.info['check'].feature_tables, models, load_games(data),
                                  cfg.target_season, cfg.target_week, expected_post_processing,
-                                 pd.read_csv(data / 'players.csv', low_memory=False, dtype={'gsis_id': str}))
+                                 players.copy())
     except ExpectedSetError as exc:
         run.info['completeness'] = {'status': 'expected set not derived', 'problems': exc.problems[:20]}
         raise RehearsalError("completeness can't be checked: " + "; ".join(exc.problems[:10])) from exc
@@ -597,7 +625,7 @@ def _stage_verify_outputs(run: Run) -> dict:
     # Decided now, so a later check that raises can't leave a stale status.
     completeness['status'] = completeness_status(
         {f: completeness[f] for f in ('latest feed', 'frozen snapshot')})
-    expect = _Expectations(run)
+    expect = _Expectations(run, players.copy())
     problems += (prediction_problems(latest, 'latest feed', run, expect)
                  + prediction_problems(snapshot, 'frozen snapshot', run, expect))
     if all('player_id' in f.columns for f in (latest, snapshot)):
@@ -626,22 +654,41 @@ def _stage_verify_outputs(run: Run) -> dict:
     if problems:
         more = f" (+{len(problems) - 10} more)" if len(problems) > 10 else ""
         raise RehearsalError("output verification failed: " + "; ".join(problems[:10]) + more)
+    _check_reference(run, 'during verification')
+    run.info['eligibility']['verified'] = True
     run.info['verified'] = {k: _sha256_file(run.info[k]) for k in ('latest', 'snapshot')}
     return {'predictions_verified': int(len(latest)), 'snapshot_rows_verified': int(len(snapshot)),
             'completeness': completeness,
             'models_metric_parity': parity,
             'adjustments': {k: int(v) for k, v in latest['adjustments'].value_counts().sort_index().items()},
             'latest_sha256': run.info['verified']['latest'],
-            'snapshot_sha256': run.info['verified']['snapshot']}
+            'snapshot_sha256': run.info['verified']['snapshot'],
+            'players_reference_sha256': run.info['eligibility']['players_reference_sha256']}
+
+
+def _check_reference(run: Run, when: str) -> None:
+    """RehearsalError unless runtime/data/players.csv still has the hash
+    verification read (unreadable counts as changed)."""
+    want = run.info['eligibility']['players_reference_sha256']
+    try:
+        got = _sha256_file(run.paths['runtime_data'] / 'players.csv')
+    except Exception as exc:  # noqa: BLE001 - any unreadable reference blocks publishing
+        raise RehearsalError(f"the players reference became unreadable {when} ({type(exc).__name__}: {exc}); "
+                             f"nothing was published") from exc
+    if got != want:
+        raise RehearsalError(f"the players reference changed {when} (verified {want}, now {got}); "
+                             f"nothing was published")
 
 
 def _stage_publish(run: Run) -> dict:
     """Copy the run's predictions to <workspace>/published, never overwriting a
-    different frozen snapshot."""
+    different frozen snapshot. Refuses if the predictions or the players
+    reference changed after verification."""
     from player_props.source_refresh import install_files
     for k in ('latest', 'snapshot'):
         if _sha256_file(run.info[k]) != run.info['verified'][k]:
             raise RehearsalError(f"{run.info[k].name} changed after verification; nothing was published")
+    _check_reference(run, 'after verification')
     published = safe_dir(run.workspace / 'published', run.workspace, run.config.protected)
     snap_name = run.info['snapshot'].name
     record_path = published / 'snapshots.json'
@@ -690,13 +737,71 @@ STAGE_FUNCS: Dict[str, Callable[[Run], dict]] = {
 # Summary
 # ---------------------------------------------------------------------------
 
-def _artifacts(run: Run) -> dict:
-    out = {}
+def _artifacts(run: Run) -> tuple:
+    """(hashes, unreadable): a file that can't be read is listed with the
+    reason instead of failing the summary."""
+    out, unreadable = {}, {}
     for path in sorted(run.dir.rglob('*')):
         if path.is_file() and path.suffix in ('.gz', '.json', '.csv', '.tar') \
                 and 'diagnostics' not in path.parts and path.name != 'summary.json':
-            out[str(path.relative_to(run.dir)).replace('\\', '/')] = _sha256_file(path)
-    return out
+            rel = str(path.relative_to(run.dir)).replace('\\', '/')
+            try:
+                out[rel] = _sha256_file(path)
+            except OSError as exc:
+                unreadable[rel] = f"{type(exc).__name__}: {exc}"[:500]
+    return out, unreadable
+
+
+def _reference_state(run: Run) -> tuple:
+    """(sha256, None) for runtime/data/players.csv as it is now, or (None, why)."""
+    data = run.paths.get('runtime_data')
+    if data is None:
+        return None, "the run stopped before runtime/data was set up"
+    try:
+        return _sha256_file(Path(data) / 'players.csv'), None
+    except FileNotFoundError:
+        return None, "runtime/data/players.csv was never written"
+    except Exception as exc:  # noqa: BLE001 - e.g. PermissionError, a directory in its place
+        return None, f"runtime/data/players.csv can't be read ({type(exc).__name__}: {exc})"[:500]
+
+
+def _eligibility_provenance(run: Run) -> dict:
+    """Policy versions and the hash of the runtime players reference.
+
+    Once verification has read the reference, the summary keeps what it read
+    (``players_reference_source`` 'verification'; ``verified`` says whether
+    verification passed) and reports the file's current state separately, so
+    a reference that later changes or becomes unreadable can't alter the
+    recorded provenance. Before that, the file is hashed as it is now
+    ('current file'). A run that stopped before the reference existed, or
+    whose reference can't be read, records the hash as None with the reason;
+    no other file (such as the fixtures copy or the configured source) stands
+    in for it."""
+    used = run.info.get('eligibility')
+    if used:
+        current, why = _reference_state(run)
+        return {'policy': used['policy'], 'restated_policy': used['restated_policy'], 'field': used['field'],
+                'players_reference_sha256': used['players_reference_sha256'],
+                'players_reference_source': 'verification', 'verified': used['verified'],
+                'players_reference_unavailable': None,
+                'players_reference_current_sha256': current, 'players_reference_current_unavailable': why}
+    doc = {'policy': None, 'restated_policy': None, 'field': None,
+           'players_reference_sha256': None, 'players_reference_source': None, 'verified': False,
+           'players_reference_unavailable': None}
+    try:
+        from player_props.predict import ELIGIBILITY_FIELD, ELIGIBILITY_POLICY
+        doc.update(policy=ELIGIBILITY_POLICY, field=ELIGIBILITY_FIELD)
+    except Exception as exc:  # noqa: BLE001 - provenance must not mask the run's own failure
+        doc['policy_unavailable'] = f"{type(exc).__name__}: {exc}"[:500]
+    try:
+        from player_props.rehearsal_expected import RESTATED_POLICY
+        doc['restated_policy'] = RESTATED_POLICY
+    except Exception as exc:  # noqa: BLE001
+        doc['restated_policy_unavailable'] = f"{type(exc).__name__}: {exc}"[:500]
+    doc['players_reference_sha256'], doc['players_reference_unavailable'] = _reference_state(run)
+    if doc['players_reference_sha256']:
+        doc['players_reference_source'] = 'current file'
+    return doc
 
 
 def _summary(run: Run, status: str) -> dict:
@@ -709,6 +814,7 @@ def _summary(run: Run, status: str) -> dict:
                              'evaluation': {k: e['evaluation'][k] for k in
                                             ('seasons', 'rows', 'first_date', 'last_date')}}
     stage = {s['stage']: s for s in run.stages}
+    artifacts, unreadable = _artifacts(run)
     return {
         'kind': SUMMARY_KIND, 'summary_version': SUMMARY_VERSION, 'run_id': run.run_id,
         'status': status, 'finished_at': _now(),
@@ -717,6 +823,8 @@ def _summary(run: Run, status: str) -> dict:
         'stages': [{'stage': s, 'status': stage.get(s, {}).get('status', 'not_run'),
                     **({'error': stage[s]['error']} if 'error' in stage.get(s, {}) else {})}
                    for s in STAGES],
+        # Which selection rules produced the rows, and from which reference.
+        'eligibility': _eligibility_provenance(run),
         'coverage': {'training_source': stage.get('source_training', {}).get('detail'),
                      'inference_source': stage.get('source_inference', {}).get('detail'),
                      'inputs': stage.get('validate_inputs', {}).get('detail')},
@@ -731,7 +839,8 @@ def _summary(run: Run, status: str) -> dict:
         'outputs': {k: stage.get(k, {}).get('detail') for k in ('predict', 'verify_outputs', 'publish')},
         # Expected / observed / missing / unexpected counts, also on failure.
         'completeness': run.info.get('completeness'),
-        'artifacts': _artifacts(run),
+        'artifacts': artifacts,
+        **({'artifacts_unreadable': unreadable} if unreadable else {}),
         'limitations': ([REAL_LIMITATION] + LIMITATIONS[1:]) if run.info.get('real') else LIMITATIONS,
     }
 
@@ -771,8 +880,11 @@ def run_rehearsal(config: RehearsalConfig,
                 if problems:
                     error['problems'] = [str(p)[:500] for p in problems[:20]]
                 run.stages.append({'stage': name, 'status': 'failed', 'error': error})
-                diag = safe_dir(run_dir / 'diagnostics', workspace, config.protected)
-                (diag / 'traceback.txt').write_text(traceback.format_exc(), encoding='utf-8')
+                try:
+                    diag = safe_dir(run_dir / 'diagnostics', workspace, config.protected)
+                    (diag / 'traceback.txt').write_text(traceback.format_exc(), encoding='utf-8')
+                except Exception as diag_exc:  # noqa: BLE001 - keep the stage's own failure
+                    error['traceback_not_saved'] = f"{type(diag_exc).__name__}: {diag_exc}"[:500]
                 status = 'conflict' if run.info.get('conflict') else 'failed'
                 break
     summary = _summary(run, status)
