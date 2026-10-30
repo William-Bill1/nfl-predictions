@@ -73,3 +73,79 @@ jobs:
             fi
           done
           echo "pipeline is deterministic across two runs"
+
+  player-props-py312:
+    # Player Props compatibility on Python 3.12, the nightly runner's version
+    # (the jobs above use 3.14). Runs the suites in
+    # tests/player_props_py312_suites.txt: synthetic fixtures and temporary
+    # workspaces only. tests/no_network_plugin.py is a Python socket guard
+    # (not OS-level isolation): it refuses non-loopback lookups and connections
+    # made through Python's socket module. A failure fails the job (no continue-on-error);
+    # the full log, JUnit XML, exit code and versions are uploaded either way.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-dev.txt
+
+      - name: Record Python and library versions
+        run: |
+          set -o pipefail   # a failed version lookup must fail the step despite tee
+          mkdir -p "$RUNNER_TEMP/py312"
+          python - <<'EOF' | tee "$RUNNER_TEMP/py312/versions.txt"
+          import platform, sys
+          from importlib.metadata import version
+          print("python", sys.version.replace("\n", " "))
+          print("platform", platform.platform())
+          for name in ("pandas", "numpy", "scikit-learn", "xgboost", "lightgbm", "pyarrow",
+                       "streamlit", "requests", "nfl-data-py", "pytest", "PyYAML"):
+              print(name, version(name))
+          EOF
+
+      - name: Run Player Props suites on Python 3.12
+        run: |
+          OUT="$RUNNER_TEMP/py312"
+          mapfile -t SUITES < <(grep -v '^[[:space:]]*#' tests/player_props_py312_suites.txt | grep -v '^[[:space:]]*$')
+          printf '%s\n' "${SUITES[@]}" > "$OUT/suites.txt"
+          if [ "${#SUITES[@]}" -eq 0 ]; then
+            # With no paths pytest would collect the default tree instead.
+            echo "::error::no suites read from tests/player_props_py312_suites.txt"
+            exit 1
+          fi
+          set +e
+          python -m pytest -p no:cacheprovider -p tests.no_network_plugin -rfEs -q \
+            --junitxml="$OUT/junit.xml" "${SUITES[@]}" > "$OUT/pytest.log" 2>&1
+          status=$?
+          set -e
+          echo "$status" > "$OUT/exit_code.txt"
+          tail -n 40 "$OUT/pytest.log"
+          {
+            echo "### Player Props on Python 3.12"
+            echo
+            echo "pytest exit code: $status ($(tail -n 1 "$OUT/pytest.log"))"
+          } >> "$GITHUB_STEP_SUMMARY"
+          exit "$status"
+
+      - name: Upload pytest log, JUnit XML and versions
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: player-props-py312-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/py312
+          if-no-files-found: warn
+          retention-days: 30

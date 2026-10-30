@@ -789,6 +789,43 @@ against real nflverse downloads, a GitHub runner, or artifact storage.
    `concurrency: {group: nightly-update, cancel-in-progress: false}`, since
    the file lock doesn't span runners.
 
+*Corrections to this procedure (runner and storage audit, 2026-10-29;
+nothing is implemented):*
+- **Immutability must be established, not assumed.** A bundle directory is
+  written once, but its stored copy is only as immutable as its storage.
+  - Git history can be rewritten.
+  - A GitHub Release's assets can be deleted or replaced, and its tag moved,
+    unless immutable releases are enabled for the repository.
+  - Before any Release copy counts as immutable, the plan must enable
+    immutable releases and confirm the protection is in effect.
+  - Separately, each asset's SHA-256 should be recorded in a committed
+    pointer and every download verified against it, treating a mismatch as
+    unusable. These hashes only detect a changed asset. They don't make a
+    Release immutable, and they don't prevent an asset from being replaced
+    or deleted.
+  - "Immutable" is not claimed for any copy until that protection is in
+    place and tested.
+- **Publishing needs its own job.** Writing a bundle, release or pointer
+  needs `contents: write`. That permission belongs to a separate publish job
+  that only uploads already-verified outputs, not to the steps that refresh,
+  train or run tests. Those run with `contents: read` and
+  `persist-credentials: false`. Today the whole nightly job has
+  `contents: write`, so step 3 as written would give every step that
+  permission.
+- **One definition of blocked and failed.** Today the provenance command
+  exits 1 for "not established" and 2 for "could not run", but `predict.py`
+  and `train_models.py` exit 1 in both cases. In the nightly job, both
+  outcomes therefore look the same, and the run stays green. Every prop
+  entry point should use one shared classification:
+  - **blocked**: a check ran and deliberately refused, for example inputs
+    not established, verification failed or a publication checkpoint
+    tripped. Existing outputs are unchanged.
+  - **failed**: something could not run, for example an exception, a
+    missing dependency, an unreadable input or a crash mid-step.
+  - **succeeded**: verified outputs were published.
+
+  Workflows must report the three separately, and from the spread steps.
+
 *Storage and retention limits:*
 - **Artifacts** expire after their retention period (90 days by default;
   configurable per repository), so they can't be the only recovery copy.
@@ -1390,6 +1427,64 @@ import by the second) was removed.
 - A season leader's `player_name` is still the stats file's short name.
 - Older prediction files without IDs can only be enriched where a name is
   unique.
+
+**Python 3.12 compatibility job (`player-props-py312` in
+`.github/workflows/tests.yml`; added, not yet run).**
+- **Why:** the nightly runner uses Python 3.12 (CPython 3.12.15 on
+  2026-10-29). The `pytest` and `pipeline-smoke` jobs use 3.14, and the
+  local rehearsals ran on 3.13. On 3.12 only three things have been seen to
+  work: the pins install, and `train_models.py` and `predict.py` import and
+  stop at the Stage 2 gate (nightly log). The rest of the prop path (source
+  refresh, aggregation, training, bundles, the verifier and the rehearsal)
+  is unverified on 3.12.
+- **What it runs:** the files in `tests/player_props_py312_suites.txt`, on
+  Python 3.12 with `requirements-dev.txt` (the production pins plus pytest
+  and PyYAML). The list covers:
+  - features, freshness and provenance;
+  - train/serve parity and bundles;
+  - source refresh and storage;
+  - the synthetic and injected-download rehearsals, with completeness and
+    early-failure summaries;
+  - the reference builder and position groups;
+  - UI identity joins and containment;
+  - dates and seasons, the roster filter, and mocked injury and odds feeds;
+  - Pick 6 wording, Model Performance week selection and backtest console
+    encoding.
+
+  `tests/test_player_props_suites.py` requires every
+  `tests/test_player_props_*.py` to be listed.
+- **Isolation:** synthetic fixtures and temporary workspaces only.
+  - `tests/no_network_plugin.py` is a Python socket guard, not OS-level
+    network isolation. For the whole session it patches `socket.getaddrinfo`,
+    `gethostbyname`, `gethostbyname_ex`, `gethostbyaddr`,
+    `create_connection` and `socket.socket.connect`/`connect_ex`, and restores
+    them when pytest finishes.
+    - **Allowed:** `localhost`, literal loopback addresses (recognized with
+      `ipaddress`, including `::1` and IPv4-mapped forms), the unspecified
+      addresses and Unix sockets.
+    - **Refused:** every other hostname, before any DNS resolution, so
+      lookalikes such as `127.example.com` fail too; and every other address.
+    - **Not covered:** code that kept its own reference to a socket function
+      before the plugin loaded, C extensions with their own networking, and
+      subprocesses.
+  - The job has `contents: read`, and checks out with
+    `persist-credentials: false`.
+- **Results:**
+  - **Kept:** the full pytest log, JUnit XML, pytest's exit code, the suite
+    list and the Python and library versions are uploaded as an artifact
+    even on failure (30 days).
+  - **Not hidden:** a failure fails the job; there is no
+    `continue-on-error`. pytest's output goes straight to the log (no pipe),
+    the version step runs with `pipefail`, and an empty suite list fails the
+    job rather than letting pytest collect the default tree.
+- **Not covered:**
+  - live nflverse downloads;
+  - real-data training on 3.12;
+  - the nightly workflow itself, which is unchanged;
+  - byte-for-byte equality of models trained on 3.12 and 3.13.
+
+  Python 3.12 compatibility stays unverified until this job has run and
+  passed.
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
