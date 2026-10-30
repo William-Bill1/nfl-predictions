@@ -1,0 +1,37 @@
+# Test files the "player-props-py312" job in .github/workflows/tests.yml runs on
+# Python 3.12 (the nightly runner's version; the other jobs use 3.14).
+# One path per line; blank lines and lines starting with # are ignored.
+# tests/test_player_props_suites.py checks this list: every
+# tests/test_player_props_*.py must be here, and every entry must exist.
+# Synthetic fixtures and temporary workspaces only; no sports-data downloads.
+
+# Feature generation, freshness/provenance, train/serve parity, model bundles
+tests/test_player_props_stage1.py
+tests/test_player_props_stage2.py
+tests/test_player_props_stage3.py
+tests/test_player_props_stage4.py
+# Source refresh, staged install, bundle export/import/inventory
+tests/test_player_props_stage5a.py
+# Synthetic end-to-end rehearsal, real-input path (injected downloads),
+# completeness, early-failure summaries
+tests/test_player_props_rehearsal.py
+tests/test_player_props_rehearsal_real.py
+tests/test_player_props_rehearsal_early_failure.py
+# Players-reference builder, position-group eligibility
+tests/test_player_props_reference.py
+tests/test_player_props_position_group.py
+# UI identity joins (pages), containment warnings, dates and seasons
+tests/test_player_props_reference_join.py
+tests/test_player_props_containment.py
+tests/test_player_props_dates.py
+tests/test_player_props_season.py
+# Prediction inputs and adjustments (mocked feeds)
+tests/test_prop_roster_filter.py
+tests/test_injuries.py
+tests/test_market_odds.py
+# Pick 6 wording and related page compatibility
+tests/test_pick6_wording.py
+tests/test_model_performance_week.py
+tests/test_backtest_console_encoding.py
+# This list's own checks
+tests/test_player_props_suites.py

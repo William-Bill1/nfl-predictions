@@ -8,6 +8,31 @@ bottom.
 
 ## October 2026
 
+- **CI: Player Props on Python 3.12** (`player-props-py312` job in
+  `.github/workflows/tests.yml`, `tests/player_props_py312_suites.txt`,
+  `tests/no_network_plugin.py`, `tests/test_player_props_suites.py`).
+  - **New job:** runs the Player Props suites on Python 3.12, the nightly
+    runner's version, with the existing `requirements-dev.txt` pins. The
+    suites include the synthetic end-to-end rehearsal, Pick 6 and the page
+    compatibility tests.
+  - **Unchanged:** the 3.14 `pytest` and `pipeline-smoke` jobs and the
+    triggers.
+  - **Isolation:** synthetic data only. A Python socket guard (not OS-level
+    isolation) refuses non-loopback DNS lookups and connections, including
+    hostnames that merely look like loopback, and restores the socket
+    functions afterwards. The job has `contents: read` and checks out with
+    `persist-credentials: false`.
+  - **Results:** the log, JUnit XML, exit code and versions are uploaded
+    even on failure, and failures aren't hidden.
+  - **Not yet verified:** 3.12 compatibility stays unverified until the job
+    runs.
+  - **Docs:** the deployment-plan notes now state three things:
+    - release immutability must be established, not assumed; committed
+      asset hashes detect a changed asset but don't make a Release immutable
+      or prevent deletion;
+    - publishing needs its own `contents: write` job;
+    - blocked and failed prop runs need one shared definition.
+
 - **Player props: prop eligibility by position group**
   (`position-group-v1`; `player_props/predict.py`,
   `player_props/rehearsal_expected.py`, `player_props/rehearsal.py`,
