@@ -20,6 +20,8 @@ tests/test_player_props_rehearsal_early_failure.py
 # Players-reference builder, position-group eligibility
 tests/test_player_props_reference.py
 tests/test_player_props_position_group.py
+# Offline release manifest (build and verify a candidate package)
+tests/test_player_props_release_manifest.py
 # UI identity joins (pages), containment warnings, dates and seasons
 tests/test_player_props_reference_join.py
 tests/test_player_props_containment.py
