@@ -1483,8 +1483,147 @@ import by the second) was removed.
   - the nightly workflow itself, which is unchanged;
   - byte-for-byte equality of models trained on 3.12 and 3.13.
 
-  Python 3.12 compatibility stays unverified until this job has run and
-  passed.
+  The job passed on PR #50 (Python 3.12.15, Linux): the synthetic suites
+  above are compatible with 3.12. Live data, real-data training, storage and
+  deployment remain unverified on 3.12.
+
+**Release manifest (S1; `player_props/release_manifest.py`; offline, nothing
+released).** It builds and verifies one candidate release package: a
+directory describing one coherent source, stats, reference and model-bundle
+set. Nothing uploads, tags, activates or creates a release, and no workflow
+runs it.
+- **Package:** `release_manifest.json` plus 19 assets, each at one fixed path
+  for its role:
+  - the training and inference play-by-play sources and their source
+    manifests;
+  - the training and inference stats, with their Stage 2 manifests and
+    schedules;
+  - the candidate players reference (the builder's output) and the runtime
+    reference (the bytes prediction read);
+  - the exported bundle archive;
+  - the rehearsal `summary.json` that verified the set, and the predictions
+    snapshot it verified.
+- **Manifest (`player_props_release`, version 1):**
+  - every asset's role, name, size and SHA-256;
+  - the reference derivation (`byte_copy` or `reserialized`);
+  - the builder's code (file hashes, git commit, dirty flag) and runtime
+    (Python, libraries, platform);
+  - an optional parent release (`release_id` and manifest SHA-256);
+  - an external tag and pointer, descriptive only;
+  - the declared claims;
+  - six *derived* sections, extracted from the assets:
+    - `identities`: source, stats, schedule and reference hashes;
+    - `bundle`: id, manifest hash, feature contract, scorer, training source,
+      code and libraries;
+    - `eligibility`: policy, field and the reference hash that verification
+      read;
+    - `windows`: per-model training and evaluation windows, training end and
+      feature cutoff;
+    - `inference_target`;
+    - `verification`: the rehearsal's run id, stages, completeness and
+      snapshot hash.
+- **Training versus inference inputs:** they are different files, and their
+  hashes are never required to match. They are linked explicitly:
+  - The bundle's `training_source` must name this package's training stats
+    manifest, every training stats file hash and the training play-by-play.
+  - Each stats manifest must name its own source: training stats the
+    training source, inference stats the inference source.
+  - Both use the bundle's feature definition and rolling windows.
+  - The training data must end before the inference feature cutoff.
+  - The inference source must cover every training season.
+- **Candidate versus runtime reference:** two assets with two hashes, never
+  interchangeable, and bytes are never normalised.
+  - **`byte_copy`:** the two files must be identical.
+  - **`reserialized`:** the bytes must differ, but every identity column
+    (`gsis_id`, `short_name`, `display_name`, `last_name`, `position`,
+    `position_group`) must match as text, row by row.
+  - The eligibility evidence must name the runtime reference's exact hash.
+    Evidence naming the candidate is refused.
+- **Evidence is cross-checked, not accepted:** a summary saying
+  `verified: true` isn't enough.
+  - The summary must list every run asset in the package under its run path
+    with the same hash, including both copies of the bundle manifest.
+  - It must name this bundle, contract, training end, sources and windows.
+  - Its output verification and publish stage must name this snapshot.
+  - Its status must be `succeeded`, with complete rows.
+  - Its stage records must be exactly the supported rehearsal stages
+    (`rehearsal.STAGES`): each once, in order, each with status `ok` and no
+    error. Missing, duplicate, unknown, malformed, extra-field or
+    non-successful records are refused, each with its index, even when every
+    hash and derived section has been updated to match. A summary with only
+    `workspace: ok` used to pass.
+  - The snapshot's path in the summary fixes the target week, and the Stage 2
+    gate (`provenance.check_inputs`) is re-run for that week on the
+    inference stats. It runs as of the rehearsal's finish date, in Toronto
+    time.
+- **Verification (`verify_package`):**
+  - **Reading:** every asset is read once.
+  - **Refused before any content check:** missing, unlisted, duplicate,
+    conflicting, unexpected or unsafe entries; links or junctions; size or
+    hash mismatches; malformed JSON or schema. JSON errors give the line and
+    column; schema errors give the field. An asset's `role` and `name` must be
+    strings: a list, object, null or number is reported for that field
+    (previously a list or object raised `TypeError`).
+  - **Content checks:** the existing validators run on a private temporary
+    copy of exactly those bytes:
+    - `source_refresh.verify_installed`;
+    - Stage 2 `check_provenance` and `check_inputs`;
+    - `bundle_store.read_archive`, the safe tar reader (no general
+      extraction);
+    - `model_bundle.verify_bundle_dir`.
+  - **Derived sections:** each is recomputed and compared with the manifest.
+- **Building (`build_package`):** each input is read once and staged in a
+  sibling directory.
+  - **Refused locations:** an output that overlaps the repository, a
+    production path, any input file, the run directory or the `--parent`
+    package (paths compared fully resolved, links and junctions included).
+    - The parent is an input. The output may not be it, lie inside it or
+      contain it: replacing the output would otherwise delete or change the
+      package the new manifest names as its parent.
+    - These checks run before the parent is read and before anything is
+      created; on refusal the parent, the inputs and any previous output are
+      left byte-identical.
+  - **Install:** the package must verify before it replaces the output, with
+    a rename-aside swap.
+  - **On a catchable failure:** the previous package is kept (or restored)
+    and the staging directory is removed.
+  - **Not handled:** a crash or power loss mid-swap can leave a `.staging-`
+    or `.previous-` sibling, and nothing is fsynced.
+- **Verified versus declared:** the report lists both.
+  - **Verified:** the hashes and the relationships above.
+  - **Declared, not provable from the bytes:**
+    - that the downloads came from nflverse at the recorded times;
+    - that the rehearsal ran the stages it reports;
+    - that the runtime reference was produced from the candidate (only
+      identity-column equality is checked);
+    - git commits, dirty flags and library versions;
+    - the parent release, unless `--parent` is given;
+    - the external tag and pointer.
+- **Immutability:** hashes detect a changed asset. They don't make a package
+  or any stored copy of it immutable, and don't prevent replacement or
+  deletion.
+- **CLI** (exit 0 valid, 1 refused, 2 couldn't run):
+
+  ```
+  python player_props/release_manifest.py build --run-dir RUN --candidate-reference CSV --reference-derivation reserialized --out DIR
+  python player_props/release_manifest.py verify --package DIR [--parent DIR]
+  ```
+- **First real-artifact check (2026-10-30; in a temporary directory outside
+  the repository):** a package was assembled from the retained 917-row
+  position-group-v1 rehearsal (run `20261029T202848Z-957eda08`) and its
+  candidate reference. Nothing was retrained, regenerated or downloaded.
+  - **Result:** it built and verified.
+  - **Linked training and inference inputs:**
+    - training source `81ed2ec7…` (2020–2025) → training stats `277bda96…`,
+      which the bundle names;
+    - inference source `235b8a9e…` (2020–2026) → inference stats
+      `5f56dc26…`.
+  - **Separate references:** candidate `2d3aad21…` and runtime `8e634557…`
+    (reserialized; identity columns identical).
+  - **Evidence:** the eligibility evidence names `8e634557…`, and 917 of 917
+    rows are verified.
+  - **Negative check:** declaring the references a byte copy was refused.
+  - **Model performance:** the check measures nothing about it.
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the

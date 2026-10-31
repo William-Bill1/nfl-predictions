@@ -8,6 +8,38 @@ bottom.
 
 ## October 2026
 
+- **Player props: offline release manifest (S1)** (`player_props/release_manifest.py`,
+  `tests/test_player_props_release_manifest.py`).
+  - **New:** builds and verifies a candidate release package covering one
+    set of training and inference sources and stats, the candidate and
+    runtime players references, the exported bundle and the rehearsal
+    evidence. Every asset has a fixed path, size and SHA-256.
+  - **Relationships checked, not just hashes:**
+    - the bundle must name its training stats and source;
+    - each stats set must name its own source;
+    - training and inference inputs are distinct but linked;
+    - the eligibility evidence must name the runtime reference's exact
+      bytes;
+    - the candidate and runtime references keep separate hashes, with their
+      declared relationship checked on the identity columns and no
+      normalisation.
+  - **Evidence cross-checked:** the rehearsal summary must list every
+    package asset with the same hash, and record exactly the supported
+    rehearsal stages, each once and `ok`. A summary that only says
+    `verified: true` is refused.
+  - **Safety:**
+    - the existing validators and safe archive reader run on a private copy
+      of the verified bytes;
+    - outputs can't overlap the repository, production paths, inputs or the
+      parent package (equal, inside or containing it, after resolving links);
+    - malformed asset entries, including non-string roles, are reported by
+      field;
+    - a failed build keeps the previous package.
+  - **Not done:** no upload, tag, release or activation; hashes don't make a
+    package immutable. A package assembled from the retained 917-row
+    rehearsal verified; the downloads' origin, the rehearsal's execution and
+    the reference's derivation remain declared claims.
+
 - **CI: Player Props on Python 3.12** (`player-props-py312` job in
   `.github/workflows/tests.yml`, `tests/player_props_py312_suites.txt`,
   `tests/no_network_plugin.py`, `tests/test_player_props_suites.py`).
