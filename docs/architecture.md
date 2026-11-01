@@ -1625,6 +1625,178 @@ runs it.
   - **Negative check:** declaring the references a byte copy was refused.
   - **Model performance:** the check measures nothing about it.
 
+**Verified publication (S2; `player_props/publication.py`; offline, isolated
+destinations only).** It publishes a target's latest feed, frozen snapshot and
+a provenance sidecar into a destination directory, only after verifying the
+outputs against a valid S1 release package. It doesn't change
+`predict.py`'s writer, the nightly workflow or any production path, and it
+doesn't unblock generation.
+- **Two sources of outputs, never confused:**
+  - **Packaged** (`--packaged`): the package's own verified snapshot is
+    published as both files. This is allowed only when the package's rehearsal
+    summary records that its latest feed and snapshot had exactly those bytes.
+  - **Supplied files** (`--latest`, `--snapshot`): new outputs. The package's
+    rehearsal evidence doesn't cover them, even if they were produced from the
+    package's inputs.
+  - **Either way:** the outputs are verified afresh, and the sidecar's
+    `evidence.package_rehearsal_names_these_bytes` says whether the package's
+    rehearsal verified these exact bytes. When it didn't, the sidecar states
+    that only this publication's verification supports them. An old package's
+    evidence never stands in for a different output set.
+- **Verification:**
+  1. **Package:** `release_manifest.verify_package` must pass. The package is
+     then re-read, and its manifest must be the bytes that verified.
+  2. **Prediction schedule:** `nfl_schedule_<season>.csv` is needed for
+     completeness but isn't an S1 asset. It's supplied separately and must
+     have the hash the package's (verified) rehearsal summary recorded for
+     it. Adding it to the package is a possible S1 change; until then this
+     hash is the link.
+  3. **Private inputs:** the package's inference stats, schedules, runtime
+     reference, training stats and bundle are written to a private directory.
+     The bundle is restored with `verify_bundle_dir`, and the Stage 2 gate is
+     re-run for the package's inference target as of the rehearsal's finish
+     date.
+  4. **Outputs:** both files are read once. Unreadable, empty, header-only or
+     missing-column files are refused with the reason. The rehearsal's
+     verifier (`rehearsal._stage_verify_outputs`) then runs unchanged on
+     private copies of the captured bytes:
+     - independent expected-row completeness (missing, unexpected, duplicate,
+       wrong side);
+     - per-row identity and eligibility from `player_id`;
+     - tier, model, raw score, clamp and label, probabilities and skipped
+       inputs;
+     - bundle ID, season and week;
+     - snapshot == latest feed;
+     - metric parity.
+
+     The copies must still hash to the captured bytes, and the reference
+     verified must be the package's runtime reference under the package's
+     eligibility policy.
+  5. **Game dates:** `game_date` is required in both files. Each row's value
+     must be its game's calendar day at UTC midnight
+     (`YYYY-MM-DD 00:00:00+00:00`), the form `predict.load_schedule` writes.
+     The game is the row's unique match in the package's inference schedule
+     (season, week, and home/away from `team`, `opponent` and `is_home`).
+     Dates are compared as recorded: never shifted to Toronto time, and no
+     kickoff time is inferred. Missing values, other formats (a bare date,
+     `Z`, an offset, a time of day), impossible dates, rows without exactly
+     one schedule game, and wrong dates are each refused with their rows.
+- **Library output:** reused code prints progress, some of it with emoji.
+  That output is captured while preparing and verifying, so it can't fail on
+  a console that can't encode it (Windows cp1252) or mix with the CLI's JSON.
+  On a refusal its last lines are kept (`library_output_tail`). The CLI
+  prints ASCII-only JSON, so no UTF-8 environment setting is needed.
+- **Captured bytes are what gets published.** The sources are never re-read
+  after verification, so changing or deleting them (or the package)
+  afterwards can't change the published files or the sidecar.
+- **Sidecar** (`player_props_predictions_week<W>_<S>.provenance.json`): records
+  - the release ID and manifest hash;
+  - the bundle ID and manifest hash, and the feature contract;
+  - the target;
+  - the inference source and stats, and the prediction schedule hash;
+  - the runtime and candidate reference hashes and derivation;
+  - the eligibility policy and the reference hash verified;
+  - both output hashes;
+  - the verification result and the evidence statement.
+
+  It's deterministic (no publication time), so the same verified bytes from
+  the same package always give the same sidecar.
+- **Writing:**
+  - **Guards first:** the destination may not overlap the repository, a
+    production path, a protected path, the package or any input file (equal,
+    ancestor or descendant, after resolving links and junctions). These
+    checks run before anything is read, and are repeated after the
+    destination is created.
+  - **Conflicts:** an existing snapshot or sidecar with different content is
+    a conflict, and nothing is written. An identical one is kept untouched,
+    so an identical repeat changes nothing. The latest feed is replaced
+    unless identical.
+  - **Install:** the files to write are staged in `<dest>/.publish-<id>` and
+    installed as a set by `install_set`, which has an explicit **commit
+    boundary**: the last file moved into place.
+- **Outcomes, by when a failure happens:**
+  - **Before the commit boundary** (staging, backing up, or any move): the
+    complete previous set is restored, and files that didn't exist are
+    removed. The result is `PublicationError` with `state: rolled_back`
+    ("nothing was replaced" if no move had happened). If a restore fails, the
+    state is `rollback_failed` and `recovery_files` names the backups kept.
+    Leftovers, such as a backup of an untouched file that couldn't be
+    deleted, are listed in `retained_files`, and the error says the previous
+    set is intact.
+  - **After the commit boundary:** every file holds its new bytes, so the
+    publication has committed. Deleting backups, the staging directory or
+    the lock is cleanup. A failure there returns `published: true` with
+    `state: committed_with_cleanup_warnings`, the warnings, and the retained
+    paths (CLI exit 3). It is never reported as a rollback. Previously a
+    `.bak` deletion failure was reported as "the previous set was restored"
+    while all three new files stayed installed.
+  - **Lock release is checked, not assumed:** `SlotLock.__exit__` deletes the
+    lock only if it still holds this publication's token, retries a sharing
+    violation briefly, and then returns normally whether or not the file was
+    deleted. So after it returns, S2 checks the lock file read-only.
+    `SlotLock` itself is unchanged.
+    - **Still holds this publication's token:** a cleanup warning and a
+      retained path. It blocks the next publication to the destination until
+      removed.
+    - **Unreadable, malformed or with no token:** its owner can't be
+      determined, so it's left, warned about and listed as retained.
+    - **Holds another token:** it's left untouched, warned about and not
+      listed as this publication's file.
+    - **When a publication had already failed:** its error and state are
+      kept, and the lock diagnostic and path are added.
+    - **Never done:** S2 never deletes or retries a lock itself, never
+      removes one by age, and never treats a remaining lock as evidence that
+      its owner is running. Previously a swallowed deletion failure was
+      reported as a clean `committed`.
+- **Three properties, stated separately:**
+  - **Catchable-error rollback (implemented and tested):**
+    - each of the three moves fails, with and without previous files;
+    - a backup copy fails;
+    - a staging write fails;
+    - a rollback fails;
+    - after the commit, backup deletions fail at each backup (including
+      after earlier ones were deleted), and the staging directory can't be
+      removed.
+
+    Each test checks that disk contents and the reported state agree.
+  - **Crash atomicity (not provided):** the set is three separate renames. A
+    crash or power loss between them can leave a mixed set, `.bak` backups
+    and a `.publish-` directory, and nothing is fsynced.
+  - **Concurrent writers (partial):** an advisory lock `<dest>/.prop-publication.lock`
+    (`ontario_spreads.SlotLock`) makes a publication refuse while another
+    holds it. That's tested only for a held lock. Writers that don't take
+    the lock, such as `predict.py`, aren't excluded.
+- **Read-only check (`verify_published`), two explicit modes:**
+  - **`current`** (default): the complete current set. The sidecar, the
+    frozen snapshot and the latest feed must exist, be readable and match
+    the sidecar's hashes and sizes. A missing, unreadable or mismatched
+    latest feed fails.
+    - A replaced feed is called a later publication only with evidence:
+      another sidecar in the destination records its exact bytes, and that
+      sidecar's own snapshot verifies. Even then this target is reported as
+      not the current set.
+    - Without that evidence the report says nothing accounts for it.
+    - Previously a missing latest feed passed, and any changed one was
+      called "another publication".
+  - **`historical`** (`--historical`): only the frozen snapshot and its
+    sidecar. The report lists the current latest feed under `not_verified`.
+  - **Both modes:** the sidecar's fields are validated before use: kind and
+    version, target, release ID and manifest hash, a passed verification,
+    and each file entry's name, SHA-256 and size. The latest entry is
+    required in `current` mode only. Unparseable sidecars report the line
+    and column.
+- **CLI** (ASCII-only JSON):
+  - `publish`: 0 committed, 3 committed with cleanup warnings, 1 refused or
+    rolled back, 2 couldn't run.
+  - `verify-published`: 0 verified, 1 not verified.
+
+  ```
+  python player_props/publication.py publish --package PKG --dest DIR --prediction-schedule CSV (--packaged | --latest CSV --snapshot CSV)
+  python player_props/publication.py verify-published --dest DIR --season S --week W [--package PKG] [--historical]
+  ```
+- **Not claimed:** deployment authorization, immutability of the published
+  set, or any accuracy, calibration or betting edge.
+
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the
    runner, aggregate from the prop source, rebuild the stats with their
