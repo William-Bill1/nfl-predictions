@@ -8,6 +8,50 @@ bottom.
 
 ## October 2026
 
+- **Player props: offline verified publication (S2)** (`player_props/publication.py`,
+  `tests/test_player_props_publication.py`).
+  - **New:** publishes a latest feed, a frozen snapshot and a provenance
+    sidecar into an isolated directory, only after verifying the outputs
+    against a valid S1 release package. Not wired into `predict.py`, the
+    nightly workflow or production paths; generation stays blocked.
+  - **Verification:** the package must pass S1, and the prediction schedule
+    (not an S1 asset) must have the hash the package's rehearsal recorded.
+    The rehearsal's own verifier then runs on private copies of the captured
+    output bytes against the package's bundle, inference inputs, runtime
+    reference and target: expected-row completeness, identity, eligibility,
+    probabilities, adjustments, skipped inputs and snapshot == feed. Each
+    row's `game_date` must be its uniquely matched schedule game's calendar
+    day at UTC midnight (the form predict.py writes; no Toronto shift).
+  - **Captured bytes:** both files are read once; the published bytes are the
+    verified bytes, even if the source files change afterwards.
+  - **Sidecar:** links the output hashes to the release-manifest hash, bundle,
+    target, references, policy and verification result. It says whether the
+    package's rehearsal evidence names these exact bytes; new outputs are
+    marked as supported only by this publication's own verification.
+  - **Writing:**
+    - A conflicting snapshot or sidecar is never replaced, and an identical
+      repeat is a no-op.
+    - The three files are installed as a set with an explicit commit
+      boundary (the last move):
+      - before it, a failure restores the previous set (`rolled_back`), or
+        reports a failed rollback with its kept backups;
+      - after it, cleanup failures are reported as committed with warnings
+        and retained paths, never as a rollback. That includes a lock file
+        `SlotLock` failed to delete (it swallows the error): the lock file is
+        checked after release, and a remaining lock is reported with its path.
+        Another holder's lock is never deleted.
+    - Destinations may not overlap the repository, production, protected
+      paths, the package or inputs.
+  - **Checking a published set:** `verify-published` checks the complete
+    current set by default, so a missing or changed latest feed fails; a
+    later publication is named only on evidence. `--historical` checks the
+    frozen snapshot and sidecar only, and says the latest feed wasn't
+    verified.
+  - **CLI:** library progress output is captured, so the CLI works on a
+    cp1252 console without a UTF-8 setting, and its JSON is ASCII-only.
+  - **Not provided:** crash atomicity (no fsync). Concurrent writers are
+    excluded only if they take the advisory lock; `predict.py` doesn't.
+
 - **Player props: offline release manifest (S1)** (`player_props/release_manifest.py`,
   `tests/test_player_props_release_manifest.py`).
   - **New:** builds and verifies a candidate release package covering one
