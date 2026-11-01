@@ -1,10 +1,100 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-10-31T09:10:43.961540+00:00",
+    "generated_at": "2026-11-01T09:58:58.522303+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-10-31"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-11-01",
+      "game_time": "13:00",
+      "game": "BAL @ BUF",
+      "home_team": "BUF",
+      "away_team": "BAL",
+      "bet_type": "Spread",
+      "pick": "BAL +3.5",
+      "confidence": 0.6289547040155726,
+      "edge": 0.0835001585610272,
+      "tier": "Elite",
+      "odds": -120,
+      "line": 3.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-01",
+      "game_time": "13:00",
+      "game": "MIN @ DET",
+      "home_team": "DET",
+      "away_team": "MIN",
+      "bet_type": "Spread",
+      "pick": "MIN +3",
+      "confidence": 0.6144655380013713,
+      "edge": 0.1144655380013712,
+      "tier": "Elite",
+      "odds": 100,
+      "line": 3.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-01",
+      "game_time": "13:00",
+      "game": "CLE @ PIT",
+      "home_team": "PIT",
+      "away_team": "CLE",
+      "bet_type": "Spread",
+      "pick": "CLE +3.5",
+      "confidence": 0.6074170300066312,
+      "edge": 0.0836075061971073,
+      "tier": "Elite",
+      "odds": -110,
+      "line": 3.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-01",
+      "game_time": "16:05",
+      "game": "LAC @ LA",
+      "home_team": "LA",
+      "away_team": "LAC",
+      "bet_type": "Spread",
+      "pick": "LAC +6.5",
+      "confidence": 0.6183144597907702,
+      "edge": 0.0990836905600008,
+      "tier": "Elite",
+      "odds": -108,
+      "line": 6.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-01",
+      "game_time": "16:25",
+      "game": "KC @ DEN",
+      "home_team": "DEN",
+      "away_team": "KC",
+      "bet_type": "Spread",
+      "pick": "DEN +1.5",
+      "confidence": 0.54432880305024,
+      "edge": -0.0011257424043054,
+      "tier": "Good",
+      "odds": -120,
+      "line": 1.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-01",
+      "game_time": "16:25",
+      "game": "NE @ MIA",
+      "home_team": "MIA",
+      "away_team": "NE",
+      "bet_type": "Spread",
+      "pick": "MIA +7",
+      "confidence": 0.647569919876708,
+      "edge": 0.1126861989464754,
+      "tier": "Elite",
+      "odds": -115,
+      "line": 7.0,
+      "notes": null
+    }
+  ]
 }
