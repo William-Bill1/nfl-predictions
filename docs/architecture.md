@@ -50,7 +50,7 @@ Player props  (python player_props/train_models.py ; python player_props/predict
                                + player_props_predictions_week{W}_{season}.csv  (frozen, write-once)
 
 Step 2 — UI:
-    predictions.py                 (7 tabs; Underdog/Over-Under tabs removed)
+    predictions.py                 (7 tabs; Underdog/Over-Under tabs removed; display helpers in display_status.py)
     pages/1_Historical_Data.py
     pages/2_Player_Props.py        [includes the DK Pick 6 calculator]
     pages/3_Parlay_Builder.py
@@ -99,6 +99,42 @@ actual `prob_underdogCovered` signal distribution (median ≈0.57, p90 ≈0.70).
 The EV threshold (`spread_ev_threshold`, in P(underdog covers) space, pushes
 excluded) is ~0.545, so the Lean band sits mostly below it — shown for context,
 not a bet. `betting_log._spread_tier` and `emailer.py` mirror these cutoffs.
+The stored names (Elite/Strong/Good/Lean in the betting log, `tier` in
+`best_bets_today.json`) are data and unchanged; the home page shows them as
+neutral model-probability bands (`display_status.NEUTRAL_TIER_LABELS`: "Model
+≥65%", "Model 59–65%", "Model 55–59%", "Model 50–55%"), because the frozen
+pregame record does not establish calibration or betting value. Displayed
+edges and EVs are labelled model-implied (`display_status.EDGE_HELP`).
+`emailer.py` and `scripts/export_best_bets.py` still use the stored names.
+
+### Home page: completion status and regenerated predictions (display only)
+
+The predictions CSV is regenerated every night for every game and stores
+**0-0 scores and 0 outcome flags for unplayed games**. The home page therefore
+never treats a passed date or a 0 score as a result. `display_status.result_status`
+gives each row one status:
+
+| Status | When |
+|---|---|
+| **Final** | The schedule (`nfl_games_historical.csv`) passes `bet_journal.completion_evidence` (exactly one row; both scores finite non-negative integers, not 0-0; `result` = home - away, `total` = home + away; `overtime` 0 or 1; game day before today, Toronto) **and** the predictions CSV shows the same home/away score. Shutouts such as 27-0 are final. |
+| **Pending - no final score yet** | The schedule lists the game with no scores, or its scores are dated today. |
+| **Result unavailable** | No schedule file or required column, no row, a duplicated `game_id`, or malformed evidence (text, negative, fractional or infinite scores, one score only, 0-0, inconsistent `result`/`total`/`overtime`, bad game day). |
+| **Unavailable - sources disagree** | The schedule is final but the predictions CSV shows a different score (e.g. 27-24 vs 0-0), or the schedule has no score yet while the predictions CSV shows one other than 0-0. |
+
+`completion_evidence` is the same conservative rule `scripts/frozen_spread_report.py`
+uses. It is reused as a pure function on the schedule frame; no journal file is
+read. Non-final games show blank scores and outcome flags (`blank_unsettled`)
+in "Regenerated model predictions vs results" and the Probabilities tab, and
+are left out of the Betting Performance spread totals and the Model vs
+Baseline line (`final_only`, with the number left out shown). Outcome flags of
+a final game are shown as stored; they are not recomputed. Final games, the
+stored files and settlement (`betting_log`, `nfl-gather-data.py`) are unchanged.
+
+Played games in those views carry predictions regenerated after their results
+were known, so the page labels them as such (`display_status.REGENERATED_NOTE`)
+and links to the Frozen Performance page, which scores only predictions frozen
+before kickoff. Known pipeline issue (not changed here): `nfl-gather-data.py`
+computes `spread_bet_return` for unplayed flagged games as a -100 loss.
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 
