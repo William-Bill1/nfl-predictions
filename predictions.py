@@ -56,6 +56,7 @@ import functools
 
 from footer import add_betting_oracle_footer
 from home_downloads import convert_df_to_csv, generate_predictions_pdf, render_home_downloads
+import display_status as ds
 
 # Application-level startup log and uncaught exception hook so Cloud logs
 # include clear tracebacks when the app crashes during startup.
@@ -408,23 +409,24 @@ def _as_display_date(df, *cols):
     return out
 
 
-SPREAD_TIER_CUTS = (0.65, 0.59, 0.55, 0.50)  # Elite, Strong, Good, Lean floors
-SPREAD_TIER_LABELS = ('🔥 Elite', '⭐ Strong', '📈 Good', '⚖️ Lean')
+SPREAD_TIER_CUTS = (0.65, 0.59, 0.55, 0.50)  # band floors (stored names: Elite, Strong, Good, Lean)
+# Neutral display labels (display_status.NEUTRAL_TIER_LABELS); the cut points are unchanged.
+SPREAD_TIER_LABELS = tuple(ds.NEUTRAL_TIER_LABELS[k] for k in ('Elite', 'Strong', 'Good', 'Lean'))
 
 
 def add_spread_confidence_tiers(df):
     """
-    Add confidence tier labels for spread betting.
+    Add model-probability band labels for spread outputs.
 
     Cutoffs are anchored to the actual `prob_underdogCovered` distribution of
     bet signals, not round numbers. The EV threshold means live bets almost
-    never sit below ~0.545, so the "Lean" band (0.50-0.55) is mostly a
-    "shown but sub-threshold" bucket. The model does reach into the 0.65+
-    "Elite" band, but only for ~1 signal in 7.
-    - 🔥 Elite (≥65%)
-    - ⭐ Strong (59-65%)
-    - 📈 Good  (55-59%)
-    - ⚖️ Lean  (50-55%, typically below the EV threshold)
+    never sit below ~0.545, so the 50-55% band is mostly a "shown but
+    sub-threshold" bucket. The model reaches the ≥65% band for ~1 signal in 7.
+    The labels name probability ranges only (calibration is not established):
+    - Model ≥65%
+    - Model 59–65%
+    - Model 55–59%
+    - Model 50–55% (typically below the EV threshold)
 
     Args:
         df: DataFrame with prob_underdogCovered column
@@ -1191,12 +1193,12 @@ def home_page():
                                 best_label = label
 
                         if best_val is not None and best_label is not None:
-                            display_label = f"Edge ({best_label})"
+                            display_label = f"Model-implied edge ({best_label})"
                             display_value = f"{best_val:.1f} pts"
                             try:
-                                # Tooltip: model edge vs market (displayed in points). Raw value shown for precision.
+                                # Tooltip: model-implied difference vs market (points). Raw value shown for precision.
                                 top_inner[2].markdown(
-                                    f"<div title='Model edge vs market for {best_label}. Raw value: {best_val}' style='font-size:12px;font-weight:600;margin-bottom:4px'>{display_label}</div>",
+                                    f"<div title='Model-implied difference vs market for {best_label} - depends on calibration, which is not established. Raw value: {best_val}' style='font-size:12px;font-weight:600;margin-bottom:4px'>{display_label}</div>",
                                     unsafe_allow_html=True,
                                 )
                                 top_inner[2].metric("", display_value, delta=best_val, label_visibility="hidden")
@@ -1536,8 +1538,8 @@ def home_page():
                         edge_text = 'N/A'
 
                     cols = st.columns(3)
-                    cols[0].metric('Confidence', prob_text)
-                    cols[1].metric('Edge', edge_text)
+                    cols[0].metric('Model probability', prob_text)
+                    cols[1].metric('Model-implied edge', edge_text, help=ds.EDGE_HELP)
                     cols[2].metric(RAW_SPREAD_LABEL, row.get('spread_line', 'N/A'), help=RAW_SPREAD_HELP)
                     st.caption(f"{RAW_SPREAD_LABEL}: {RAW_SPREAD_HELP} Odds: {row['odds_shown']}.")
 
@@ -1558,8 +1560,8 @@ def home_page():
                         'recommendation': 'Recommendation', 'odds_shown': 'Odds',
                         'recommended_team': 'Recommended Team', 'spread_line': RAW_SPREAD_LABEL,
                         'total_line': 'Total',
-                        'moneyline_odds': 'Moneyline Odds', 'model_probability': 'Model Confidence',
-                        'edge': 'Edge', 'confidence_tier': 'Confidence Tier', 'bet_result': 'Result',
+                        'moneyline_odds': 'Moneyline Odds', 'model_probability': 'Model Probability',
+                        'edge': 'Model-implied edge', 'confidence_tier': 'Model Band', 'bet_result': 'Result',
                         'bet_profit': 'Profit'
                     }
 
@@ -1599,6 +1601,9 @@ def home_page():
                                 val = f"{float(val):.1%}"
                             except Exception:
                                 pass
+
+                        if f == 'confidence_tier':
+                            val = ds.tier_label(val)
 
                         if f == 'edge':
                             try:
@@ -1863,7 +1868,8 @@ def home_page():
 
             if len(new_elite_bets) > 0:
                 # Show elite notification
-                st.toast(f"🔥 {len(new_elite_bets)} new elite betting opportunities!", icon="🔥")
+                st.toast(f"{len(new_elite_bets)} new game(s) with a model output ≥65% "
+                         f"(model probability, not a validated edge)", icon=":material/info:")
 
                 # Add to notified set to avoid duplicate notifications
                 st.session_state.notified_games.update(new_elite_bets['game_id'].tolist())
@@ -1874,7 +1880,8 @@ def home_page():
 
             if len(new_strong_bets) > 0:
                 # Show strong notification
-                st.toast(f"⭐ {len(new_strong_bets)} new strong betting opportunities!", icon="⭐")
+                st.toast(f"{len(new_strong_bets)} new game(s) with a model output of about 59–65% "
+                         f"(model probability, not a validated edge)", icon=":material/info:")
 
                 # Add to notified set to avoid duplicate notifications
                 st.session_state.notified_games.update(new_strong_bets['game_id'].tolist())
@@ -2574,7 +2581,9 @@ def home_page():
                             hide_index=True,
                             height=height
                         )
-                    st.caption(f"Showing next {len(schedule_display)} upcoming game(s) • Green edges indicate positive expected value bets")
+                    st.caption(f"Showing next {len(schedule_display)} upcoming game(s) • Green edges are positive "
+                               f"model-implied differences, not demonstrated value: they depend on the model's "
+                               f"calibration, which is not established")
 
                     # Check if predictions are missing for upcoming games
                     if predictions_for_schedule is not None:
@@ -2662,12 +2671,27 @@ def home_page():
             ]
             # Only show columns that exist
             display_cols = [col for col in display_cols if col in predictions_df.columns]
-            st.write("### Model Predictions vs Actual Results")
+            st.write("### Regenerated model predictions vs results")
+            st.caption(ds.REGENERATED_NOTE)
+            try:
+                st.page_link(ds.FROZEN_PAGE, label="Frozen Performance: predictions frozen before kickoff",
+                             icon=":material/ac_unit:")
+            except Exception:
+                pass
             predictions_df_display = predictions_df.copy()
             predictions_df_display['gameday'] = pd.to_datetime(predictions_df_display['gameday'], errors='coerce')
             mask = predictions_df_display['gameday'] <= pd.to_datetime(datetime.now())
             predictions_df_display = predictions_df_display[mask]
             predictions_df_display.sort_values(by='gameday', ascending=False, inplace=True)
+
+            # A date on or before today and 0-0 scores are not evidence of a result: the
+            # predictions file stores 0-0 for unplayed games. Status comes from validated
+            # final scores in the nflverse schedule, cross-checked against the scores in
+            # the predictions file (display_status.result_status).
+            _status = ds.result_status(predictions_df_display, ds.load_completion_evidence(DATA_DIR))
+            predictions_df_display = ds.blank_unsettled(predictions_df_display, _status)
+            predictions_df_display['result_status'] = _status
+            display_cols = display_cols[:2] + ['result_status'] + display_cols[2:]
 
             # Convert team abbreviations to full names for display
             predictions_df_display['home_team'] = predictions_df_display['home_team'].map(team_full_name_map).fillna(predictions_df_display['home_team'])
@@ -2680,19 +2704,35 @@ def home_page():
                 column_config={
                     'game_id': None,
                     'gameday': st.column_config.DateColumn('Game Date', format='MM/DD/YYYY'),
+                    'result_status': st.column_config.TextColumn(
+                        'Status', width='medium',
+                        help='Final only when the nflverse schedule has valid final scores for the game '
+                             'and the predictions file shows the same scores. Pending and unavailable '
+                             'games show blank scores and results.'),
                     'home_team': st.column_config.TextColumn('Home Team', width='medium'),
                     'away_team': st.column_config.TextColumn('Away Team', width='medium'),
                     'home_score': st.column_config.NumberColumn('Home Score', format='%d'),
                     'away_score': st.column_config.NumberColumn('Away Score', format='%d'),
                     'total_line': st.column_config.NumberColumn('O/U Line', format='%.1f', help='Over/Under betting line'),
                     'spread_line': st.column_config.NumberColumn('Spread', format='%.1f', help='Point spread (negative = away favored)'),
-                    'predictedSpreadCovered': st.column_config.CheckboxColumn('Predicted Spread', help='Model prediction: underdog covers the spread'),
-                    'underdogCovered': st.column_config.CheckboxColumn('Actual Spread', help='Actual result: underdog covered the spread (push = 0)'),
-                    'predictedOverHit': st.column_config.CheckboxColumn('Predicted Over', help='Model prediction: total goes over'),
-                    'overHit': st.column_config.CheckboxColumn('Actual Over', help='Actual result: total went over')
+                    'predictedSpreadCovered': st.column_config.CheckboxColumn(
+                        'Regenerated Spread Pick',
+                        help='Latest run\'s prediction that the underdog covers - regenerated after the '
+                             'result for played games, so not a pregame forecast'),
+                    'underdogCovered': st.column_config.CheckboxColumn('Actual Spread', help='Actual result: underdog covered the spread (push = 0); blank until final'),
+                    'predictedOverHit': st.column_config.CheckboxColumn(
+                        'Regenerated Over Pick',
+                        help='Latest run\'s prediction that the total goes over - regenerated, not a pregame forecast'),
+                    'overHit': st.column_config.CheckboxColumn('Actual Over', help='Actual result: total went over; blank until final')
                 }
             )
-            st.caption(f"Showing 50 most recent completed games • Total predictions: {predictions_df.shape[0]:,} games")
+            _shown = _status.reindex(predictions_df_display.head(50).index)
+            st.caption(
+                f"Showing the 50 most recent games dated through today: "
+                f"{int((_shown == ds.FINAL).sum())} final, {int((_shown == ds.PENDING).sum())} pending, "
+                f"{int((_shown == ds.UNAVAILABLE).sum())} with no result available, "
+                f"{int((_shown == ds.INCONSISTENT).sum())} where the schedule and predictions files disagree • "
+                f"Total predictions: {predictions_df.shape[0]:,} games")
         else:
             st.warning("Predictions CSV not found. Run the model script to generate predictions.")
 
@@ -2742,6 +2782,11 @@ def home_page():
 
             # Create a display copy and convert probabilities/edges to percentages
             display_df = predictions_df[display_cols].sort_values(by='gameday', ascending=False).head(50).copy()
+            # Unplayed games carry 0-0 in the predictions file; show their scores blank.
+            display_df = ds.blank_unsettled(
+                display_df,
+                ds.result_status(predictions_df.loc[display_df.index], ds.load_completion_evidence(DATA_DIR)),
+                columns=('home_score', 'away_score'))
 
             # Convert probability and edge columns from decimal to percentage
             prob_cols = ['prob_underdogCovered', 'implied_prob_underdog_spread', 'edge_underdog_spread',
@@ -2767,16 +2812,16 @@ def home_page():
                     'total_line': st.column_config.NumberColumn('O/U', format='%.1f', width='small', help='Over/Under line'),
                     'prob_underdogCovered': st.column_config.NumberColumn('Spread Prob', format='%.1f%%', width='small', help='Model probability underdog covers spread'),
                     'implied_prob_underdog_spread': st.column_config.NumberColumn('Implied Spread', format='%.1f%%', width='small', help='Sportsbook implied probability for underdog covering'),
-                    'edge_underdog_spread': st.column_config.NumberColumn('Spread Edge', format='%.1f%%', width='small', help='Model edge for underdog spread bet'),
+                    'edge_underdog_spread': st.column_config.NumberColumn('Spread Edge (model-implied)', format='%.1f%%', width='small', help=ds.EDGE_HELP),
                     'prob_underdogWon': st.column_config.NumberColumn('ML Prob', format='%.1f%%', width='small', help='Model probability underdog wins outright'),
                     'pred_underdogWon_optimal': st.column_config.CheckboxColumn('ML Signal', help='🎯 Betting signal: Bet on underdog (≥28% threshold)'),
                     'implied_prob_underdog_ml': st.column_config.NumberColumn('Implied ML', format='%.1f%%', width='small', help='Sportsbook implied probability for underdog moneyline'),
-                    'edge_underdog_ml': st.column_config.NumberColumn('ML Edge', format='%.1f%%', width='small', help='Model edge for underdog moneyline bet'),
+                    'edge_underdog_ml': st.column_config.NumberColumn('ML Edge (model-implied)', format='%.1f%%', width='small', help=ds.EDGE_HELP),
                     'prob_overHit': st.column_config.NumberColumn('Over Prob', format='%.1f%%', width='small', help='Model probability total goes over'),
                     'implied_prob_over': st.column_config.NumberColumn('Implied Over', format='%.1f%%', width='small', help='Sportsbook implied probability for over'),
-                    'edge_over': st.column_config.NumberColumn('Over Edge', format='%.1f%%', width='small', help='Model edge for over bet'),
+                    'edge_over': st.column_config.NumberColumn('Over Edge (model-implied)', format='%.1f%%', width='small', help=ds.EDGE_HELP),
                     'implied_prob_under': st.column_config.NumberColumn('Implied Under', format='%.1f%%', width='small', help='Sportsbook implied probability for under'),
-                    'edge_under': st.column_config.NumberColumn('Under Edge', format='%.1f%%', width='small', help='Model edge for under bet')
+                    'edge_under': st.column_config.NumberColumn('Under Edge (model-implied)', format='%.1f%%', width='small', help=ds.EDGE_HELP)
                 }
             )
             st.caption(f"Showing next 50 upcoming games with betting data • {len(predictions_df):,} games in next week")
@@ -2801,10 +2846,11 @@ def home_page():
             **📌 Quick Reference:**
             - **Prob Columns**: Model's predicted probability (higher = more confident)
             - **Implied Columns**: Probability implied by sportsbook odds
-            - **Edge Columns**: Model advantage vs sportsbook (positive = value bet)
+            - **Edge Columns (model-implied)**: model probability minus the price-implied probability
             - **ML Signal (✅)**: Automated betting signal when model probability ≥ 28% (F1-optimized threshold)
 
-            💡 **Positive edge = value bet opportunity** (model thinks probability is higher than sportsbook odds suggest)
+            A positive edge means the model's probability is above the price's. It depends on the
+            model being calibrated, which is not established, so it is not a demonstrated value bet.
             """)
         else:
             st.warning("Predictions CSV not found. Run the model script to generate predictions.")
@@ -2953,13 +2999,17 @@ def home_page():
             # Spread betting stats (if available)
             if 'spread_bet_return' in predictions_df_full.columns:
                 spread_bets = predictions_df_full[predictions_df_full['spread_bet_return'] != 0]
+                # The predictions file settles unplayed games as 0-0; count only final games.
+                spread_bets, _not_final = ds.final_only(spread_bets, ds.load_completion_evidence(DATA_DIR))
+                if len(spread_bets) > 0 or _not_final:
+                    st.write("#### 📈 Spread Betting Performance (regenerated predictions)")
+                    st.caption(ds.REGENERATED_NOTE)
                 if len(spread_bets) > 0:
                     spread_wins = (spread_bets['spread_bet_return'] > 0).sum()
                     spread_total_return = spread_bets['spread_bet_return'].sum()
                     spread_win_rate = spread_wins / len(spread_bets)
                     spread_roi = spread_total_return / (len(spread_bets) * 100)
 
-                    st.write("#### 📈 Spread Betting Performance")
                     col1, col2, col3 = st.columns(3)
                     with col1:
                         st.metric("Spread Bets", f"{len(spread_bets):,}")
@@ -2967,6 +3017,10 @@ def home_page():
                         st.metric("Win Rate", f"{spread_win_rate:.1%}")
                     with col3:
                         st.metric("ROI", f"{spread_roi:.1%}")
+                if _not_final:
+                    st.caption(f"{_not_final:,} flagged game(s) without a verified final score are not "
+                               f"counted (pending, result unavailable, or the schedule and predictions "
+                               f"files disagree).")
 
                 # Over/Under betting performance
                 if 'totals_bet_return' in predictions_df_full.columns:
@@ -2997,12 +3051,14 @@ def home_page():
             st.write(f"- **Baseline (always pick the favorite on the moneyline)**: {baseline_accuracy:.1%} accuracy")
             if 'spread_bet_return' in predictions_df_full.columns:
                 _sb = predictions_df_full[predictions_df_full['spread_bet_return'].fillna(0) != 0]
+                _sb, _ = ds.final_only(_sb, ds.load_completion_evidence(DATA_DIR))
                 if len(_sb) > 0:
                     _sb_roi = _sb['spread_bet_return'].sum() / (len(_sb) * 100)
                     _sb_wr = (_sb['spread_bet_return'] > 0).mean()
                     st.write(
                         f"- **Spread model** (the only live bet signal): {_sb_wr:.1%} win rate, "
-                        f"{_sb_roi:+.1%} ROI over {len(_sb):,} EV-qualified bets (in-sample to threshold selection)"
+                        f"{_sb_roi:+.1%} ROI over {len(_sb):,} EV-qualified final games, scored with "
+                        f"regenerated predictions (in-sample to threshold selection; not pregame forecasts)"
                     )
             st.caption(
                 "Moneyline and totals models are disabled — no out-of-time edge. Only the spread "
@@ -3014,8 +3070,8 @@ def home_page():
 
     with pred_tab5:
         if predictions_df is not None:
-            st.write("### 🏈 Spread Betting Opportunities")
-            st.write("*Tiered confidence system for underdog spread bets*")
+            st.write("### 🏈 Spread model outputs")
+            st.write("*Upcoming underdog spread outputs, grouped by model-probability band*")
 
             # Reload predictions_df fresh and filter for upcoming games only
             predictions_df_spread = pd.read_csv(predictions_csv_path, sep='\t')
@@ -3078,33 +3134,34 @@ def home_page():
                     else:
                         spread_bets_all['Value Edge'] = 'N/A'
 
-                    st.write(f"### 🎯 Spread Betting Opportunities ({len(spread_bets_all)} games)")
+                    st.write(f"### 🎯 Spread model outputs ({len(spread_bets_all)} games)")
 
-                    # Group by tier and show in expanders
-                    for tier in ['🔥 Elite', '⭐ Strong', '📈 Good', '⚖️ Lean']:
+                    # Group by band and show in expanders (same bands and order as before)
+                    l65, l59, l55, l50 = SPREAD_TIER_LABELS
+                    for tier in SPREAD_TIER_LABELS:
                         tier_games = spread_bets_all[spread_bets_all['spread_confidence_tier'] == tier]
 
                         if len(tier_games) > 0:
-                            # Define tier descriptions and bet sizing
+                            # Band descriptions; sizing values unchanged and not validated
                             tier_info = {
-                                '🔥 Elite': {
-                                    'desc': 'Highest confidence bets (≥60%) - Recommended for max units',
-                                    'units': '3-5% of bankroll',
+                                l65: {
+                                    'desc': 'Model probability ≥65% that the underdog covers',
+                                    'units': 'sizing tier 3-5% (not validated)',
                                     'expanded': True
                                 },
-                                '⭐ Strong': {
-                                    'desc': 'Strong conviction bets (55-60%) - Good risk/reward',
-                                    'units': '2-3% of bankroll',
+                                l59: {
+                                    'desc': 'Model probability 59–65% that the underdog covers',
+                                    'units': 'sizing tier 2-3% (not validated)',
                                     'expanded': True
                                 },
-                                '📈 Good': {
-                                    'desc': 'Positive edge bets (52-55%) - Solid value',
-                                    'units': '1-2% of bankroll',
+                                l55: {
+                                    'desc': 'Model probability 55–59% that the underdog covers',
+                                    'units': 'sizing tier 1-2% (not validated)',
                                     'expanded': False
                                 },
-                                '⚖️ Lean': {
-                                    'desc': 'Slight edge bets (50-52%) - Lower risk approach',
-                                    'units': '0.5-1% of bankroll',
+                                l50: {
+                                    'desc': 'Model probability 50–55% - usually below the EV threshold',
+                                    'units': 'sizing tier 0.5-1% (not validated)',
                                     'expanded': False
                                 }
                             }
@@ -3138,9 +3195,15 @@ def home_page():
                                         'Away Team': st.column_config.TextColumn(width='medium'),
                                         'Favorite & Spread': st.column_config.TextColumn(width='medium'),
                                         'Underdog (Bet On)': st.column_config.TextColumn(width='medium'),
-                                        'Model Confidence': st.column_config.NumberColumn(format='%.1f%%'),
-                                        'Value Edge': st.column_config.NumberColumn(format='%.1f%%') if 'Value Edge' in tier_display.columns and tier_display['Value Edge'].dtype != 'object' else st.column_config.TextColumn(),
-                                        'Bet Size': st.column_config.TextColumn(width='small')
+                                        'Model Confidence': st.column_config.NumberColumn(
+                                            'Model Probability', format='%.1f%%',
+                                            help='Model probability that the underdog covers; not a validated win rate'),
+                                        'Value Edge': (st.column_config.NumberColumn('Model-implied Edge', format='%.1f%%', help=ds.EDGE_HELP)
+                                                       if 'Value Edge' in tier_display.columns and tier_display['Value Edge'].dtype != 'object'
+                                                       else st.column_config.TextColumn('Model-implied Edge', help=ds.EDGE_HELP)),
+                                        'Bet Size': st.column_config.TextColumn(
+                                            'Sizing Tier', width='small',
+                                            help='Fixed sizing by probability band; not validated by results')
                                     },
                                     height=height,
                                     hide_index=True
@@ -3148,26 +3211,27 @@ def home_page():
 
                     # Summary statistics
                     st.info(f"""
-                    **📊 CONFIDENCE TIERS** (model P(underdog covers), *not* a promised win rate —
-                    the model is only lightly calibrated and out-of-time AUC is ~0.58):
-                    - **🔥 Elite (≥65%)**: strongest signals, ~1 in 7 bets
-                    - **⭐ Strong (59-65%)**
-                    - **📈 Good (55-59%)**
-                    - **⚖️ Lean (50-55%)**: usually below the EV threshold — shown for context, not a bet
+                    **📊 MODEL-PROBABILITY BANDS** (model P(underdog covers), *not* a promised win rate):
+                    - **{l65}**: ~1 in 7 signals
+                    - **{l59}**
+                    - **{l55}**
+                    - **{l50}**: usually below the EV threshold — shown for context, not a bet
 
-                    **Total Opportunities**: {len(spread_bets_all)} games across all tiers
+                    {ds.TIER_NOTE}
+
+                    **Total games shown**: {len(spread_bets_all)} across all bands
                     """)
 
-                    st.info("""
-                    **💡 How to Use Spread Bets:**
-                    - **Underdog (Bet On)**: Team to bet on covering the spread (+points means they get that advantage)
-                    - **Model Confidence**: How confident model is underdog will cover
-                    - **Value Edge**: How much better the model thinks the odds are vs the betting line
-                    - **Bet Size**: Recommended percentage of bankroll based on confidence tier
+                    st.info(f"""
+                    **💡 How to read this table:**
+                    - **Underdog (Bet On)**: the underdog at the listed handicap (+points means they get that advantage)
+                    - **Model Probability**: the model's probability that the underdog covers
+                    - **Model-implied Edge**: {ds.EDGE_HELP}
+                    - **Sizing Tier**: fixed bankroll percentage by band; not validated by results
 
-                    **Example**: If betting "Chiefs +3.5", the Chiefs can lose by 1, 2, or 3 points and you still win!
+                    **Example**: For "Chiefs +3.5", the Chiefs can lose by 1, 2, or 3 points and the underdog still covers.
 
-                    **💰 Strategy**: Start with Elite/Strong tiers for best risk-adjusted returns!
+                    Frozen pregame results for this model are on the Frozen Performance page.
                     """)
 
                 else:
@@ -3210,7 +3274,9 @@ def home_page():
                 with col3:
                     # Filter by confidence tier
                     tiers = ['All'] + list(log_df['confidence_tier'].unique())
-                    selected_tier = st.selectbox("Confidence Tier", tiers, key="log_tier")
+                    # Options stay the stored values (filtering unchanged); only the label is neutral.
+                    selected_tier = st.selectbox("Model band", tiers, key="log_tier",
+                                                 format_func=lambda t: t if t == 'All' else ds.tier_label(t))
 
                 # Apply filters
                 filtered_log = log_df.copy()
@@ -3246,7 +3312,8 @@ def home_page():
 
                 # Performance by confidence tier (if any completed bets)
                 if completed_bets > 0:
-                    st.write("#### 🎯 Performance by Confidence Tier")
+                    st.write("#### 🎯 Results by model band")
+                    st.caption(ds.TIER_NOTE)
 
                     tier_stats = []
                     for tier in ['Elite', 'Strong', 'Good', 'Lean']:  # match betting_log._spread_tier
@@ -3268,7 +3335,7 @@ def home_page():
                                 roi = 0
 
                             tier_stats.append({
-                                'Tier': tier,
+                                'Model band': ds.tier_label(tier),
                                 'Bets': len(tier_bets),
                                 'Wins': wins,
                                 'Win Rate': f"{win_rate:.1%}",
@@ -3294,6 +3361,8 @@ def home_page():
                     display_log['model_probability'] = display_log['model_probability'].apply(lambda x: f"{x:.1%}" if pd.notna(x) else "")
                 if 'edge' in display_log.columns:
                     display_log['edge'] = display_log['edge'].apply(lambda x: f"{x:.2%}" if pd.notna(x) else "")
+                if 'confidence_tier' in display_log.columns:
+                    display_log['confidence_tier'] = display_log['confidence_tier'].map(ds.tier_label)
 
                 # The recommendation is the team at its RECORDED handicap
                 # (recommended_team + bet_spread), never the raw source line.
@@ -3338,8 +3407,9 @@ def home_page():
                         'spread_line': st.column_config.NumberColumn(RAW_SPREAD_LABEL, format='%.1f',
                                                                      help=RAW_SPREAD_HELP),
                         'model_probability': st.column_config.TextColumn('Model Prob', width='small', help='Model\'s predicted probability'),
-                        'edge': st.column_config.TextColumn('Edge', width='small', help='Model\'s edge over sportsbook'),
-                        'confidence_tier': st.column_config.TextColumn('Tier', width='small'),
+                        'edge': st.column_config.TextColumn('Model-implied Edge', width='small', help=ds.EDGE_HELP),
+                        'confidence_tier': st.column_config.TextColumn('Model Band', width='small',
+                                                                       help=ds.TIER_NOTE),
                         'bet_result': st.column_config.TextColumn('Result', width='small'),
                         'bet_profit': st.column_config.NumberColumn('Profit', format='$%.2f')
                     },
@@ -3404,13 +3474,16 @@ def home_page():
 
                 if len(completed_bets) > 0:
                     # Performance by confidence tier
-                    st.write("#### 🎯 Performance by Confidence Level")
+                    st.write("#### 🎯 Results by model band")
+                    st.caption(ds.TIER_NOTE)
                     confidence_performance = completed_bets.groupby('confidence_tier', observed=True).agg({
                         'bet_result': lambda x: (x == 'win').mean() * 100,
                         'bet_profit': 'sum'
                     }).round(2)
                     confidence_performance.columns = ['Win Rate %', 'Total Profit $']
                     confidence_performance = confidence_performance.sort_values('Win Rate %', ascending=False)
+                    confidence_performance.index = confidence_performance.index.map(ds.tier_label)
+                    confidence_performance.index.name = 'Model band'
                     st.dataframe(confidence_performance, width='stretch')
 
                     # Week-over-week tracking
@@ -3435,7 +3508,9 @@ def home_page():
                     elite_bets = completed_bets[completed_bets['confidence_tier'] == 'Elite']
                     if len(elite_bets) > 0:
                         elite_win_rate = (elite_bets['bet_result'] == 'win').mean() * 100
-                        st.info(f"🏆 **Elite Tier Performance**: {len(elite_bets)} bets with {elite_win_rate:.1f}% win rate")
+                        st.info(f"**{ds.tier_label('Elite')} band**: {len(elite_bets)} logged recommendations, "
+                                f"{elite_win_rate:.1f}% won. This alone does not establish that the "
+                                f"band is calibrated or profitable.")
 
                     # Best performing bet types
                     bet_type_performance = completed_bets.groupby('bet_type', observed=True).agg({
@@ -3457,7 +3532,7 @@ def home_page():
 
     with pred_tab9:
         st.write("### 💰 Bankroll Management Tool")
-        st.write("*Smart position sizing for elite bets to optimize risk and reward*")
+        st.write("*Fixed-percentage position sizing for games with a model output ≥65%*")
 
         # Bankroll input
         col1, col2 = st.columns([2, 1])
@@ -3593,7 +3668,7 @@ def home_page():
                     })
 
             if elite_bets:
-                st.write("#### 🏆 Elite Bets (≥65% Confidence)")
+                st.write("#### Games with a model output ≥65%")
                 elite_df = pd.DataFrame(elite_bets)
 
                 # Sort by expected value (highest first)
@@ -3607,11 +3682,14 @@ def home_page():
                         'gameday': st.column_config.TextColumn('Date', width='medium'),
                         'bet_type': st.column_config.TextColumn('Type', width='medium'),
                         'bet_on': st.column_config.TextColumn('Bet On', width='medium'),
-                        'confidence': st.column_config.TextColumn('Confidence', width='small'),
+                        'confidence': st.column_config.TextColumn('Model Probability', width='small'),
                         'odds': st.column_config.TextColumn('Odds', width='small'),
                         'recommended_bet': st.column_config.TextColumn('Bet Amount', width='medium'),
-                        'expected_payout': st.column_config.TextColumn('Expected Payout', width='medium'),
-                        'expected_value': st.column_config.TextColumn('Expected Value', width='small', help='Positive EV = profitable long-term')
+                        'expected_payout': st.column_config.TextColumn('Payout if Won', width='medium'),
+                        'expected_value': st.column_config.TextColumn(
+                            'Model-implied EV', width='small',
+                            help='Expected value if the model probability were correct. Calibration is '
+                                 'not established, so this is not a demonstrated long-term return.')
                     },
                     height=400,
                     hide_index=True
@@ -3623,21 +3701,21 @@ def home_page():
 
                 col1, col2, col3 = st.columns(3)
                 with col1:
-                    st.metric("Elite Opportunities", total_elite_bets)
+                    st.metric("Games ≥65% model output", total_elite_bets)
                 with col2:
                     st.metric("Total Recommended Wager", f"${total_recommended_wager:,.2f}")
                 with col3:
                     st.metric("Max Bankroll Impact", f"{(total_recommended_wager/bankroll)*100:.1f}%")
 
                 st.info(f"""
-                **💡 Bankroll Strategy:**
-                - **Elite bets only**: Only betting when model confidence ≥65%
+                **💡 Sizing summary:**
+                - **Selection**: games whose model probability is ≥65% and that carry the model's signal
                 - **Position sizing**: {risk_pct*100:.0f}% of bankroll per bet (${bankroll * risk_pct:,.2f})
-                - **Expected value**: All shown bets have positive expected value
+                - **Expected value**: model-implied only; it assumes the model is calibrated, which is not established
                 - **Risk management**: Maximum exposure is {total_recommended_wager/bankroll*100:.1f}% of your bankroll
                 """)
             else:
-                st.info("🎯 **No elite betting opportunities found.** Elite bets require ≥65% model confidence. Check back when new predictions are available or adjust your risk criteria.")
+                st.info("**No games with a model output ≥65% and a signal.** Check back when new predictions are available or adjust your risk criteria.")
 
         else:
             st.warning("No predictions data available. Run the model script to generate predictions.")

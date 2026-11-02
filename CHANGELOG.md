@@ -6,6 +6,36 @@ bottom.
 
 ---
 
+## November 2026
+
+- **Home page: pending games, regenerated predictions and neutral spread labels**
+  (`display_status.py`, `predictions.py`, `tests/test_display_status.py`). Display only.
+  - **Pending games:** a game dated today with no final score (e.g. a Monday
+    night game on Monday) showed as completed at 0-0, because the predictions
+    CSV stores 0-0 for unplayed games and the table selected games by date.
+    A game is now Final only when the nflverse schedule passes the repo's
+    conservative final-score rule (`bet_journal.completion_evidence`, reused
+    as a pure function on the schedule; no journal data is read) and the
+    predictions CSV shows the same score. Otherwise it is Pending (no score
+    yet, or dated today), Result unavailable (no schedule, no or duplicated
+    row, or malformed evidence: text, negative, fractional or infinite
+    scores, 0-0, inconsistent result/total/overtime) or "Unavailable -
+    sources disagree" (e.g. schedule 27-24 but predictions 0-0). Shutouts
+    such as 27-0 stay final. Non-final games show blank scores and outcomes,
+    and are left out of the Betting Performance spread totals and the Model
+    vs Baseline line (the CSV settles unplayed flagged games as -100 losses;
+    that pipeline behaviour, stored scores and settlement are unchanged).
+  - **Regenerated predictions:** the predictions-vs-results table and the
+    spread performance totals say that played games carry predictions
+    regenerated after the result, not pregame forecasts or evidence of
+    predictive success, and link to Frozen Performance.
+  - **Neutral labels:** spread bands show as "Model ≥65%" ... "Model 50–55%"
+    instead of Elite/Strong/Good/Lean; edges and EVs are labelled
+    model-implied, dependent on calibration that is not established; claims
+    such as "Recommended for max units" and "best risk-adjusted returns" are
+    removed. Probabilities, band cut points, thresholds, sorting, filters,
+    recommendations, sizing values, stored files and model code are unchanged.
+
 ## October 2026
 
 - **Player props: offline verified publication (S2)** (`player_props/publication.py`,
