@@ -1,25 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-02T10:25:28.673312+00:00",
+    "generated_at": "2026-11-03T10:24:04.418096+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-11-03"
   },
-  "bets": [
-    {
-      "game_date": "2026-11-02",
-      "game_time": "20:15",
-      "game": "CHI @ SEA",
-      "home_team": "SEA",
-      "away_team": "CHI",
-      "bet_type": "Spread",
-      "pick": "CHI +3",
-      "confidence": 0.6271331647127516,
-      "edge": 0.1221826696632466,
-      "tier": "Elite",
-      "odds": -102,
-      "line": 3.0,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
