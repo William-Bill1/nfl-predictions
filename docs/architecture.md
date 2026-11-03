@@ -109,9 +109,12 @@ edges and EVs are labelled model-implied (`display_status.EDGE_HELP`).
 
 ### Home page: completion status and regenerated predictions (display only)
 
-The predictions CSV is regenerated every night for every game and stores
-**0-0 scores and 0 outcome flags for unplayed games**. The home page therefore
-never treats a passed date or a 0 score as a result. `display_status.result_status`
+The predictions CSV is regenerated every night for every game. It leaves the
+scores, outcome flags and bet returns of every game without valid final-score
+evidence **missing** (see "Settlement of games without a final score" below);
+files written before Nov 2026 stored **0-0 scores, 0 outcome flags and -100
+spread returns** for unplayed games instead. The home page therefore never
+treats a passed date or a 0 score as a result. `display_status.result_status`
 gives each row one status:
 
 | Status | When |
@@ -127,14 +130,68 @@ read. Non-final games show blank scores and outcome flags (`blank_unsettled`)
 in "Regenerated model predictions vs results" and the Probabilities tab, and
 are left out of the Betting Performance spread totals and the Model vs
 Baseline line (`final_only`, with the number left out shown). Outcome flags of
-a final game are shown as stored; they are not recomputed. Final games, the
-stored files and settlement (`betting_log`, `nfl-gather-data.py`) are unchanged.
+a final game are shown as stored; they are not recomputed. These display rules
+work the same on files with missing outcomes and on older 0-0 files.
 
 Played games in those views carry predictions regenerated after their results
 were known, so the page labels them as such (`display_status.REGENERATED_NOTE`)
 and links to the Frozen Performance page, which scores only predictions frozen
-before kickoff. Known pipeline issue (not changed here): `nfl-gather-data.py`
-computes `spread_bet_return` for unplayed flagged games as a -100 loss.
+before kickoff.
+
+### Settlement of games without a final score (Nov 2026)
+
+`nfl-gather-data.py` used to `fillna(0)` the whole schedule before writing, so
+an unplayed game's missing scores became a 0-0 result: `underdogCovered` = 0,
+`spreadPush` = 0, and a flagged game got `spread_bet_return` = -100, a settled
+loss (e.g. CHI @ SEA on 2026-11-02; on 2026-11-03 eight flagged Week 9 games
+were stored that way). Score-derived fields of a malformed or inconsistent
+schedule row were graded too.
+
+Now `final_score_mask` decides, on the raw schedule before `fillna(0)`, which
+games have valid final-score evidence, reusing `bet_journal.completion_evidence`
+(pure; reads only the frame passed in, never journal files): exactly one row;
+both scores finite non-negative integers, not 0-0; `result` = home - away,
+`total` = home + away; `overtime` 0 or 1; game day strictly before today in
+America/Toronto. **Same-day policy:** a game dated today is not settled even if
+scores are present; the next run settles it (the nightly run is at about
+05:25 Toronto, after the previous day's games). A passed date or a 0 score is
+never evidence. When the predictions CSV is written, `unsettled_as_missing`
+sets every field in `OUTCOME_COLUMNS` (scores, `result`, `total`, `overtime`,
+win/cover/push/over/under flags and the score-derived accuracy fields) and
+`BET_RETURN_COLUMNS` (`moneyline_bet_return`, `spread_bet_return`,
+`totals_bet_return`) to missing for every other game.
+
+- **Unchanged:** training (still every game with both scores), thresholds,
+  probabilities, signals, EV/edges, metrics, feature importances and the
+  grading and payout arithmetic of settled games. Only the written copy is
+  blanked; settled rows are written byte for byte as before. Integer flag
+  columns are written as nullable integers, so readers load them as float.
+- **When it applies:** on every pipeline run. The nightly run rewrites the whole
+  file, so the next run also fixes rows written earlier: a game that was stored
+  as 0-0 / -100 while unplayed is stored with missing outcomes until it has valid
+  evidence, and graded once it does. Nothing else rewrites stored history.
+- **Readers:** `betting_log.grade_pending` and `scripts/run_weekly_backtest.py`
+  treat missing scores like the old 0-0 placeholder (not played).
+  `display_status` and `pregame_snapshots` (which reads the schedule's own
+  scores) work unchanged. The home page's in-app Monte Carlo splits use only
+  games with a known target; the moneyline baseline counts only known results;
+  and the page's own moneyline return is missing, not -100, for a flagged game
+  without a result, and its moneyline totals count settled bets only.
+- **Monte Carlo feature search (home page):** the Moneyline and Totals
+  searches select, split, fit and score only rows with a known target (the
+  same mask as the page's own split, original row index kept); the
+  best-feature retraining takes its labels from that same split. With fewer
+  than 5 known games of either outcome (`FEATURE_SEARCH_MIN_PER_CLASS`), the
+  search shows a warning and runs nothing, so no `best_features_*.txt` is
+  written. With every target known, the splits are identical to before.
+- **Spread performance block (home page):** settled bets are rows with a
+  non-zero recorded return on a verified final game (pushes return 0 and are
+  not counted, as before). The "flagged game(s) without a verified final
+  score" caption counts rows whose recorded signal
+  (`pred_spreadCovered_optimal == 1`) or non-zero return marks a bet, but
+  whose game isn't final. An unflagged pending game is "no bet" and is not
+  counted. (Before, `spread_bet_return != 0` let every missing return
+  through, so all pending games were counted.)
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 
@@ -1889,6 +1946,10 @@ rollout history in `docs/ODDS_API_INTEGRATION_PLAN.md`.
   `pred_spreadCovered_optimal = 0`, and are never trained on. The CSV's
   `spread_line` is still written as 0 for those games (schema unchanged);
   read a missing probability as "no line".
+- **Unsettled games:** `_final` (`final_score_mask`) is also captured before
+  `fillna(0)`. Games without valid final-score evidence are written with
+  missing outcome fields and bet returns, never a 0-0 result or a -100 loss;
+  see "Settlement of games without a final score".
 
 ## API Integrations
 | Source | Purpose | Notes |

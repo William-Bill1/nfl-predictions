@@ -409,6 +409,25 @@ def _as_display_date(df, *cols):
     return out
 
 
+FEATURE_SEARCH_MIN_PER_CLASS = 5  # a stratified 80/20 split leaves >= 4 per class for 3-fold CV
+
+
+def _feature_search_shortfall(y_known):
+    """Why a Monte Carlo feature search can't run on these known labels, or None.
+
+    The search splits 80/20 stratified on the label, then scores and calibrates
+    with 3-fold CV, so it needs both outcomes and enough games of each.
+    """
+    counts = y_known.value_counts()
+    if len(counts) < 2:
+        return (f"it needs games of both outcomes with a final result; "
+                f"{len(y_known):,} known result(s) all share one outcome")
+    if counts.min() < FEATURE_SEARCH_MIN_PER_CLASS:
+        return (f"it needs at least {FEATURE_SEARCH_MIN_PER_CLASS} games of each outcome with a final "
+                f"result; the rarer outcome has {int(counts.min()):,}")
+    return None
+
+
 SPREAD_TIER_CUTS = (0.65, 0.59, 0.55, 0.50)  # band floors (stored names: Elite, Strong, Good, Lean)
 # Neutral display labels (display_status.NEUTRAL_TIER_LABELS); the cut points are unchanged.
 SPREAD_TIER_LABELS = tuple(ds.NEUTRAL_TIER_LABELS[k] for k in ('Elite', 'Strong', 'Good', 'Lean'))
@@ -1915,8 +1934,11 @@ def home_page():
     available_spread_features = [f for f in best_features_spread if f in historical_game_level_data.columns]
     X_spread_full = historical_game_level_data[available_spread_features].select_dtypes(include=["number", "bool", "category"])
     # Spread features loaded (log suppressed)
+    # Games without a final result have a missing (not 0) target in the
+    # predictions file; they can't be split on or learned from.
+    _known = y_spread.notna()
     X_train_spread, X_test_spread, y_spread_train, y_spread_test = train_test_split(
-        X_spread_full, y_spread, test_size=0.2, random_state=42, stratify=y_spread)
+        X_spread_full[_known], y_spread[_known], test_size=0.2, random_state=42, stratify=y_spread[_known])
     # Spread train/test split complete (log suppressed)
 
     # --- Moneyline (underdogWon) target and split ---
@@ -1927,8 +1949,9 @@ def home_page():
     available_moneyline_features = [f for f in best_features_moneyline if f in historical_game_level_data.columns]
     X_moneyline_full = historical_game_level_data[available_moneyline_features].select_dtypes(include=["number", "bool", "category"])
     # Moneyline features loaded (log suppressed)
+    _known_ml = y_moneyline.notna()   # also used by the Monte Carlo search below
     X_train_ml, X_test_ml, y_train_ml, y_test_ml = train_test_split(
-        X_moneyline_full, y_moneyline, test_size=0.2, random_state=42, stratify=y_moneyline)
+        X_moneyline_full[_known_ml], y_moneyline[_known_ml], test_size=0.2, random_state=42, stratify=y_moneyline[_known_ml])
     # Moneyline train/test split complete (log suppressed)
 
     # --- Totals (overHit) target and split ---
@@ -1945,8 +1968,9 @@ def home_page():
         X_totals_full = historical_game_level_data[available_totals_features].select_dtypes(include=["number", "bool", "category"])
         # X_totals_full shape (log suppressed)
 
+        _known_tot = y_totals.notna()   # also used by the Monte Carlo search below
         X_train_tot, X_test_tot, y_train_tot, y_test_tot = train_test_split(
-            X_totals_full, y_totals, test_size=0.2, random_state=42, stratify=y_totals)
+            X_totals_full[_known_tot], y_totals[_known_tot], test_size=0.2, random_state=42, stratify=y_totals[_known_tot])
         print("✅ Totals train/test split complete", file=sys.stderr, flush=True)
     except Exception as e:
         print(f"❌ ERROR in totals model setup: {type(e).__name__}: {str(e)}", file=sys.stderr, flush=True)
@@ -2865,6 +2889,8 @@ def home_page():
                 # Calculate moneyline_bet_return column
                 def calc_moneyline_return(row):
                     if row['pred_underdogWon_optimal'] == 1:
+                        if pd.isna(row['underdogWon']):
+                            return np.nan  # no final result yet: not a settled win or loss
                         if row['underdogWon'] == 1:
                             underdog_odds = max(row['away_moneyline'], row['home_moneyline'])
                             if underdog_odds > 0:
@@ -2884,7 +2910,9 @@ def home_page():
             # Calculate betting statistics
             if predictions_df_full is not None and 'pred_underdogWon_optimal' in predictions_df_full.columns and 'moneyline_bet_return' in predictions_df_full.columns:
                 # Moneyline betting stats
-                moneyline_bets = predictions_df_full[predictions_df_full['pred_underdogWon_optimal'] == 1].copy()
+                # Settled bets only: a game without a final result has a missing return.
+                moneyline_bets = predictions_df_full[(predictions_df_full['pred_underdogWon_optimal'] == 1)
+                                                     & predictions_df_full['moneyline_bet_return'].notna()].copy()
                 if len(moneyline_bets) == 0:
                     st.info(
                         "**Moneyline model disabled** — no out-of-time edge (temporal AUC ≈ 0.56). "
@@ -2998,9 +3026,21 @@ def home_page():
 
             # Spread betting stats (if available)
             if 'spread_bet_return' in predictions_df_full.columns:
-                spread_bets = predictions_df_full[predictions_df_full['spread_bet_return'] != 0]
-                # The predictions file settles unplayed games as 0-0; count only final games.
-                spread_bets, _not_final = ds.final_only(spread_bets, ds.load_completion_evidence(DATA_DIR))
+                _spread_ret = predictions_df_full['spread_bet_return']
+                _evidence = ds.load_completion_evidence(DATA_DIR)
+                # Settled bets have a non-zero return (a push refunds the stake, 0, and is
+                # not counted, as before). A missing return is an unknown result, not a bet:
+                # fill it first, since NaN != 0 is True.
+                spread_bets = predictions_df_full[_spread_ret.fillna(0) != 0]
+                # Older predictions files settle unplayed games as 0-0; count only final games.
+                spread_bets, _ = ds.final_only(spread_bets, _evidence)
+                # Left out: games the recorded spread signal flagged (or that carry a
+                # non-zero return) without a verified final score. Unflagged pending games
+                # are "no bet" and are not counted here.
+                _flagged = _spread_ret.fillna(0) != 0
+                if 'pred_spreadCovered_optimal' in predictions_df_full.columns:
+                    _flagged |= predictions_df_full['pred_spreadCovered_optimal'] == 1
+                _not_final = int((ds.result_status(predictions_df_full[_flagged], _evidence) != ds.FINAL).sum())
                 if len(spread_bets) > 0 or _not_final:
                     st.write("#### 📈 Spread Betting Performance (regenerated predictions)")
                     st.caption(ds.REGENERATED_NOTE)
@@ -3047,7 +3087,9 @@ def home_page():
 
             # Performance comparison
             st.write("#### 🏆 Model vs Baseline Comparison")
-            baseline_accuracy = (predictions_df_full['underdogWon'] == 0).mean()  # Always pick favorites
+            # Always pick favorites, over games with a known result (a missing
+            # underdogWon is an unplayed game, not a favorite win or loss).
+            baseline_accuracy = (predictions_df_full['underdogWon'].dropna() == 0).mean()
             st.write(f"- **Baseline (always pick the favorite on the moneyline)**: {baseline_accuracy:.1%} accuracy")
             if 'spread_bet_return' in predictions_df_full.columns:
                 _sb = predictions_df_full[predictions_df_full['spread_bet_return'].fillna(0) != 0]
@@ -3992,7 +4034,14 @@ def home_page():
             subset_size = st.number_input("Subset Size (Moneyline)", min_value=2, max_value=numeric_features_count, value=min(8, numeric_features_count), step=1)
             random_seed = st.number_input("Random Seed (Moneyline)", min_value=0, value=42, step=1)
             run_mc = st.button("Run Monte Carlo Search (Moneyline)")
-            if run_mc:
+            # Only games with a final result (a missing underdogWon is unplayed) are
+            # searched, split, fitted and scored; rows keep their original index.
+            y_moneyline_known = y_moneyline[_known_ml]
+            _ml_shortfall = _feature_search_shortfall(y_moneyline_known) if run_mc else None
+            if _ml_shortfall:
+                st.warning(f"Moneyline feature search not run: {_ml_shortfall}. "
+                           f"best_features_moneyline.txt was not changed.")
+            elif run_mc:
                 with st.spinner("Running Monte Carlo feature selection..."):
                     # Filter features to only those available in the dataset
                     available_features = [f for f in features if f in historical_game_level_data.columns]
@@ -4005,9 +4054,9 @@ def home_page():
                     for i in range(int(num_iter)):
                         subset = random.sample(numeric_features, min(int(subset_size), len(numeric_features)))
                         # Create a fresh dataset slice for this subset to avoid column mismatch
-                        X_subset_data = historical_game_level_data[subset]
+                        X_subset_data = historical_game_level_data.loc[_known_ml, subset]
                         X_train_subset, _, y_train_subset, _ = train_test_split(
-                            X_subset_data, y_moneyline, test_size=0.2, random_state=42, stratify=y_moneyline)
+                            X_subset_data, y_moneyline_known, test_size=0.2, random_state=42, stratify=y_moneyline_known)
 
                         model = XGBClassifier(eval_metric='logloss', use_label_encoder=False)
                         acc = cross_val_score(model, X_train_subset, y_train_subset, cv=3, scoring='accuracy').mean()
@@ -4036,13 +4085,14 @@ def home_page():
                 with open(path.join(DATA_DIR, 'best_features_moneyline.txt'), 'w') as f:
                     f.write("\n".join(best_features))
                 # Retrain model using best_features (Moneyline) - create new dataset with selected features
-                X_moneyline_best = historical_game_level_data[best_features]
-                X_train_ml_best, X_test_ml_best, _, _ = train_test_split(
-                    X_moneyline_best, y_moneyline, test_size=0.2, random_state=42, stratify=y_moneyline)
+                # Labels come from this same split, so they stay aligned with its rows.
+                X_moneyline_best = historical_game_level_data.loc[_known_ml, best_features]
+                X_train_ml_best, X_test_ml_best, y_train_ml_best, y_test_ml_best = train_test_split(
+                    X_moneyline_best, y_moneyline_known, test_size=0.2, random_state=42, stratify=y_moneyline_known)
                 model_moneyline_best = XGBClassifier(eval_metric='logloss', use_label_encoder=False)
-                model_moneyline_best.fit(X_train_ml_best, y_train_ml)
+                model_moneyline_best.fit(X_train_ml_best, y_train_ml_best)
                 y_moneyline_pred_best = model_moneyline_best.predict(X_test_ml_best)
-                moneyline_accuracy_best = accuracy_score(y_test_ml, y_moneyline_pred_best)
+                moneyline_accuracy_best = accuracy_score(y_test_ml_best, y_moneyline_pred_best)
                 st.write(f"Accuracy with best features (Moneyline): {moneyline_accuracy_best:.3f}")
                 scores_df = pd.DataFrame(scores_list).sort_values(by='accuracy', ascending=False).head(10)
                 st.write("#### Top 10 Feature Subsets (by Accuracy)")
@@ -4068,7 +4118,14 @@ def home_page():
             subset_size = st.number_input("Subset Size (Totals)", min_value=2, max_value=len(features), value=8, step=1)
             random_seed = st.number_input("Random Seed (Totals)", min_value=0, value=42, step=1)
             run_mc = st.button("Run Monte Carlo Search (Totals)")
-            if run_mc:
+            # Only games with a final result (a missing overHit is unplayed) are searched,
+            # split, fitted and scored; X_train_tot / y_train_tot already exclude the rest.
+            y_totals_known = y_totals[_known_tot]
+            _tot_shortfall = _feature_search_shortfall(y_totals_known) if run_mc else None
+            if _tot_shortfall:
+                st.warning(f"Totals feature search not run: {_tot_shortfall}. "
+                           f"best_features_totals.txt was not changed.")
+            elif run_mc:
                 with st.spinner("Running Monte Carlo feature selection..."):
                     best_score = 0
                     best_features = []
@@ -4105,19 +4162,20 @@ def home_page():
                 with open(path.join(DATA_DIR, 'best_features_totals.txt'), 'w') as f:
                     f.write("\n".join(best_features))
                 # Retrain model using best_features and calibrate probabilities (Totals)
-                X_totals_best = historical_game_level_data[best_features].select_dtypes(include=["number", "bool", "category"])
-                X_train_tot_best, X_test_tot_best, _, _ = train_test_split(
-                    X_totals_best, y_totals, test_size=0.2, random_state=42, stratify=y_totals)
+                # Labels come from this same split, so they stay aligned with its rows.
+                X_totals_best = historical_game_level_data.loc[_known_tot, best_features].select_dtypes(include=["number", "bool", "category"])
+                X_train_tot_best, X_test_tot_best, y_train_tot_best, y_test_tot_best = train_test_split(
+                    X_totals_best, y_totals_known, test_size=0.2, random_state=42, stratify=y_totals_known)
                 from sklearn.calibration import CalibratedClassifierCV
                 model_totals_best = XGBClassifier(eval_metric='logloss', use_label_encoder=False)
                 calibrated_model_totals = CalibratedClassifierCV(model_totals_best, method='isotonic', cv=3)
-                calibrated_model_totals.fit(X_train_tot_best, y_train_tot)
+                calibrated_model_totals.fit(X_train_tot_best, y_train_tot_best)
                 y_totals_pred_best = calibrated_model_totals.predict(X_test_tot_best)
-                totals_accuracy_best = accuracy_score(y_test_tot, y_totals_pred_best)
+                totals_accuracy_best = accuracy_score(y_test_tot_best, y_totals_pred_best)
                 # Probability sanity check
                 probs_totals = calibrated_model_totals.predict_proba(X_test_tot_best)[:, 1]
                 mean_pred_prob_totals = np.mean(probs_totals)
-                actual_rate_totals = np.mean(y_test_tot)
+                actual_rate_totals = np.mean(y_test_tot_best)
                 st.write(f"Accuracy with best features (Totals): {totals_accuracy_best:.3f}")
                 st.write(f"Mean predicted probability (test set): {mean_pred_prob_totals:.3f}")
                 st.write(f"Actual outcome rate (test set): {actual_rate_totals:.3f}")

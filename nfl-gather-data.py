@@ -7,7 +7,7 @@ from pathlib import Path
 # from sklearn.metrics import mean_absolute_error, accuracy_score
 # from sklearn.inspection import permutation_importance
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 import requests
 from xgboost import XGBClassifier
 try:
@@ -167,6 +167,55 @@ def implied_prob(odds):
     return prob
 
 
+# Stored fields that describe a game's result. For a game without valid final
+# scores these are unknown, and are written as missing (NaN), never as the 0s
+# that fillna(0) gives them: a 0 there reads as a real result (0-0, favorite
+# won, underdog didn't cover) and a 0/-100 bet return as a settled bet.
+OUTCOME_COLUMNS = (
+    'home_score', 'away_score', 'result', 'total', 'overtime',
+    'homeWin', 'awayWin', 'isCloseGame', 'isBlowout', 'totalScore', 'pointDiff',
+    'gameLineAccuracy', 'overUnderAccuracy',
+    'spreadCovered', 'favoriteCovered', 'spreadPush', 'underdogCovered', 'underdogWon',
+    'overHit', 'underHit', 'totalHit', 'total_line_diff',
+)
+BET_RETURN_COLUMNS = ('moneyline_bet_return', 'spread_bet_return', 'totals_bet_return')
+
+
+def final_score_mask(schedule, now):
+    """True for each schedule row whose game has valid, consistent final-score
+    evidence: bet_journal.completion_evidence (exactly one row; both scores
+    finite non-negative integers, not 0-0; `result` = home - away, `total` =
+    home + away; `overtime` 0 or 1; game day strictly before today in
+    America/Toronto). Same-day policy: a game dated today is not final yet,
+    even with scores; the next day's run settles it. A passed date or a 0
+    score alone is never evidence. Call it on the raw schedule, before
+    fillna(0). completion_evidence is pure: it reads only the frame passed in,
+    never journal files."""
+    import bet_journal
+    final = pd.Series(False, index=schedule.index)
+    if 'game_id' not in schedule.columns:
+        return final
+    for game_id, rows in schedule.groupby('game_id', sort=False):
+        evidence, _ = bet_journal.completion_evidence(rows, game_id, now)
+        final.loc[rows.index] = evidence is not None
+    return final
+
+
+def unsettled_as_missing(df, final):
+    """Copy of df with every outcome field and bet return set to missing
+    where `final` is False. Final rows keep their values exactly (integer
+    columns become nullable Int64, so they are still written as 1/0)."""
+    out = df.copy()
+    not_final = ~final.reindex(out.index, fill_value=False).astype(bool)
+    for col in OUTCOME_COLUMNS + BET_RETURN_COLUMNS:
+        if col not in out.columns:
+            continue
+        if pd.api.types.is_integer_dtype(out[col]) or pd.api.types.is_bool_dtype(out[col]):
+            out[col] = out[col].astype('Int64')
+        out[col] = out[col].mask(not_final)
+    return out
+
+
 DATA_DIR = 'data_files/'
 
 # Reproducibility: a fixed seed plus single-threaded training. XGBoost's `hist`
@@ -179,13 +228,16 @@ _XGB_KW = {"random_state": RANDOM_STATE, "n_jobs": 1}
 _LGBM_KW = {"random_state": RANDOM_STATE, "n_jobs": 1}
 
 
-def main():
+def main(now=None):
     """Build features, train the three game models, write predictions +
     metrics + feature importances, then run Monte Carlo feature selection.
 
     All pipeline work lives here so importing this module (e.g. via runpy or
-    importlib) has no side effects.
+    importlib) has no side effects. `now` (timezone-aware; default: the
+    current time) only decides which games count as final for the stored
+    outcome fields and bet returns - see final_score_mask.
     """
+    now = now or datetime.now(timezone.utc)
     # Provenance: a run that doesn't finish leaves no manifest, so pregame
     # snapshots can't attach an old run's identity to new (or half-written)
     # predictions. The schedule hash records exactly which input was read.
@@ -205,6 +257,14 @@ def main():
                & historical_game_level_data['away_score'].notna())
     print(f"Games: {len(historical_game_level_data)} total, {int(_played.sum())} played, "
           f"{int((~_played).sum())} upcoming (predicted but not trained on)")
+    # Games with valid final-score evidence, decided on the raw schedule before
+    # fillna(0) turns missing scores into 0-0. Only these are settled in the
+    # written predictions file: every other game's outcome fields and bet
+    # returns are stored as missing, not as a 0-0 result and a -100 loss.
+    # (Training still uses _played; this changes only what is written.)
+    _final = final_score_mask(historical_game_level_data, now)
+    print(f"Settlement: {int(_final.sum())} games with valid final scores, "
+          f"{int((~_final).sum())} pending or without valid evidence (outcomes left missing)")
     # A spread prediction needs a posted, non-zero line (a 0 line has no underdog).
     # Captured here, on the raw schedule, because fillna(0) below would turn a
     # missing line into a fake pick'em.
@@ -963,7 +1023,11 @@ def main():
         if col not in historical_game_level_data.columns:
             historical_game_level_data[col] = np.nan
 
-    historical_game_level_data.to_csv(path.join(DATA_DIR, 'nfl_games_historical_with_predictions.csv'), index=False, sep='\t')
+    # Written from a copy: the in-memory frame (used below for the training
+    # cut-off dates) keeps its values; only the stored file leaves unknown
+    # outcomes missing.
+    unsettled_as_missing(historical_game_level_data, _final).to_csv(
+        path.join(DATA_DIR, 'nfl_games_historical_with_predictions.csv'), index=False, sep='\t')
     print("Saved historical game data with predictions to nfl_games_historical_with_predictions.csv")
 
     # Save model metrics (accuracy, MAE, etc.) to JSON

@@ -8,6 +8,37 @@ bottom.
 
 ## November 2026
 
+- **Pipeline: unplayed games are no longer settled as losses**
+  (`nfl-gather-data.py`, `predictions.py`, `tests/test_pending_settlement.py`).
+  - **Bug:** `fillna(0)` turned an unplayed game's missing scores into a 0-0
+    result before the outcome flags and bet returns were written, so a
+    flagged unplayed game was stored with `underdogCovered` = 0 and
+    `spread_bet_return` = -100 (CHI @ SEA on 2026-11-02; eight Week 9 games
+    in the 2026-11-03 file). Malformed or inconsistent schedule rows were
+    graded too.
+  - **Fix:** a game is settled only with valid, consistent final-score
+    evidence (`bet_journal.completion_evidence`, reused as a pure function on
+    the raw schedule; game day strictly before today in Toronto, so same-day
+    games settle on the next run). For every other game the written file
+    leaves the scores, `result`/`total`/`overtime`, all outcome flags and the
+    three bet returns missing instead of 0 / -100.
+  - **Unchanged:** training, probabilities, thresholds, signals, metrics,
+    and the grading and payouts of settled games (byte for byte as written).
+  - **Readers:** the betting log grader and weekly backtest already treat
+    missing scores as unplayed. On the home page the in-app Monte Carlo
+    splits skip unknown targets (missing targets would otherwise raise), the
+    moneyline baseline counts known results only, and the page's own
+    moneyline return is missing, not -100, for a game without a result.
+    The Moneyline and Totals Monte Carlo feature searches also split, fit
+    and score known results only (labels from the same split), and with
+    fewer than 5 known games of either outcome they show a warning instead
+    of running or writing a feature file. The spread block's "without a
+    verified final score" caption now counts only games the recorded spread
+    signal flagged; unflagged pending games (missing return) are no bet.
+  - **History:** the nightly run rewrites the whole file, so its next run
+    also replaces earlier 0-0 / -100 rows for unplayed games. No stored file
+    was edited by hand.
+
 - **Home page: pending games, regenerated predictions and neutral spread labels**
   (`display_status.py`, `predictions.py`, `tests/test_display_status.py`). Display only.
   - **Pending games:** a game dated today with no final score (e.g. a Monday
