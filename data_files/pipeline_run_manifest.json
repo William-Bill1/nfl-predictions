@@ -1,16 +1,16 @@
 {
   "artifact": {
     "path": "nfl_games_historical_with_predictions.csv",
-    "sha256": "74d0d734bfc09b23fdc8a61d3baf3a10d14813d1c9ba0645e2987faeaa359052"
+    "sha256": "64648ffcaad2e82585c79b5b7fa388a47e87360cea62a7a9c2d10b38f4ec4b87"
   },
   "ci_run": {
     "GITHUB_RUN_ATTEMPT": "1",
-    "GITHUB_RUN_ID": "41618536604",
+    "GITHUB_RUN_ID": "41812900367",
     "GITHUB_WORKFLOW": "Nightly NFL Data Update"
   },
   "code_dirty": false,
-  "code_revision": "b0b304f2437db077e25cf3b9da95d0683296462d",
-  "code_sha256": "a6c222a5591da6f7049b7d756d59e6d86cda29f337c463179ed44870e17388e7",
+  "code_revision": "13ad065d26c5badf22410fd20a31fe953f10002a",
+  "code_sha256": "d78f3d4e3b3849996184a03cd50c33e8c3c05154ed0494f77d377e7ab8db9874",
   "config": {
     "lgbm_available": true,
     "libraries": {
@@ -121,14 +121,14 @@
     "homeTeamWinPct",
     "spread_line"
   ],
-  "generated_at": "2026-11-03T10:23:55Z",
+  "generated_at": "2026-11-04T10:17:43Z",
   "platform": {
-    "python": "3.12.15"
+    "python": "3.12.16"
   },
-  "run_id": "20261103T102355Z-8215e4fed27a",
+  "run_id": "20261104T101743Z-68a1c5ebb6d8",
   "schedule": {
     "path": "nfl_games_historical.csv",
-    "sha256": "ed999af76d182719c02746ab72799f7aed0f4da1b723cf64239e025cff53711b"
+    "sha256": "7138d842d8f6f7ad0246849ae62c170247f23963e00ee08a3a7ec829f4325ab7"
   },
   "schema_version": 1,
   "spread_threshold": 0.5439752982594829,
