@@ -299,6 +299,15 @@ def validate_manifest(m: dict, where: str = "manifest") -> None:
         _check_fields(m[key], ("path", "sha256"), f"{where}.{key}")
         if m[key]["path"] != name or not _HEX64.match(str(m[key]["sha256"])):
             _fail(f"{where}.{key}", f"malformed {m[key]!r}")
+    # Optional (absent from manifests written before it existed): the clock the
+    # run settled games with (nfl-gather-data.final_score_mask), so a checker
+    # can apply the same Toronto same-day rule to the same instant. Not ordered
+    # against generated_at here: tests run the pipeline "as of" other dates.
+    if "settled_as_of" in m:
+        try:
+            _parse_utc(m["settled_as_of"])
+        except ValueError as exc:
+            _fail(where, f"settled_as_of: {exc}")
 
 
 def _validate_game(g, captured_at: datetime, where: str) -> None:
@@ -428,12 +437,13 @@ def remove_stale_manifest(data_dir: Path | str) -> None:
 def write_run_manifest(data_dir: Path | str, *, schedule_sha256: str, code_files: list[Path],
                        repo_dir: Path | str, config: dict, features: list[str],
                        training_cutoff: dict, data_cutoff: dict, spread_threshold: float,
-                       now: datetime | None = None) -> dict:
+                       now: datetime | None = None, settled_as_of: datetime | None = None) -> dict:
     """Write pipeline_run_manifest.json for the run that just produced the predictions CSV.
 
     The run_id is assigned here, once, and never regenerated: capture retries
     reuse this manifest. `schedule_sha256` must be the hash of the exact bytes
-    the run parsed (see read_bytes_once).
+    the run parsed (see read_bytes_once). `settled_as_of`, when given, is the
+    clock the run decided final games with (recorded to the second).
     """
     data_dir = Path(data_dir)
     generated_at = (now or utc_now()).replace(microsecond=0)
@@ -464,6 +474,8 @@ def write_run_manifest(data_dir: Path | str, *, schedule_sha256: str, code_files
         "artifact": {"path": PREDICTIONS_NAME, "sha256": artifact_sha},
         "schedule": {"path": SCHEDULE_NAME, "sha256": schedule_sha256},
     }
+    if settled_as_of is not None:
+        manifest["settled_as_of"] = _iso(settled_as_of)
     validate_manifest(manifest)
     tmp = data_dir / (MANIFEST_NAME + ".tmp")
     tmp.write_text(json.dumps(manifest, indent=2, sort_keys=True, allow_nan=False) + "\n")

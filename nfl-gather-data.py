@@ -1157,6 +1157,7 @@ def main(now=None):
         training_cutoff=_cutoff(_train_rows),
         data_cutoff=_cutoff(_data_rows),
         spread_threshold=optimal_spread_threshold,
+        settled_as_of=now,          # the clock final_score_mask used above
     )
     print("Wrote pipeline_run_manifest.json (provenance for pregame snapshots)")
 
