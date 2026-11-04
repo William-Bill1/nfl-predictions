@@ -26,8 +26,8 @@ Step 1 — build/train  (python build_and_train_pipeline.py):
                data_files/pipeline_run_manifest.json  (provenance of this run:
                  unique run_id, revision, config/feature ids, cutoffs, artifact
                  + schedule sha256 - schedule read once, hash of the parsed
-                 bytes; written last, deleted at start; NOT a deterministic
-                 artifact)
+                 bytes; settled_as_of = the settlement clock; written last,
+                 deleted at start; NOT a deterministic artifact)
 
 Pregame capture  (python pregame_snapshots.py capture - nightly, after step 1):
     manifest hashes verified against the predictions CSV + schedule
@@ -35,6 +35,12 @@ Pregame capture  (python pregame_snapshots.py capture - nightly, after step 1):
           schema-validated + whole-payload checksum; eligible upcoming games
           with a usable kickoff after capture time; no outcomes; a failed
           capture fails the nightly run after data is published)
+
+Publication gate  (python scripts/check_pipeline_outputs.py --require-current-run
+                   - nightly, before the upload/commit/push steps; required):
+    this run's manifest + exact file hashes; consistent settlement
+        → pass: publish as before   fail: job fails, nothing uploaded/committed/pushed
+          (see "Nightly publication gate" below)
 
 Results tracking  (python betting_log.py ; python scripts/weekly_spread_report.py):
     nfl_games_historical_with_predictions.csv
@@ -192,6 +198,117 @@ win/cover/push/over/under flags and the score-derived accuracy fields) and
   whose game isn't final. An unflagged pending game is "no bet" and is not
   counted. (Before, `spread_bet_return != 0` let every missing return
   through, so all pending games were counted.)
+
+### Nightly publication gate (Nov 2026)
+
+`nightly-update.yml` runs `python scripts/check_pipeline_outputs.py
+--require-current-run` in the step **"Validate pipeline outputs before
+publishing"** (`id: output_gate`). It runs after everything that writes
+tonight's files (pipeline, pregame capture, prop steps, betting log) and
+before the first step that publishes anything. It has **no
+`continue-on-error`**: a failure fails the job, and every later step without
+`always()` in its `if:` is skipped. That covers the artifact upload, "Commit
+and push changes", the best-bets export and its push. Only "Keep the rejected
+outputs for diagnosis" (7-day artifact: predictions CSV, schedule, manifest,
+metrics; nothing committed) and the final pregame-capture check still run. The
+gate's report (run identity, counts, problems) goes to the job summary.
+
+What the gate requires (the same script, without the flag, is
+`pipeline-smoke`'s sanity check):
+
+- **This run's outputs, by identity rather than file times:**
+  - the manifest is valid, and the predictions CSV and schedule are
+    byte-for-byte the files whose SHA-256 it recorded;
+  - its `ci_run` `GITHUB_RUN_ID` and `GITHUB_RUN_ATTEMPT`, and its
+    `code_revision`, equal this run's; `code_dirty` is false;
+  - `code_sha256` matches the checked-out `nfl-gather-data.py` and
+    `team_features.py`.
+
+  So an older run's internally consistent pair, such as the committed files
+  left in place by a pipeline that didn't rewrite them, can't pass as
+  tonight's.
+- **Structure:** one predictions row per schedule row, the same games in the
+  same order, with the same season, week and game day. Bet signals are 0 or 1.
+- **Teams and lines match the schedule row.** `home_team`, `away_team` and
+  the posted market (`spread_line`, `total_line`, both moneylines, both
+  spread odds, `over_odds`, `under_odds`) must be in both files and equal the
+  matching schedule row. The only normalization allowed is the pipeline's
+  own: its whole-frame `fillna(0)` and inf → 0, so an unposted or infinite
+  line is written as 0. Teams are never renamed. A missing column or a
+  mismatched or blank value is rejected; the gate never fills in the
+  schedule's value.
+- **Probabilities where the market is valid.** Every probability is finite
+  and in [0, 1], and is present exactly where its market is valid, by the
+  pipeline's own rules:
+  - `prob_underdogCovered`: a posted, non-zero `spread_line` in the raw
+    schedule, flagged or not. Games without a posted line, and pick'ems
+    (line 0), must have no probability and no signal.
+  - `prob_overHit`: non-zero `over_odds`, after normalization.
+  - `prob_underdogWon`: a non-zero underdog moneyline (the higher of the
+    two), after normalization.
+- **Settlement, decided as the pipeline decides it:** `final_score_mask`
+  (imported from `nfl-gather-data.py`) is applied at the manifest's new
+  `settled_as_of`, the clock the run settled with.
+  - **Pending or unverifiable games** must have *every* outcome field and bet
+    return missing. A 0-0, a 0 or a -100 on such a game (the old fictitious
+    loss) is rejected.
+  - **Final games** must have them all, except the three ratio fields. Their
+    scores, `result`, `total` and `overtime` must equal the schedule's
+    evidence. The win, close, blowout, total, cover, push, underdog and over
+    or under flags are re-derived from the score and line. `spread_bet_return`
+    must be 0 with no bet or a push, and otherwise +90.91 or -100. Moneyline
+    and totals returns must be 0 without a bet.
+- **Unchanged checks:** metrics keys and slices, and the feature file.
+
+**Toronto same-day policy and midnight.** The pipeline takes its clock once,
+when `main()` starts, and settles every game with it. The manifest now records
+that instant as `settled_as_of` (`generated_at` is stamped later, when the
+manifest is written). The gate applies the same rule at the same instant, so a
+run that starts just before Toronto midnight and finishes after it is still
+checked against the day it settled with. The gate never uses its own clock for
+settlement. A manifest without `settled_as_of` (written before this change) is
+rejected, because its settlement can't be checked. Two limitations remain:
+- the rule itself: a game dated "today" at settlement stays pending until the
+  next run, even if it has finished;
+- other steps keep their own clocks. `betting_log.py`, the best-bets export
+  and the app's completion status each read the time when they run, so near
+  midnight they can disagree with the file about which day "today" is. That
+  was already the case before the gate.
+
+The gate also requires `settled_as_of` to be at most 30 minutes (the pipeline
+step's timeout) before `generated_at`.
+
+**Not covered by the gate:**
+- `model_metrics.json`, `model_feature_importances.csv` and
+  `best_features_spread.txt` are not hashed in the manifest. They are checked
+  for structure only, not tied to this run.
+- `betting_recommendations_log.csv` (written by `betting_log.py`) and the
+  pregame snapshot are not validated by the gate; the snapshot validates
+  itself in its own capture step.
+- `best_bets_today.json` is exported after the gate, from the validated
+  predictions file.
+- Probability *values* are not reproduced. A different finite probability in
+  [0, 1] passes. `prob_overHit` and `prob_underdogWon` are not compared to
+  the implied odds. `ev_spread`, the edge columns and whether a signal
+  matches the threshold are not re-derived.
+- Other columns copied from the schedule (game time, venue, weather, rest,
+  coaches, quarterbacks and so on) are not compared, only teams and the
+  posted market.
+
+**What can still fail under a green run** (all these steps have
+`continue-on-error: true`, or are only reported later):
+- "Update play-by-play data";
+- the pregame capture, which fails the run at the very end, after publishing;
+- "Retrain player prop models" and "Freeze player-prop predictions" (both exit
+  1 while Player Props are blocked);
+- "Update the betting-recommendations log";
+- **"Commit and push changes"**: a failed `git push` there is not reported;
+- "Export best bets";
+- **"Commit best_bets_today.json"**: run 41812900367's push was rejected by a
+  GitHub 500 and the run stayed green.
+
+A green run therefore means the gate passed, not that tonight's data reached
+`main`.
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 

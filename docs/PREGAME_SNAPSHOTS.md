@@ -95,6 +95,7 @@ don't affect the CI determinism check.
 |---|---|
 | `run_id` | the generating run's identity, assigned **once** when the manifest is written: `<generated_at %Y%m%dT%H%M%SZ>-<12 random hex>`. It's unique even for identical inputs. Capture retries reuse it and never mint a new one |
 | `generated_at` | UTC time the run finished writing predictions (whole seconds) |
+| `settled_as_of` | UTC time (whole seconds) of the clock the run decided final games with (`final_score_mask`, Toronto same-day rule), taken when `nfl-gather-data.py`'s `main()` starts. Optional: older manifests lack it; the nightly publication gate requires it (see `docs/architecture.md`, "Nightly publication gate") |
 | `code_revision`, `code_dirty` | `GITHUB_SHA` in Actions, otherwise `git rev-parse HEAD` plus whether tracked files were modified; `unknown` / null without git |
 | `code_sha256` | hash of `nfl-gather-data.py` and `team_features.py` as executed |
 | `config`, `config_id` | the fitted spread models' `get_params(deep=True)`, the split defaults, the EV min edge, library versions; `config_id` = first 16 hex of its canonical-JSON sha256 |

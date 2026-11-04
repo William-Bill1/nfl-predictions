@@ -158,6 +158,45 @@ jobs:
           python betting_log.py
         continue-on-error: true
 
+      - name: Validate pipeline outputs before publishing
+        id: output_gate
+        # Required gate: deliberately NO continue-on-error. Runs right before the
+        # first step that publishes anything, so it checks the exact bytes about
+        # to be uploaded and committed: the manifest must come from THIS run
+        # (run ID/attempt, commit, code hash), the predictions CSV and schedule
+        # must match the SHA-256s it recorded, and every game must be settled
+        # consistently (pending games with missing outcomes and returns; final
+        # games graded from their scores). See scripts/check_pipeline_outputs.py.
+        # A failure fails the job here, and every later step without always()
+        # in its `if:` is skipped: the artifact upload, the commit and push, and
+        # the best-bets export and its push.
+        if: steps.season_check.outputs.in_season == 'true'
+        run: |
+          status=0
+          python scripts/check_pipeline_outputs.py --require-current-run \
+            --report "$RUNNER_TEMP/output_gate.md" || status=$?
+          if [ -f "$RUNNER_TEMP/output_gate.md" ]; then
+            cat "$RUNNER_TEMP/output_gate.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+          if [ "$status" -ne 0 ]; then
+            echo "::error title=Pipeline output gate failed::Tonight's outputs failed validation and were not published. See this step's log."
+            exit "$status"
+          fi
+
+      - name: Keep the rejected outputs for diagnosis
+        # Only after a failed gate: the files it rejected, for 7 days. Nothing
+        # is committed or pushed.
+        if: failure() && steps.output_gate.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nfl-predictions-rejected-${{ github.run_number }}
+          path: |
+            data_files/nfl_games_historical_with_predictions.csv
+            data_files/nfl_games_historical.csv
+            data_files/pipeline_run_manifest.json
+            data_files/model_metrics.json
+          retention-days: 7
+
       - name: Upload updated predictions
         if: steps.season_check.outputs.in_season == 'true'
         uses: actions/upload-artifact@v4

@@ -357,7 +357,8 @@ class TestPipelineManifest:
         for f in ("nfl_games_historical_with_predictions.csv", "model_metrics.json", "best_features_spread.txt"):
             assert (outputs[0] / f).read_bytes() == (outputs[1] / f).read_bytes(), f   # determinism intact
         m = [ps.load_verified_manifest(d) for d in outputs]                            # hashes validate
-        volatile = {"run_id", "generated_at", "ci_run"}
+        volatile = {"run_id", "generated_at", "settled_as_of", "ci_run"}
+        assert m[0]["settled_as_of"] <= m[0]["generated_at"]                          # the run's own clock
         assert {k: v for k, v in m[0].items() if k not in volatile} == \
                {k: v for k, v in m[1].items() if k not in volatile}
         assert m[0]["artifact"]["sha256"] == ps.sha256_file(outputs[0] / ps.PREDICTIONS_NAME)

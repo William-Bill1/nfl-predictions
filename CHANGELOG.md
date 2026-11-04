@@ -8,6 +8,49 @@ bottom.
 
 ## November 2026
 
+- **Nightly: required output-validation gate before publishing**
+  (`.github/workflows/nightly-update.yml`, `scripts/check_pipeline_outputs.py`,
+  `pregame_snapshots.py`, `nfl-gather-data.py`, `tests/test_output_gate.py`).
+  - **Before:** nothing stopped the nightly from publishing bad outputs.
+    `check_pipeline_outputs.py` ran only in `pipeline-smoke`, which the bot's
+    `[skip ci]` commits don't trigger. The pregame capture's manifest check
+    has `continue-on-error` and fails the run only after publishing. The
+    commit and push steps have `continue-on-error` too, so a bad or failed
+    publication still showed a green run.
+  - **Gate:** a new step, "Validate pipeline outputs before publishing", has
+    no `continue-on-error` and runs before the artifact upload, the commit
+    and push, and the best-bets export and push. If it fails, the job fails
+    and none of those run. The rejected files are kept as a 7-day artifact
+    and the report goes to the job summary.
+  - **Checks** (`--require-current-run`):
+    - the manifest was written by this workflow run, from the checked-out
+      code (run ID and attempt, `GITHUB_SHA`, `code_sha256`), and the
+      predictions CSV and schedule are the exact bytes it hashed;
+    - one row per schedule game, in order;
+    - home and away teams and the posted lines and odds equal the schedule
+      row, allowing only the pipeline's `fillna(0)` / inf → 0 (an unposted
+      line is written as 0). Missing columns and mismatches are rejected,
+      never filled in from the schedule;
+    - probabilities finite and in [0, 1], and present wherever their market
+      is valid. A flagged or unflagged game with a posted, non-zero spread
+      line needs a `prob_underdogCovered`; unposted lines and pick'ems have
+      none. Signals are 0 or 1;
+    - pending or unverifiable games have every outcome and return missing,
+      so the old 0-0 / -100 fictitious loss is rejected;
+    - final games match the schedule's score evidence, and their flags and
+      spread return follow from it.
+  - **Same-day policy:** the manifest now records `settled_as_of`, the
+    clock `main()` settled games with, and the gate applies the Toronto rule
+    at that exact instant. A run that crosses Toronto midnight is checked
+    against the day it actually settled with.
+  - **Unchanged:** predictions, grading, schedules, permissions and
+    dependencies. `pipeline-smoke` runs the same checks without the
+    current-run requirement.
+  - **Not covered:** metrics, feature importances and the feature file are
+    checked for structure only; the manifest doesn't hash them. Every other
+    `continue-on-error` step can still fail under a green run, including
+    both `git push` steps (see `docs/architecture.md`).
+
 - **Pipeline: unplayed games are no longer settled as losses**
   (`nfl-gather-data.py`, `predictions.py`, `tests/test_pending_settlement.py`).
   - **Bug:** `fillna(0)` turned an unplayed game's missing scores into a 0-0
