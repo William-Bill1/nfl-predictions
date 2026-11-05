@@ -1117,7 +1117,8 @@ nothing is implemented):*
 - **Artifacts** expire after their retention period (90 days by default;
   configurable per repository), so they can't be the only recovery copy.
 - **The Actions cache** can be evicted at any time (unused entries after 7
-  days; a per-repository size cap), so the play-by-play cache is a
+  days, and oldest-first once the repository's total cache size passes its
+  limit, 10 GB by default), so the play-by-play cache is a
   convenience. A restored cache must pass `verify_installed` or be
   re-downloaded.
 - **The prop source** (a column subset, all seasons) is tens of megabytes:
@@ -2083,6 +2084,146 @@ doesn't unblock generation.
   ```
 - **Not claimed:** deployment authorization, immutability of the published
   set, or any accuracy, calibration or betting edge.
+
+**Release storage: archive and restore (offline slice;
+`player_props/release_storage.py`).** It packs a verified S1 package and its
+prediction schedule into one archive, describes the stored bytes, and restores
+them into an isolated directory with full verification. Nothing uploads,
+downloads, approves, activates or publishes anything, and nothing is wired
+into a workflow.
+- **Pack** (`pack --package PKG --prediction-schedule CSV --out NEW_DIR`):
+  - **Checks first:** `verify_package` must pass, and the schedule must have
+    the hash the package's rehearsal summary records
+    (`runtime/data/nfl_schedule_<season>.csv`). S1 doesn't package the
+    schedule, but S2 needs it.
+  - **Archive:** `player-props-<release_id>.tar` holds exactly the verified
+    bytes: `package/<file>` for every package file, plus
+    `schedule/nfl_schedule_<season>.csv`. It is an uncompressed ustar of
+    sorted regular files with fixed metadata (mode 0644, owner 0, mtime 0),
+    so the same inputs give the same archive bytes. Most large assets are
+    already gzipped, and skipping compression avoids zlib differences.
+  - **Descriptor:** `player-props-<release_id>.storage.json` records the
+    release ID, manifest hash, inference target, the archive's hash, size and
+    format, every entry's name, hash and size, and the schedule entry. It
+    never contains its own hash, and the archive never contains the
+    descriptor.
+  - **Writing:** into a new directory only, after the same location checks as
+    S1. The archive is read back and inspected before the directory is
+    renamed into place. The package and schedule are only read.
+- **A descriptor is candidate-storage metadata, not an approval.** Its
+  `status` is always `candidate_storage_only`, with a fixed statement, and
+  its fields are exact. An `approved`, `active`, `sequence` or `previous`
+  field is refused. Validation (`validate_descriptor`) returns
+  `approval: not_established` even for a valid descriptor. The descriptor
+  travels with the archive, so it is not a trusted record of anything.
+- **Validation is strict.**
+  - Every field's JSON type is checked before the field is used as a key,
+    compared with a path or formatted into one. A list, object, null, number
+    or boolean where a string belongs is reported by field name (for example
+    `prediction_schedule.entry must be a string, not list`). Nothing is
+    coerced or repaired.
+  - The `package/` entries must be exactly the S1 package paths: every
+    `release_manifest.ROLES` path plus `release_manifest.json`
+    (`package_entries()`, derived from S1 and not kept as a second list).
+    `schedule/` holds only the matching prediction schedule.
+  - An extra or missing path is refused while the descriptor is checked,
+    before the archive is opened or any lock, staging directory or file
+    exists. The full S1 verification after extraction still runs.
+- **Inspection** (`inspect`), before anything is written: the archive's size
+  and SHA-256 must equal the descriptor's, and it must be an uncompressed
+  tar. It refuses:
+  - members other than regular files (links, hard links, directories,
+    devices, FIFOs);
+  - unsafe names: absolute, `..`, backslash, drive or stream separators,
+    non-ASCII, characters outside `A-Z a-z 0-9 . _ -`, trailing dots,
+    reserved Windows device names, anything outside `package/` and
+    `schedule/`;
+  - case or Unicode-normalisation collisions, and a file that is also
+    another entry's directory;
+  - duplicate, unexpected or missing entries, or a changed entry;
+  - more than 64 entries, an entry over 1 GiB, or an archive at or over
+    2 GiB.
+- **Restore** (`restore --archive TAR --descriptor JSON --dest DIR`):
+  1. **Checks:** the descriptor is validated (duplicate JSON keys refused).
+     The destination is resolved fully, links and junctions included, and
+     refused if it overlaps the repository, `data_files/`,
+     `player_props/models/`, a protected path, the archive or the
+     descriptor. An existing destination is replaced only if it is a previous
+     restore (it holds a readable `restore_report.json`).
+  2. **Lock:** an advisory lock beside the destination
+     (`.release-restore-<name>.lock`, `ontario_spreads.SlotLock`) makes a
+     concurrent restore to the same destination refuse.
+  3. **Inspect and extract:** full inspection, then extraction into a private
+     `.<dest>.restore-<token>` directory. Only inspected names are written,
+     with exclusive creation, and every file is re-read afterwards.
+  4. **Verify:** `verify_package` on the restored package, then the manifest
+     hash, release ID and inference target against the descriptor, and the
+     schedule against the package's summary.
+  5. **Report and install:** `restore_report.json` is written. It records
+     the verification stages that ran, the descriptor's SHA-256, S1's
+     verified and declared lists, and what is not established: approval,
+     authenticity, S2 publication and the runtime. Then the staging
+     directory is renamed into place.
+  - **Data only:** archive contents are only read as data. Nothing from an
+    archive is imported or executed, and the bundle is checked by the
+    existing safe reader. S1 then parses each model with XGBoost's
+    `load_model` (XGBoost's own model format, not pickle). That is a native
+    parser reading untrusted bytes, but it doesn't execute code.
+  - **Side effect of the lock:** `SlotLock` comes from `ontario_spreads`,
+    which calls `load_dotenv()` on import. A `.env` that `python-dotenv`
+    finds is loaded into the restoring process's environment. Restore never
+    reads or reports those values.
+- **Failure handling:**
+
+  | When | State | On disk |
+  |---|---|---|
+  | Before the install | `not_restored` | The previous destination is untouched and the staging directory is removed. A staging directory that can't be removed is listed in `retained_files`. |
+  | Install fails after the previous restore was moved aside | `rolled_back` | The previous restore is moved back. |
+  | Moving it back also fails | `rollback_failed` | `recovery_files` names the moved-aside copy. |
+  | After the install, the moved-aside copy can't be deleted | `restored_with_cleanup_warnings` (CLI exit 3) | The restore succeeded; the copy is listed in `retained_files`. |
+
+  - **Not crash-atomic:** nothing is fsynced, and a crash can leave
+    `.<dest>.restore-*` or `.<dest>.previous-*` beside the destination.
+- **S2 stays separate:** to publish a restored package, run
+  `publication.py publish --package DIR/package --prediction-schedule
+  DIR/schedule/nfl_schedule_<season>.csv` explicitly.
+- **CLI:** ASCII-only JSON. Exit 0 ok, 1 refused, 2 could not run, 3
+  restored with cleanup warnings.
+- **Design rules for later stages (not implemented):**
+  - **Approval records are separate from storage descriptors.** An approval
+    record names the approved release by release ID, manifest hash, archive
+    hash and descriptor hash, and is kept somewhere the storage can't change.
+    Creating or validating a descriptor never approves anything.
+  - **Concurrency.** `main` is unprotected, and four workflows can push to
+    it. A `sequence`/`previous` field and an ordinary CI check are procedural
+    safeguards, not an enforced compare-and-swap. A check can only detect a
+    stale or replayed pointer against a trusted baseline it is given
+    explicitly, such as the last approval record the operator holds. Without
+    that baseline, a pointer can only be shown to be self-consistent.
+    Enforced controls (branch rulesets, required reviews, restricted
+    pushers) are repository-protection changes outside this stage.
+  - **Recovery environment.** An archive or `git archive` preserves files,
+    not Python or installed dependencies. These are the runtime needs,
+    measured on the retained 917-row package (2026-11-05):
+    - **Package restoration** (inspect and extract): the standard library,
+      plus pandas, numpy and pyarrow, which come in with the module imports.
+    - **Verification:** S1 `verify_package` refuses unless xgboost matches the
+      version recorded in the bundle (3.4.1). It also imports scikit-learn,
+      scipy, joblib, nfl-data-py, requests, niquests and openmeteo-requests
+      through the feature and model modules. In practice, this is the full
+      pinned `requirements.txt`. The package's `runtime` records CPython
+      3.13.14, numpy 2.5.2, pandas 2.3.3, scikit-learn 1.9.0 and xgboost
+      3.4.1, which match the pins.
+    - **S2 publication:** the same environment. It is a separate command, and
+      restore never runs it.
+    - **Package registry:** `pip install -r requirements.txt` needs PyPI.
+      The repository has no wheelhouse or lock file, and pyarrow, scipy,
+      joblib and niquests are pinned only transitively.
+
+    Restore and verification ran with networking blocked, in the existing
+    venv. No restore has been tested in a freshly built environment, or with
+    the registry unavailable. Recovery from durable copies alone is not
+    claimed until that runtime path has been tested.
 
 **Remaining stages (not implemented):**
 2. **Deploy the source refresh (5B).** Run the Stage 5A refresh on the

@@ -8,6 +8,36 @@ bottom.
 
 ## November 2026
 
+- **Player Props release storage: offline archive and restore**
+  (`player_props/release_storage.py`,
+  `tests/test_player_props_release_storage.py`; not wired into any workflow).
+  - **`pack`:** archives a verified S1 package together with its prediction
+    schedule. It checks the schedule against the hash the package's rehearsal
+    recorded. The output is a deterministic uncompressed ustar, plus a strict
+    storage descriptor holding the release ID, manifest hash, archive hash and
+    size, and every entry's hash and size.
+  - **`restore`:**
+    - inspects the whole archive before writing anything;
+    - extracts into a private staging directory and re-reads every file;
+    - re-runs S1 verification and the schedule check;
+    - installs the result only then, with a `restore_report.json`.
+  - **Refused:** links, unsafe names and aliases, collisions, unexpected
+    files and oversized entries.
+  - **Strict descriptors:** a descriptor field of the wrong JSON type is
+    reported by name as a refusal (CLI exit 1). `package/` must hold exactly
+    the S1 package paths (from `release_manifest.ROLES` plus the manifest).
+    An extra or missing path is refused before the archive is opened or
+    anything is written.
+  - **Destinations:** a destination overlapping the repository, production
+    paths or the inputs is refused, and a failed restore keeps the previous
+    one.
+  - **Not an approval:** a descriptor is candidate-storage metadata. Creating
+    or validating one never approves or activates a release, and restoring
+    never runs S2 publication.
+  - **Docs:** the release-storage design rules (approval records,
+    concurrency, recovery environment) and a corrected Actions cache limit
+    (10 GB is the default) are in `docs/architecture.md`.
+
 - **Nightly: publication failures now fail the run**
   (`.github/workflows/nightly-update.yml`, `scripts/publish_commit.py`,
   `tests/test_publish_commit.py`).

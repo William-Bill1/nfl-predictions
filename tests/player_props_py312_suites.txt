@@ -24,6 +24,8 @@ tests/test_player_props_position_group.py
 tests/test_player_props_release_manifest.py
 # Verified publication of outputs against a release package (offline)
 tests/test_player_props_publication.py
+# Release storage: deterministic archive, storage descriptor, verified restore (offline)
+tests/test_player_props_release_storage.py
 # UI identity joins (pages), containment warnings, dates and seasons
 tests/test_player_props_reference_join.py
 tests/test_player_props_containment.py
