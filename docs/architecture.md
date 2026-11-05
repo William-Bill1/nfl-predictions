@@ -302,13 +302,90 @@ step's timeout) before `generated_at`.
 - "Retrain player prop models" and "Freeze player-prop predictions" (both exit
   1 while Player Props are blocked);
 - "Update the betting-recommendations log";
-- **"Commit and push changes"**: a failed `git push` there is not reported;
-- "Export best bets";
-- **"Commit best_bets_today.json"**: run 41812900367's push was rejected by a
-  GitHub 500 and the run stayed green.
+- "Export best bets".
 
-A green run therefore means the gate passed, not that tonight's data reached
-`main`.
+The two publication steps are no longer on this list; see the next section.
+
+### Nightly publication: push retries and a moving `main` (Nov 2026)
+
+Both publication steps, **"Commit and push changes"** (`id: publish_nightly`)
+and **"Commit best_bets_today.json"** (`id: publish_best_bets`), stage their
+files and then run `scripts/publish_commit.py`. Neither has
+`continue-on-error` any more. Before, a failed `git push` left the run green:
+run 41812900367's best-bets push was rejected by a GitHub 500 and nobody was
+told. The best-bets step runs only if `publish_nightly` succeeded. If the
+nightly publication fails, the job fails there, and the export and best-bets
+push are skipped.
+
+`publish_commit.py`:
+- **Nothing staged** is a successful no-op, reported as `nothing-to-commit`.
+  It is kept separate from staging/commit errors (exit 3), permanent push
+  errors (4), conflicts (5), a failed rebuild check (6), exhausted retries
+  (7) and an unconfirmed outcome (8).
+- **Three outcomes, never conflated:**
+  - **published:** a fetch showed the commit on the branch;
+  - **not published:** nothing was pushed, the server refused the push, or a
+    fetch after the last push showed the commit absent;
+  - **unconfirmed** (exit 8): a push may have landed (it reported success, or
+    failed in a way that doesn't rule that out), but every later fetch failed.
+    The step then reports "Publication unconfirmed; the commit may already be
+    on origin/main.", with the full commit SHA, the remote and the branch, and
+    a read-only check (`git ls-remote origin refs/heads/main`).
+
+  Every failure, unconfirmed included, fails the step. Nothing is rolled
+  back, deleted or force-pushed. The step outputs `result` (`published`,
+  `nothing-to-commit`, `not-published` or `unconfirmed`) and `commit`; the job
+  summary and the `::error` annotation use the same words.
+- **One commit, pushed without force** as `<sha>:refs/heads/main`. Publication
+  is reported (`result=published`, `commit=<sha>` in the step outputs and the
+  job summary) only after a fetch shows the commit on `origin/main`.
+- **After a failed push it reads `origin/main` first.** If the commit is
+  already there (the server accepted the push but the client saw an error),
+  that counts as published and the commit is not pushed again. Errors a retry
+  can't fix (authentication, 403, protected branch/hook declined, repository
+  not found) stop at once. Anything else (5xx, timeouts, a dropped
+  connection) is retried: 4 attempts, waiting 10 s, 20 s, then 30 s, with each
+  attempt's git output in the log (credentials redacted). Pushing the same
+  commit again is harmless: the server either has it or doesn't. If an
+  earlier push couldn't be checked, a later permanent error is also reported
+  as unconfirmed, not as "not published".
+- **If `main` moved on during the run** (the Ontario and injury captures and
+  the spread tracker push on their own schedules), the commit is rebuilt on
+  top of the new tip, but only when the remote commits changed none of the
+  paths this commit changes and none of its `--guard` paths. The rebuilt
+  commit has the same author and message and exactly the same files as the
+  original, and leaves every remote change byte-for-byte as it was. It is
+  checked for both before it is pushed. Git's content merging is never used,
+  so two edits to one file can't be combined into something nobody validated.
+- **Any overlap stops the step.** The step fails, lists the paths, and pushes
+  nothing. `origin/main` keeps the other writer's version, and the runner keeps
+  tonight's commit. This happens if another run changed tonight's predictions
+  or manifest, or anyone changed a guarded input such as the schedule.
+  Nothing is pulled, regenerated or overwritten.
+
+**Why no revalidation before the rebuilt push:** what the gate validated
+(tonight's predictions CSV, schedule, manifest, metrics and feature file, the
+nightly step's `--guard` list) is published byte-for-byte. Any remote change to
+those files blocks the push instead. The best-bets step guards the predictions
+CSV that its export read. The remote's own changes are in files the gate
+doesn't read. Re-running the gate would need tonight's outputs rebuilt against
+the newer data, which this step deliberately does not do.
+
+**Limits:**
+- The guard list is explicit. A new file that the published outputs depend on
+  must be added to it.
+- A conflict fails the run but doesn't resolve itself. The next nightly
+  regenerates and publishes normally.
+- An unconfirmed outcome fails the run even when the commit did land. It is
+  resolved by reading `origin/main` (for example on the next nightly), never
+  by rolling back.
+- The local branch is not moved to a rebuilt commit. The best-bets step
+  therefore replays its own commit on top of `origin/main` too, which costs one
+  rejected push.
+- The steps' 15-minute timeout bounds a push that hangs repeatedly (each git
+  command also has a 180 s limit).
+- An unrelated `continue-on-error` step that fails (see the list above) still
+  leaves the run green.
 
 ### Spread convention (Aug 2026 — was the "inversion fix")
 

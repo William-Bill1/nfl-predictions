@@ -211,24 +211,36 @@ jobs:
             player_props/models/model_metrics.json
           retention-days: 7
       
-      - name: Commit and push changes (optional)
+      - name: Commit and push changes
+        id: publish_nightly
+        # Required: deliberately NO continue-on-error. scripts/publish_commit.py
+        # commits what is staged here ("nothing to commit" is a successful
+        # no-op), pushes without force, retries transient failures and reports
+        # success only once the commit is confirmed on origin/main. If no fetch
+        # can check a push that may have landed, it fails as "unconfirmed" (the
+        # commit may already be on origin/main), not "not published". If main moved
+        # on during the run, the commit is replayed on top of it only when the
+        # new remote commits touch none of tonight's files or the gate-validated
+        # inputs (--guard); otherwise the step fails and nothing is overwritten.
+        # A failure here fails the job, so the best-bets export and push below
+        # are skipped.
         if: steps.season_check.outputs.in_season == 'true' && github.ref == 'refs/heads/main'
+        timeout-minutes: 15
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
-          
-          # Check if there are changes to commit
+
           git add data_files/*.csv data_files/*.json
           # Immutable pregame snapshots (new files only - existing ones are never rewritten)
           if [ -d data_files/pregame_snapshots ]; then git add data_files/pregame_snapshots; fi
 
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Automated nightly update: predictions and ESPN data [skip ci]"
-            git push
-          fi
-        continue-on-error: true  # Don't fail if nothing to commit
+          python scripts/publish_commit.py --label "Nightly data" \
+            --message "Automated nightly update: predictions and ESPN data [skip ci]" \
+            --guard data_files/nfl_games_historical.csv \
+            --guard data_files/nfl_games_historical_with_predictions.csv \
+            --guard data_files/pipeline_run_manifest.json \
+            --guard data_files/model_metrics.json \
+            --guard data_files/best_features_spread.txt
 
       - name: Export best bets for Sports Picks Grid
         if: steps.season_check.outputs.in_season == 'true'
@@ -238,18 +250,25 @@ jobs:
           PYTHONPATH: ${{ github.workspace }}
 
       - name: Commit best_bets_today.json
-        if: steps.season_check.outputs.in_season == 'true' && github.ref == 'refs/heads/main'
+        id: publish_best_bets
+        # Required, like the nightly commit above, and only after it succeeded.
+        # The predictions CSV the export read is guarded: a remote change to it
+        # blocks this push instead of pairing the file with other predictions.
+        if: steps.season_check.outputs.in_season == 'true' && github.ref == 'refs/heads/main' && steps.publish_nightly.outcome == 'success'
+        timeout-minutes: 15
         run: |
           git add data_files/best_bets_today.json
-          git diff --staged --quiet || git commit -m "chore: update best_bets_today [skip ci]"
-          git push
-        continue-on-error: true
-      
+          python scripts/publish_commit.py --label "Best bets" \
+            --message "chore: update best_bets_today [skip ci]" \
+            --guard data_files/nfl_games_historical_with_predictions.csv
+
       - name: Summary
         if: steps.season_check.outputs.in_season == 'true'
         run: |
           echo "Nightly update steps finished (see step results above)."
           echo "Pregame snapshot capture: ${{ steps.pregame_capture.outcome }}"
+          echo "Nightly data publication: ${{ steps.publish_nightly.outputs.result }} ${{ steps.publish_nightly.outputs.commit }}"
+          echo "Best bets publication: ${{ steps.publish_best_bets.outputs.result }} ${{ steps.publish_best_bets.outputs.commit }}"
           echo "📊 Updated predictions available as artifact: nfl-predictions-${{ github.run_number }}"
           
           # Show some stats
@@ -259,8 +278,9 @@ jobs:
           fi
 
       - name: Fail the run if the pregame capture failed
-        # Last step: by now tonight's data has been committed, so failing here
-        # only makes the missed capture impossible to overlook.
+        # Last step: by now tonight's data has been published (or its
+        # publication has already failed the run), so failing here only makes
+        # the missed capture impossible to overlook.
         if: always() && steps.season_check.outputs.in_season == 'true' && steps.pregame_capture.outcome == 'failure'
         run: |
           echo "::error title=Pregame snapshot capture failed::No pregame snapshot was written for this run. See the 'Capture pregame spread snapshot' step log."

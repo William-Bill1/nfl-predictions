@@ -8,6 +8,32 @@ bottom.
 
 ## November 2026
 
+- **Nightly: publication failures now fail the run**
+  (`.github/workflows/nightly-update.yml`, `scripts/publish_commit.py`,
+  `tests/test_publish_commit.py`).
+  - **Before:** both `git push` steps had `continue-on-error` and no retry. A
+    rejected push (run 41812900367's best-bets push hit a GitHub 500) left the
+    run green, and a `main` that moved during the run made the push fail
+    silently.
+  - **Now:** both steps call `publish_commit.py` and have no
+    `continue-on-error`. Nothing to commit is a successful no-op. Transient
+    push failures are retried (4 attempts, 10/20/30 s). Authentication and
+    permission errors stop at once. Publication is reported only once the
+    commit is confirmed on `origin/main`. If the server accepted a push the
+    client reported as failed, the commit is recognised and not pushed again.
+  - **Three outcomes:** published (confirmed by a fetch), not published
+    (nothing pushed, refused, or shown absent by a fetch), and unconfirmed
+    (exit 8). Unconfirmed means a push may have landed but no later fetch
+    could check it. It is reported as "Publication unconfirmed; the commit may
+    already be on origin/main.", with the full SHA, remote and branch. Every
+    failure fails the run, and nothing is rolled back or force-pushed.
+  - **Moving `main`:** the commit is rebuilt on top of the new tip only if the
+    remote commits touched none of its files or guarded inputs. Its files are
+    the exact validated bytes, and the remote's files are left as they were.
+    Any overlap fails the step without pushing or overwriting either side.
+    The best-bets push runs only after the nightly publication succeeded.
+  - The output-validation gate is unchanged and still runs first.
+
 - **Nightly: required output-validation gate before publishing**
   (`.github/workflows/nightly-update.yml`, `scripts/check_pipeline_outputs.py`,
   `pregame_snapshots.py`, `nfl-gather-data.py`, `tests/test_output_gate.py`).

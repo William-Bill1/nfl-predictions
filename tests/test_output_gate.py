@@ -506,7 +506,7 @@ class TestSourceFieldsAndMarkets:
 
 # --------------------------------------------------- workflow wiring --
 
-PUBLISHING = ("Upload updated predictions", "Commit and push changes (optional)",
+PUBLISHING = ("Upload updated predictions", "Commit and push changes",
               "Export best bets for Sports Picks Grid", "Commit best_bets_today.json")
 GATE = "Validate pipeline outputs before publishing"
 
@@ -608,7 +608,7 @@ def _simulate(workflow, data_src: Path, tmp_path: Path, env_run: dict):
     env = {**os.environ, **env_run, **SECRETS, "GITHUB_STEP_SUMMARY": summary.as_posix(),
            "RUNNER_TEMP": temp.as_posix(), "PATH": str(bin_) + os.pathsep + os.environ.get("PATH", "")}
     env.pop("PYTHONIOENCODING", None), env.pop("PYTHONUTF8", None)
-    executed = {GATE, "Commit and push changes (optional)", "Commit best_bets_today.json"}
+    executed = {GATE, "Commit and push changes", "Commit best_bets_today.json"}
     outcomes, job_failed, ran, logs = {"pregame_capture": "success"}, False, [], ""
     for step in steps[names.index(GATE):]:
         if not _condition(step.get("if", ""), outcomes, job_failed):
@@ -638,7 +638,7 @@ class TestWorkflowSimulation:
         r = _simulate(workflow, tonight["data"], tmp_path, RUN)
         assert not r["failed"], r["logs"]
         assert set(PUBLISHING) <= set(r["ran"]) and "Keep the rejected outputs for diagnosis" not in r["ran"]
-        assert "git commit" in r["calls"] and r["calls"].count("git push") == 2
+        assert "git add" in r["calls"] and r["calls"].count("python scripts/publish_commit.py") == 2
         assert "Pipeline output gate: passed" in r["summary"]
 
     def test_failed_validation_publishes_nothing(self, workflow, tonight, tmp_path):
@@ -653,7 +653,7 @@ class TestWorkflowSimulation:
         r = _simulate(workflow, data, tmp_path, RUN)
         assert r["failed"]
         assert not set(PUBLISHING) & set(r["ran"])
-        assert "git commit" not in r["calls"] and "git push" not in r["calls"] and "git add" not in r["calls"]
+        assert "git add" not in r["calls"] and "publish_commit.py" not in r["calls"]
         assert "Keep the rejected outputs for diagnosis" in r["ran"]
         assert "Pipeline output gate: FAILED" in r["summary"] and "carry realized outcomes" in r["summary"]
         assert "::error title=Pipeline output gate failed::" in r["logs"]
@@ -666,12 +666,12 @@ class TestWorkflowSimulation:
         _reseal(data)
         r = _simulate(workflow, data, tmp_path, RUN)
         assert r["failed"] and not set(PUBLISHING) & set(r["ran"])
-        assert "git add" not in r["calls"] and "git commit" not in r["calls"] and "git push" not in r["calls"]
+        assert "git add" not in r["calls"] and "publish_commit.py" not in r["calls"]
         assert needle in r["summary"]
 
     def test_stale_outputs_publish_nothing(self, workflow, tonight, tmp_path):
         r = _simulate(workflow, tonight["data"], tmp_path, {**RUN, "GITHUB_RUN_ID": "9999"})
-        assert r["failed"] and "git push" not in r["calls"]
+        assert r["failed"] and "publish_commit.py" not in r["calls"]
         assert "outputs from another run" in r["summary"]
 
     def test_diagnostics_do_not_expose_credentials(self, workflow, tonight, tmp_path):
