@@ -1,10 +1,25 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-03T10:24:04.418096+00:00",
+    "generated_at": "2026-11-05T10:11:25.204248+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-11-03"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-11-05",
+      "game_time": "20:15",
+      "game": "JAX @ BAL",
+      "home_team": "BAL",
+      "away_team": "JAX",
+      "bet_type": "Spread",
+      "pick": "BAL +10",
+      "confidence": 0.6730973088210579,
+      "edge": 0.144795422028605,
+      "tier": "Elite",
+      "odds": -112,
+      "line": 10.0,
+      "notes": null
+    }
+  ]
 }
