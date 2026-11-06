@@ -68,7 +68,7 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-10-29 09:13:11,2026,9,2026_09_NYG_PHI,2026-11-08 00:00:00,PHI,NYG,spread,PHI,-1.5,40.5,,0.5489826223823213,0.0251730985727974,Lean,,,pending,,1.5,-110.0,assumed -110 model recommendation
 2026-10-29 09:13:11,2026,9,2026_09_LA_WAS,2026-11-08 00:00:00,WAS,LA,spread,WAS,-5.5,48.5,,0.550574788826226,0.0267652650167021,Good,,,pending,,5.5,-110.0,assumed -110 model recommendation
 2026-10-29 09:13:11,2026,9,2026_09_GB_NE,2026-11-08 00:00:00,NE,GB,spread,GB,3.0,47.5,,0.5442272899786086,0.032032168027389,Lean,,,pending,,3.0,-110.0,assumed -110 model recommendation
-2026-11-02 10:25:24,2026,9,2026_09_JAX_BAL,2026-11-05 00:00:00,BAL,JAX,spread,BAL,-8.5,43.5,,0.599821883448751,0.0649381625185184,Strong,,,pending,,8.5,-110.0,assumed -110 model recommendation
+2026-11-02 10:25:24,2026,9,2026_09_JAX_BAL,2026-11-05 00:00:00,BAL,JAX,spread,BAL,-8.5,43.5,,0.599821883448751,0.0649381625185184,Strong,10.0,33.0,loss,-100.0,8.5,-110.0,assumed -110 model recommendation
 2026-11-03 10:24:00,2026,9,2026_09_HOU_LAC,2026-11-08 00:00:00,LAC,HOU,spread,LAC,-4.5,40.5,,0.5448493179992497,0.0326541960480302,Lean,,,pending,,4.5,-110.0,assumed -110 model recommendation
 2026-11-03 10:24:00,2026,9,2026_09_LV_SF,2026-11-08 00:00:00,SF,LV,spread,LV,10.0,51.5,,0.5480616475854531,0.0197597607930002,Lean,,,pending,,10.0,-110.0,assumed -110 model recommendation
 2026-11-05 10:11:15,2026,10,2026_10_NE_DET,2026-11-15 00:00:00,DET,NE,spread,DET,-1.5,49.5,,0.552045322502667,0.0328145532718977,Good,,,pending,,1.5,-110.0,assumed -110 model recommendation
@@ -80,3 +80,4 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-11-05 10:11:15,2026,10,2026_10_JAX_TEN,2026-11-15 00:00:00,TEN,JAX,spread,TEN,-9.5,45.5,,0.5482748885590405,0.0244653647495166,Lean,,,pending,,9.5,-110.0,assumed -110 model recommendation
 2026-11-05 10:11:15,2026,10,2026_10_LA_ARI,2026-11-15 00:00:00,ARI,LA,spread,ARI,-7.5,47.5,,0.612433864577962,0.1002387426267424,Strong,,,pending,,7.5,-110.0,assumed -110 model recommendation
 2026-11-05 10:11:15,2026,10,2026_10_PIT_CIN,2026-11-15 00:00:00,CIN,PIT,spread,PIT,3.5,47.5,,0.5506529571416311,0.0268434333321072,Good,,,pending,,3.5,-110.0,assumed -110 model recommendation
+2026-11-06 10:15:06,2026,10,2026_10_LAC_BAL,2026-11-16 00:00:00,BAL,LAC,spread,LAC,1.5,37.5,,0.5632001819035353,0.0283164609733027,Good,,,pending,,1.5,-110.0,assumed -110 model recommendation
