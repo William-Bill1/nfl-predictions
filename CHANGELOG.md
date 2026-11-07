@@ -8,6 +8,19 @@ bottom.
 
 ## November 2026
 
+- **Player Props managed-release loading (opt-in, not adopted):** both prop pages
+  recheck a configured release before showing its outputs. The configuration pins
+  the S1 manifest and publication sidecar hashes. Reference, stats, schedule,
+  snapshot, latest feed and installed bundle must agree. The UI uses captured
+  bytes; an invalid managed set never falls back to legacy files. Legacy stored
+  outputs remain available, explicitly marked as not release-verified. Empty,
+  malformed and unusable prediction CSVs produce visible errors rather than page
+  exceptions; Parlay Builder also coerces invalid legacy game dates to `NaT`.
+  Expensive S1 verification is cached by complete package hashes and policy;
+  prediction verification is not hidden behind the old hour-long page cache.
+  No managed configuration, reference adoption, generation unblocking or deployment
+  is included, and containment warnings and probability calculations are unchanged.
+
 - **Player Props release storage: offline archive and restore**
   (`player_props/release_storage.py`,
   `tests/test_player_props_release_storage.py`; not wired into any workflow).

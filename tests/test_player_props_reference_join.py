@@ -396,7 +396,9 @@ def page_loader(page):
         def cache_data(*a, **k):
             return a[0] if a and callable(a[0]) else (lambda f: f)
 
-    ns = {'st': St, 'pd': pd, 'Path': Path, 'enrich': rj.enrich, 'load_reference': rj.load_reference}
+    from player_props.page_data import load_page_inputs
+    ns = {'st': St, 'pd': pd, 'Path': Path, 'enrich': rj.enrich, 'load_reference': rj.load_reference,
+          'load_page_inputs': load_page_inputs}
     exec(compile(ast.Module(body=keep, type_ignores=[]), page, 'exec'), ns)
     return ns['load_player_props_predictions']
 

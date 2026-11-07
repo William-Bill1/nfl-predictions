@@ -131,16 +131,17 @@ class TestSeasonSelection:
 
     def test_page_loader_keeps_bad_game_dates_visible(self, tmp_path, monkeypatch, page_module):
         (tmp_path / "data_files").mkdir()
-        pd.DataFrame({"player_name": ["A.One", "B.Two"], "season": [2026, 2026],
-                      "game_date": ["2026-10-25 00:00:00+00:00", "2026-10-25NOT-A-DATE"]}
-                     ).to_csv(tmp_path / "data_files" / "player_props_predictions.csv", index=False)
+        from test_player_props_reference_join import pred_row
+        frame = pd.DataFrame([
+            pred_row('A1', 'A.One', 'receptions', 3.5, 0.62),
+            pred_row('B2', 'B.Two', 'receptions', 3.5, 0.62),
+        ])
+        frame['game_date'] = ['2026-10-25 00:00:00+00:00', '2026-10-25NOT-A-DATE']
+        frame.to_csv(tmp_path / 'data_files' / 'player_props_predictions.csv', index=False)
         write_schedule(tmp_path / "data_files", 2026, SCHED_2026)
         monkeypatch.chdir(tmp_path)
-        page_module.load_player_props_predictions.clear()
-        try:
-            p = page_module.load_player_props_predictions()
-        finally:
-            page_module.load_player_props_predictions.clear()
+        # Prediction verification deliberately has no hour-long result cache.
+        p = page_module.load_player_props_predictions()
         assert list(p["player_name"]) == ["A.One", "B.Two"]          # still displayed
         level, text = ss.remaining_games_banner(p, Path("data_files"))
         assert level == "warning" and "no valid game date" in text

@@ -3,19 +3,19 @@ import pandas as pd
 from pathlib import Path
 
 from footer import add_betting_oracle_footer
+from player_props.page_data import PageDataError, load_page_inputs
 from player_props.reference_join import enrich, enrichment_summary, load_reference, player_key, unique_labels
 
 st.title("🎲 Parlay Builder")
 
 # Load predictions
-@st.cache_data(ttl=3600)
 def load_player_props_predictions():
-    """Load player prop predictions with memory optimization."""
-    file_path = Path('data_files/player_props_predictions.csv')
-    if not file_path.exists():
+    """Recheck managed files on every rerun; parse only captured bytes."""
+    global _page_load
+    _page_load = load_page_inputs(Path('data_files'))
+    if _page_load.predictions is None:
         return None
-
-    df = pd.read_csv(file_path, dtype={'player_id': str})
+    df = _page_load.predictions.copy()
 
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
@@ -23,7 +23,7 @@ def load_player_props_predictions():
 
     # Parse game_date
     if 'game_date' in df.columns:
-        df['game_date'] = pd.to_datetime(df['game_date'])
+        df['game_date'] = pd.to_datetime(df['game_date'], errors='coerce')
 
     # Classify every row's identity against the players reference (by stable
     # ID; see player_props/reference_join.py) and fill only blank display_name
@@ -41,10 +41,10 @@ def load_player_props_predictions():
 
     return df
 
-@st.cache_data
 def load_reference_cached():
     """The players reference (IDs as text, duplicate IDs flagged), or None."""
-    return load_reference(Path('data_files/players.csv'))
+    loaded = globals().get('_page_load')
+    return loaded.reference if loaded is not None else load_reference(Path('data_files/players.csv'))
 
 def detect_correlations(props_df):
     """
@@ -116,11 +116,20 @@ def calculate_parlay_metrics(selected_props):
     }
 
 # Load predictions
-predictions_df = load_player_props_predictions()
+try:
+    predictions_df = load_player_props_predictions()
+    _load_problem = None
+except PageDataError as exc:
+    predictions_df = None
+    _load_problem = str(exc)
 
 # Containment notice (player_props/containment.py), before any prop output.
 from player_props.containment import latest_stats_date, notice_markdown, single_season
 st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions_df)))
+if _load_problem:
+    st.error(f"Player prop outputs unavailable: {_load_problem}")
+    st.stop()
+st.caption(_page_load.notice)
 
 if predictions_df is None or predictions_df.empty:
     st.error("❌ No player prop predictions found. Please generate predictions first.")
