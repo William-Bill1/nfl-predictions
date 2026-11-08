@@ -1,10 +1,40 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-07T09:31:43.632479+00:00",
+    "generated_at": "2026-11-08T09:46:41.167004+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-11-07"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-11-08",
+      "game_time": "13:00",
+      "game": "DET @ MIA",
+      "home_team": "MIA",
+      "away_team": "DET",
+      "bet_type": "Spread",
+      "pick": "MIA +6",
+      "confidence": 0.6241479393860639,
+      "edge": 0.1049171701552946,
+      "tier": "Elite",
+      "odds": -108,
+      "line": 6.0,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-08",
+      "game_time": "13:00",
+      "game": "LA @ WAS",
+      "home_team": "WAS",
+      "away_team": "LA",
+      "bet_type": "Spread",
+      "pick": "WAS +4.5",
+      "confidence": 0.5615931629308661,
+      "edge": 0.0615931629308661,
+      "tier": "Strong",
+      "odds": 100,
+      "line": 4.5,
+      "notes": null
+    }
+  ]
 }
