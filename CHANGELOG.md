@@ -8,6 +8,19 @@ bottom.
 
 ## November 2026
 
+- **External managed Player Props runtime (opt-in, not activated):** configuration
+  version 2 adds an absolute `runtime_root`. Predictions, reference, stats,
+  schedule and the installed bundle are checked in that external tree; the
+  configuration remains in the application's `data_files`. Version 1 and labelled
+  legacy loading remain supported. External runtime and package paths cannot
+  overlap each other or the app/repository, or sit in a Git checkout. Runtime
+  paths reject symlinks, junctions/reparse points and multiply hard-linked files.
+  Managed stats-date and remaining-games banners use the captured bytes, including
+  in version 1; a failed input load reports unknown stats freshness rather than
+  reading unrelated legacy stats. No writer, installer, activation, reference
+  adoption, workflow, dependency or probability change is included. Path and hash
+  checks are checkpoints, not a lock or an immutability guarantee.
+
 - **Player Props managed-release loading (opt-in, not adopted):** both prop pages
   recheck a configured release before showing its outputs. The configuration pins
   the S1 manifest and publication sidecar hashes. Reference, stats, schedule,

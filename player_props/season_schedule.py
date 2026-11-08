@@ -17,6 +17,7 @@ Read-only: nothing is written and nothing is fetched.
 from __future__ import annotations
 
 import re
+from io import BytesIO
 from datetime import date, datetime, time, timedelta
 from pathlib import Path
 
@@ -103,14 +104,15 @@ def prediction_season(predictions: pd.DataFrame | None) -> tuple[int | None, str
     return season, None
 
 
-def load_season_schedule(season: int, data_dir: Path | str) -> tuple[pd.DataFrame | None, str | None]:
+def load_season_schedule(season: int, data_dir: Path | str, *,
+                         source_bytes: bytes | None = None) -> tuple[pd.DataFrame | None, str | None]:
     """(schedule, None) for a valid `nfl_schedule_<season>.csv`, else (None, message)."""
     path = Path(data_dir) / f"nfl_schedule_{season}.csv"
     name = f"data_files/{path.name}"
-    if not path.is_file():
+    if source_bytes is None and not path.is_file():
         return None, f"The {season} schedule ({name}) is missing, so {COUNT_OMITTED}"
     try:
-        df = pd.read_csv(path, dtype=str, keep_default_na=False)
+        df = pd.read_csv(path if source_bytes is None else BytesIO(source_bytes), dtype=str, keep_default_na=False)
     except (OSError, UnicodeDecodeError, pd.errors.ParserError, pd.errors.EmptyDataError):
         return None, f"The {season} schedule ({name}) can't be read, so {COUNT_OMITTED}"
     missing = [c for c in SCHEDULE_COLUMNS if c not in df.columns]
@@ -163,12 +165,18 @@ def remaining_games_text(season: int, count: int) -> str:
 
 
 def remaining_games_banner(predictions: pd.DataFrame | None, data_dir: Path | str,
-                           now: datetime | None = None) -> tuple[str, str]:
+                           now: datetime | None = None, *,
+                           captured: dict[str, bytes] | None = None) -> tuple[str, str]:
     """('info', text) with the count, or ('warning', message) with no count."""
     season, problem = prediction_season(predictions)
     if problem:
         return "warning", problem
-    schedule, problem = load_season_schedule(season, data_dir)
+    raw = None
+    if captured is not None:
+        raw = captured.get(f'nfl_schedule_{season}.csv')
+        if not isinstance(raw, bytes):
+            return 'warning', f'The captured {season} schedule is unavailable, so {COUNT_OMITTED}'
+    schedule, problem = load_season_schedule(season, data_dir, source_bytes=raw)
     if problem:
         return "warning", problem
     return "info", remaining_games_text(season, len(upcoming(schedule, "date", now)))

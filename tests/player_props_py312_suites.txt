@@ -40,5 +40,6 @@ tests/test_pick6_wording.py
 tests/test_model_performance_week.py
 tests/test_backtest_console_encoding.py
 tests/test_player_props_page_data.py
+tests/test_player_props_external_runtime.py
 # This list's own checks
 tests/test_player_props_suites.py

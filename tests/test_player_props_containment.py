@@ -127,7 +127,7 @@ class TestPages:
     ])
     def test_notice_shown_before_any_prop_output(self, page, first_output):
         src = PAGES[page]
-        call = src.index("st.warning(notice_markdown(latest_stats_date(Path('data_files'))")
+        call = src.index("st.warning(notice_markdown(")
         assert call < src.index(first_output)
 
     def test_parlay_export_carries_the_warning(self):
