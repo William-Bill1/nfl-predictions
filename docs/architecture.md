@@ -2366,3 +2366,83 @@ All data in `data_files/` (committed to git):
 - All numeric columns → `float32` (50% reduction vs `float64`)
 - Use DataFrame views not `.copy()`
 - All data loading via `@st.cache_data` — NEVER at module level (causes silent crashes)
+
+
+## Managed player-prop page inputs (opt-in; no production adoption)
+
+`player_props/page_data.py` supplies the Player Props and Parlay Builder loaders.
+With **no** `data_files/player_props_release.json`, the pages retain the legacy
+stored-output path and ID/name classification. They explicitly say release
+integrity is not verified. A file with player IDs is not, by itself, a managed
+release. The containment notice remains first in either mode.
+
+A present configuration must have exactly these fields (values shown are a
+schema example, not an instruction to enable production):
+
+```json
+{
+  "version": 1,
+  "package": "<verified S1 package directory>",
+  "release_id": "20261030T151244Z-5655c907",
+  "manifest_sha256": "<64 lowercase hex characters from the trusted release record>",
+  "publication_sha256": "<64 lowercase hex characters for the trusted S2 sidecar>",
+  "season": 2026,
+  "week": 7
+}
+```
+
+Relative package paths are relative to the deployment root (the parent of
+`data_files`); absolute package paths are supported. The installed models remain
+under that root's `player_props/models`. No configuration is created by the
+loader or committed with this change. Enabling one is a separate adoption and
+deployment decision. The expected hashes must come from trusted retained records,
+not simply be recalculated from whatever files happen to be present.
+
+Before returning managed predictions, the loader:
+
+1. Captures and validates the configuration and pinned S1 identity/target.
+2. Reads and hashes every package asset, then requires full S1 verification. Only
+   its expensive derivation/model work is cached, keyed by the complete asset
+   fingerprints and feature/eligibility policy. The verification result must name
+   the captured manifest, and the package is checked again after verification.
+3. Captures the latest feed, frozen snapshot, sidecar, runtime reference, three
+   stats CSVs and prediction schedule. The sidecar hash must equal the configured
+   publication hash, so resealing changed CSVs and their sidecar does not bypass a
+   fixed configuration. Its release, bundle, target, reference, inputs,
+   eligibility and complete-row claims must agree with the verified package.
+4. Requires snapshot/latest bytes and their sidecar hashes to agree. Reference,
+   stats and schedule bytes must match the package or its schedule evidence.
+5. Requires the installed current pointer and **every** active bundle file to
+   equal the S1-verified bundle; missing, changed and unlisted active files fail.
+   No model fallback or inference is performed by the pages.
+6. Checks required CSV fields and finite/ranged probabilities, known unique IDs
+   and the configured season/week/bundle. It rechecks the captured files and
+   package at the end. Managed reference and stats readers use these captured
+   bytes rather than rereading changed paths or selecting an older cache entry.
+
+A malformed, unreadable or inconsistent managed configuration/set is a visible
+error and produces no prop tables, pickers or parlay selections. It never
+silently downgrades to legacy mode. Explicitly removing the configuration selects
+the labelled legacy mode again; cached successful or failed prediction loads do
+not override that choice. Invalid legacy prediction CSVs also produce a controlled error;
+missing files retain the existing missing-data messages. The legacy numeric
+parser, probability calculations, thresholds, identity fallback and stored values
+are preserved. Managed CSVs use exact float parsing before the pages' existing
+float32 display conversion. Stats caches include managed source bytes in their
+keys. Parlay Builder now coerces invalid legacy game dates, like Player Props.
+
+This is **consistency and integrity checking**, not authenticity, release approval,
+calibration or betting validation. It relies on a trusted package builder,
+publisher and configuration record. It does not recompute model scores during
+page loading; S2 performed output verification. The checkpoints are not a lock:
+a writer can change disk state after the final check, but the UI receives only
+the already captured set and a subsequent rerun checks files again. No workflow,
+nightly generation gate, source refresh, model feature contract, production file,
+reference adoption or app restart is changed. The existing historical containment
+wording is retained; it is not a new accuracy claim for a managed candidate.
+
+Regression coverage uses synthetic temporary releases and AppTest renders, with
+networking guarded. The new suite is listed for the existing Python 3.12 job;
+being listed is not evidence of a completed CI run. Initial cold S1 verification
+can be expensive. Cross-runner activation, crash-atomic deployment, authentication
+and real-browser coverage remain separate.

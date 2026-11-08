@@ -14,6 +14,7 @@ import xgboost as xgb
 sys.path.append(str(Path(__file__).parent.parent))
 
 from footer import add_betting_oracle_footer
+from player_props.page_data import PageDataError, load_page_inputs
 from player_props.reference_join import (enrich, enrichment_summary, load_reference, player_rows,
                                          season_totals as season_totals_by_id, status_label, unique_labels)
 
@@ -25,13 +26,15 @@ from player_props.reference_join import (enrich, enrichment_summary, load_refere
 
 
 @st.cache_data(ttl=3600)
-def load_player_passing_stats():
+def load_player_passing_stats(source_bytes=None):
     """Load aggregated passing stats with memory optimization."""
     file_path = Path('data_files/player_passing_stats.csv')
-    if not file_path.exists():
+    if source_bytes is None and not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path, dtype={'player_id': str})
+    from io import BytesIO
+    source = BytesIO(source_bytes) if source_bytes is not None else file_path
+    df = pd.read_csv(source, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -43,13 +46,15 @@ def load_player_passing_stats():
 
 
 @st.cache_data(ttl=3600)
-def load_player_rushing_stats():
+def load_player_rushing_stats(source_bytes=None):
     """Load aggregated rushing stats with memory optimization."""
     file_path = Path('data_files/player_rushing_stats.csv')
-    if not file_path.exists():
+    if source_bytes is None and not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path, dtype={'player_id': str})
+    from io import BytesIO
+    source = BytesIO(source_bytes) if source_bytes is not None else file_path
+    df = pd.read_csv(source, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -61,13 +66,15 @@ def load_player_rushing_stats():
 
 
 @st.cache_data(ttl=3600)
-def load_player_receiving_stats():
+def load_player_receiving_stats(source_bytes=None):
     """Load aggregated receiving stats with memory optimization."""
     file_path = Path('data_files/player_receiving_stats.csv')
-    if not file_path.exists():
+    if source_bytes is None and not file_path.exists():
         return None
     
-    df = pd.read_csv(file_path, dtype={'player_id': str})
+    from io import BytesIO
+    source = BytesIO(source_bytes) if source_bytes is not None else file_path
+    df = pd.read_csv(source, dtype={'player_id': str})
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -78,10 +85,10 @@ def load_player_receiving_stats():
     return df
 
 
-@st.cache_data(ttl=3600)
 def load_reference_cached():
     """The players reference (IDs as text, duplicate IDs flagged), or None."""
-    return load_reference(Path('data_files/players.csv'))
+    loaded = globals().get('_page_load')
+    return loaded.reference if loaded is not None else load_reference(Path('data_files/players.csv'))
 
 
 def load_players():
@@ -90,15 +97,14 @@ def load_players():
     return None if ref is None else ref.records
 
 
-@st.cache_data(ttl=3600)
 def load_player_props_predictions():
-    """Load player prop predictions with memory optimization."""
-    file_path = Path('data_files/player_props_predictions.csv')
-    if not file_path.exists():
+    """Recheck managed files on every rerun; parse only captured bytes."""
+    global _page_load
+    _page_load = load_page_inputs(Path('data_files'))
+    if _page_load.predictions is None:
         return None
-    
-    df = pd.read_csv(file_path, dtype={'player_id': str})
-    
+    df = _page_load.predictions.copy()
+
     # Memory optimization
     for col in df.select_dtypes(include=['float64']).columns:
         df[col] = df[col].astype('float32')
@@ -206,18 +212,25 @@ def main():
     st.title("🎯 Player Props Predictions")
 
     # Load data
-    predictions = load_player_props_predictions()
+    try:
+        predictions = load_player_props_predictions()
+    except PageDataError as exc:
+        from player_props.containment import latest_stats_date, notice_markdown
+        st.warning(notice_markdown(latest_stats_date(Path('data_files'))))
+        st.error(f"Player prop outputs unavailable: {exc}")
+        return
 
     # Containment notice (player_props/containment.py): shown before anything
     # else so no prop output appears without it.
     from player_props.containment import (band_label, holdout_label, latest_stats_date,
                                           notice_markdown, single_season)
     st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions)))
+    st.caption(_page_load.notice)
     st.markdown("---")
 
-    passing_stats = load_player_passing_stats()
-    rushing_stats = load_player_rushing_stats()
-    receiving_stats = load_player_receiving_stats()
+    passing_stats = load_player_passing_stats(_page_load.payloads.get('player_passing_stats.csv'))
+    rushing_stats = load_player_rushing_stats(_page_load.payloads.get('player_rushing_stats.csv'))
+    receiving_stats = load_player_receiving_stats(_page_load.payloads.get('player_receiving_stats.csv'))
     players = load_players()
     reference = load_reference_cached()
     _reference_notes = enrichment_summary(predictions, reference)
