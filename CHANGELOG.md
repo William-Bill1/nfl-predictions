@@ -8,6 +8,19 @@ bottom.
 
 ## November 2026
 
+- **`player_props/aggregators.py` status lines are plain ASCII:** with stdout
+  redirected on native Windows (cp1252), the Stage 5B rehearsal stopped in
+  `aggregate_training` with `UnicodeEncodeError` at the first check mark, before
+  any training. All 18 emoji prints in the module now use `OK:` / `WARNING:` /
+  `ERROR:` text. Stats files, manifests, validation, exit codes and wording are
+  otherwise unchanged; no stream, code page or environment setting is involved.
+  Missing-column diagnostics escape non-ASCII column names into ASCII text;
+  dataframe names and UTF-8 file contents are not rewritten.
+  Existing stats manifests record the previous file hash, so the freshness check
+  notes that `aggregators.py` changed. `models.py` and `predict.py` still print
+  emoji: the rehearsal's train and predict stages fail the same way until they
+  are changed. Tests: `tests/test_aggregators_console_encoding.py`.
+
 - **External managed Player Props runtime (opt-in, not activated):** configuration
   version 2 adds an absolute `runtime_root`. Predictions, reference, stats,
   schedule and the installed bundle are checked in that external tree; the

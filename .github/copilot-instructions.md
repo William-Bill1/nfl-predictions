@@ -180,6 +180,9 @@ def generate_pdf_bytes(df_upcoming) -> bytes:
   - **Optional for `player_props/backtest.py`'s diagnostics only:** they are
     plain ASCII via `_say()`, which escapes unencodable characters and drops a
     message if stdout is unavailable.
+  - **Also optional for `player_props/aggregators.py`:** its status lines are
+    plain ASCII, with diagnostic column names escaped. `player_props/models.py`
+    and `predict.py` still print emoji.
   - **New console output in app code paths:** keep it ASCII, so a redirected
     cp1252 stdout can't turn success into failure.
 - **Deployment**: Streamlit Cloud, all data files committed. The fork's nightly
