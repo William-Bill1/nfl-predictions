@@ -215,8 +215,8 @@ def main():
     try:
         predictions = load_player_props_predictions()
     except PageDataError as exc:
-        from player_props.containment import latest_stats_date, notice_markdown
-        st.warning(notice_markdown(latest_stats_date(Path('data_files'))))
+        from player_props.containment import notice_markdown
+        st.warning(notice_markdown(None))
         st.error(f"Player prop outputs unavailable: {exc}")
         return
 
@@ -224,7 +224,7 @@ def main():
     # else so no prop output appears without it.
     from player_props.containment import (band_label, holdout_label, latest_stats_date,
                                           notice_markdown, single_season)
-    st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions)))
+    st.warning(notice_markdown(latest_stats_date(Path('data_files'), captured=_page_load.payloads if _page_load.managed else None), single_season(predictions)))
     st.caption(_page_load.notice)
     st.markdown("---")
 
@@ -275,7 +275,8 @@ def main():
     # (never the calendar year, never another season's file). On a problem the
     # count is omitted with a message; the predictions below stay visible.
     from player_props.season_schedule import remaining_games_banner
-    level, banner = remaining_games_banner(predictions, Path('data_files'))
+    level, banner = remaining_games_banner(predictions, Path('data_files'),
+                                            captured=_page_load.payloads if _page_load.managed else None)
     (st.info if level == 'info' else st.warning)(banner)
 
     # Main tabs

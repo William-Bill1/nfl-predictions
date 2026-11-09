@@ -2446,3 +2446,96 @@ networking guarded. The new suite is listed for the existing Python 3.12 job;
 being listed is not evidence of a completed CI run. Initial cold S1 verification
 can be expensive. Cross-runner activation, crash-atomic deployment, authentication
 and real-browser coverage remain separate.
+
+
+## External managed prop runtime (configuration version 2; not activated)
+
+Version 1 remains supported with its original seven fields and repository-relative
+runtime layout. Version 2 has exactly those fields plus `runtime_root`:
+
+```json
+{
+  "version": 2,
+  "package": "<verified S1 package directory>",
+  "runtime_root": "<absolute external runtime directory>",
+  "release_id": "<approved release ID>",
+  "manifest_sha256": "<trusted 64-character lowercase hash>",
+  "publication_sha256": "<trusted S2 sidecar hash>",
+  "season": 2026,
+  "week": 9
+}
+```
+
+This is a schema example with deliberately unusable placeholders, not an
+activation instruction or approval of a particular target. No configuration is
+created. It still lives at the application's `data_files/player_props_release.json`;
+relative package paths are still relative to the app root. `runtime_root` must
+already exist, be an absolute directory without padding or parent traversal, and
+contain this layout:
+
+```text
+<runtime_root>/
+  data_files/
+    player_props_predictions.csv
+    player_props_predictions_week<W>_<Y>.csv
+    player_props_predictions_week<W>_<Y>.provenance.json
+    players.csv
+    player_passing_stats.csv
+    player_rushing_stats.csv
+    player_receiving_stats.csv
+    nfl_schedule_<Y>.csv
+  player_props/models/
+    current_bundle.json
+    bundles/<bundle_id>/...exact packaged bundle files...
+```
+
+The runtime and package must be separate and outside the application/repository:
+no equal, ancestor or descendant overlaps, including with each other, and neither
+may be in a Git checkout (`.git` directories and worktree metadata files both
+count). Runtime path components and the package directory's lexical components are
+checked before resolution so a symlink,
+Windows junction or other reparse point is refused even if it points inside the
+runtime. Runtime files with multiple hard links are refused too. Root/layout and
+component checks repeat before runtime file reads and final checkpoints. No paths
+are created and no inputs are rewritten by the loader.
+
+All existing S1, S2, package/sidecar pins, completeness, identity, feature-contract,
+installed-pointer/bundle, captured-bytes and final hash checks still apply. Only
+the approved runtime supplies the managed data; valid or invalid legacy CSVs,
+references, schedules and model pointers do not substitute for external files.
+A bad runtime/configuration still raises a controlled error and never restores
+legacy mode automatically. The configuration itself is rechecked in its original
+app location, not under `runtime_root`. In version 2 its lexical path also rejects
+links/reparse points at initial validation and the final configuration checkpoint.
+
+Managed stats-date notices and the Player Props remaining-games banner now parse
+the captured stats/schedule bytes in both versions. They do not reread the app's
+live files after validation; an unavailable captured schedule yields an omitted
+count, not a disk fallback. Existing schedule validation and Toronto date counting
+are unchanged. On an input-load failure, the containment notice reports unknown
+stats freshness. Legacy mode keeps its existing disk readers. The notice wording,
+probability calculations, filters, tiers, feature contracts and all six tab bodies
+are unchanged. Real Model Performance continues to use the helper's legacy
+argument defaults; its page is not changed.
+
+This separates managed reads from future legacy/nightly file changes only when
+an independently assembled runtime is explicitly configured. It does not add an
+installer, authorize production S2 publication, adopt a reference, enable training
+or generation, refresh a source, copy the Week 7 archive into current outputs,
+change workflows/dependencies, create an OS permission boundary, or make files
+immutable. A trusted builder/publisher/configuration is still needed. Existing
+S2 destination protections are not relaxed. The 917-row Week 7 package remains a
+historical rehearsal candidate and is not approved for current-week use.
+
+Checks are not a lock: a non-cooperating writer can change a path after the last
+check and before an open, or alter disk state after a successful render. Captured
+bytes keep that render coherent, and subsequent reruns validate again. Missing or
+changed runtime assets fail closed. Removing the app configuration deliberately
+selects labelled legacy data; switching it to a retained verified runtime can
+return to a prior release. Neither action restores overwritten legacy artifacts,
+so production assembly and rollback still need a separately reviewed plan.
+
+Regression tests use synthetic temporary releases, real junctions on Windows (or
+symlinks on other platforms), a hard-linked file, denied overlaps, configuration
+switches, injected corruption and AppTest page renders. Listing the new suite in
+the existing Python 3.12 job is not evidence it has run in CI.

@@ -18,6 +18,7 @@ The game spread model is a separate pipeline and is not covered.
 from __future__ import annotations
 
 from datetime import date
+from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
@@ -28,14 +29,14 @@ HOLDOUT_PASSED = "passed 2025 holdout check"
 HOLDOUT_NOT_PASSED = "did not pass holdout check"
 
 
-def latest_stats_date(data_dir: Path | str) -> date | None:
+def latest_stats_date(data_dir: Path | str, *, captured: dict[str, bytes] | None = None) -> date | None:
     """Latest player game date across the prop stats files, or None if none can be read."""
     latest = None
     for name in STATS_FILES:
         try:
-            dates = pd.to_datetime(pd.read_csv(Path(data_dir) / name, usecols=["game_date"])["game_date"],
+            dates = pd.to_datetime(pd.read_csv(Path(data_dir) / name if captured is None else BytesIO(captured[name]), usecols=["game_date"])["game_date"],
                                    errors="coerce").dropna()
-        except (OSError, ValueError, pd.errors.ParserError, pd.errors.EmptyDataError):
+        except (OSError, ValueError, TypeError, KeyError, pd.errors.ParserError, pd.errors.EmptyDataError):
             continue
         if not dates.empty:
             d = dates.max().date()

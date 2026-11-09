@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import stat
 import tarfile
 import warnings
 
@@ -107,15 +108,64 @@ def _verified_package(package: str, fingerprint: tuple, policy: str) -> None:
         raise PageDataError('the managed package changed during S1 verification')
 
 
+def _overlaps(left: Path, right: Path) -> bool:
+    return left == right or left in right.parents or right in left.parents
+
+
+def _reject_links(path: Path) -> None:
+    """Check lexical components before resolving: even an in-root alias is refused."""
+    if 'bet_journal' in {p.lower() for p in path.parts}:
+        raise PageDataError('the Bet Journal is not a managed runtime input')
+    for part in reversed((path, *path.parents)):
+        try:
+            info = part.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISLNK(info.st_mode)
+                or getattr(info, 'st_file_attributes', 0) & getattr(stat, 'FILE_ATTRIBUTE_REPARSE_POINT', 1024)):
+            raise PageDataError(f'managed runtime paths must not contain links or reparse points: {part}')
+
+
+def _external_runtime(value: str, app_root: Path, package_input: Path) -> Path:
+    if not isinstance(value, str) or not value or value != value.strip():
+        raise PageDataError('runtime_root must be a nonblank, unpadded absolute path')
+    runtime = Path(value)
+    if not runtime.is_absolute() or '..' in runtime.parts:
+        raise PageDataError('runtime_root must be an absolute path without parent traversal')
+    _reject_links(runtime)
+    _reject_links(package_input)
+    runtime = runtime.resolve(strict=True)
+    package = package_input.resolve(strict=True)
+    if not runtime.is_dir():
+        raise PageDataError('runtime_root must be an existing directory')
+    for protected in (app_root.resolve(), Path(__file__).resolve().parents[1]):
+        if _overlaps(runtime, protected) or _overlaps(package, protected):
+            raise PageDataError('the external runtime and package must not overlap the application or repository')
+    if _overlaps(runtime, package):
+        raise PageDataError('the external runtime must not overlap its package')
+    for location in (runtime, package):
+        if any(os.path.lexists(parent / '.git') for parent in (location, *location.parents)):
+            raise PageDataError('the external runtime and package must be outside Git checkouts')
+    return runtime
+
+
 def _managed(data: Path, config_bytes: bytes) -> PageInputs:
     from player_props import release_manifest as rm, publication as pub, model_bundle as mb
     from player_props.features import FEATURE_CONTRACT
     from player_props.rehearsal_expected import RESTATED_POLICY
 
+    config_path = data / CONFIG_FILE
+    app_root = data.parent.resolve()
     cfg = _json(config_bytes, CONFIG_FILE)
     keys = {'version', 'package', 'release_id', 'manifest_sha256', 'publication_sha256', 'season', 'week'}
-    if set(cfg) != keys or type(cfg.get('version')) is not int or cfg['version'] != 1:
-        raise PageDataError(f'{CONFIG_FILE} must have exactly {sorted(keys)} and version 1')
+    version = cfg.get('version')
+    if type(version) is not int or version not in (1, 2):
+        raise PageDataError(f'{CONFIG_FILE} must use version 1 or 2')
+    if version == 2:
+        _reject_links(config_path.absolute())
+        keys = keys | {'runtime_root'}
+    if set(cfg) != keys:
+        raise PageDataError(f'{CONFIG_FILE} version {version} must have exactly {sorted(keys)}')
     if (not isinstance(cfg['package'], str) or not cfg['package'].strip()
             or not isinstance(cfg['release_id'], str) or not re.fullmatch(r'\d{8}T\d{6}Z-[0-9a-f]{8}', cfg['release_id'])
             or not isinstance(cfg['manifest_sha256'], str) or not re.fullmatch(r'[0-9a-f]{64}', cfg['manifest_sha256'])
@@ -126,7 +176,23 @@ def _managed(data: Path, config_bytes: bytes) -> PageInputs:
     package = Path(cfg['package'])
     if not package.is_absolute():
         package = data.parent / package
+    package_input = package.absolute()
+    runtime = _external_runtime(cfg['runtime_root'], app_root, package_input) if version == 2 else None
     package = package.resolve()
+    if runtime is not None:
+        data = runtime / 'data_files'
+
+    def read_input(path: Path) -> bytes:
+        if runtime is not None:
+            if (_external_runtime(cfg['runtime_root'], app_root, package_input) != runtime
+                    or package_input.resolve(strict=True) != package):
+                raise PageDataError('the managed runtime or package location changed')
+            _reject_links(path)
+            if path.lstat().st_nlink > 1 and path.is_file():
+                raise PageDataError('managed runtime files must not have multiple hard links')
+            if not path.resolve(strict=True).is_relative_to(runtime):
+                raise PageDataError('a managed input escapes runtime_root')
+        return _read(path)
     if 'bet_journal' in {p.lower() for p in package.parts}:
         raise PageDataError('the Bet Journal is not a release package')
     manifest, mbytes, contents = rm.read_package(package)
@@ -141,7 +207,7 @@ def _managed(data: Path, config_bytes: bytes) -> PageInputs:
     # Capture the exact files used by the UI, including all stats and reference.
     names = [LATEST_FILE, pub.snapshot_name(**target), pub.sidecar_name(**target),
              'players.csv', *STATS.values(), f'nfl_schedule_{cfg["season"]}.csv']
-    captured = {name: _read(data / name) for name in names}
+    captured = {name: read_input(data / name) for name in names}
     if _sha(captured[pub.sidecar_name(**target)]) != cfg['publication_sha256']:
         raise PageDataError('the publication sidecar does not match the configured publication hash')
     side = _json(captured[pub.sidecar_name(**target)], 'publication sidecar')
@@ -192,7 +258,7 @@ def _managed(data: Path, config_bytes: bytes) -> PageInputs:
     # S1 verified the stored bundle. The installed bundle must be byte-for-byte
     # that bundle, including its current pointer, rather than a cross-model fallback.
     models = data.parent / 'player_props' / 'models'
-    pointer_bytes = _read(models / mb.POINTER_FILE)
+    pointer_bytes = read_input(models / mb.POINTER_FILE)
     pointer = _json(pointer_bytes, 'current bundle pointer')
     if pointer != {'kind': mb.POINTER_KIND, 'bundle_id': bundle['bundle_id'],
                    'manifest_sha256': bundle['manifest_sha256']}:
@@ -210,7 +276,7 @@ def _managed(data: Path, config_bytes: bytes) -> PageInputs:
             expected_model_names.add(parts[1])
             expected = archive.extractfile(member).read()
             installed = models / mb.BUNDLES_DIR / parts[0] / parts[1]
-            actual = _read(installed)
+            actual = read_input(installed)
             if actual != expected:
                 raise PageDataError(f'the installed bundle file {parts[1]} differs from the managed package')
             model_reads[installed] = actual
@@ -232,9 +298,16 @@ def _managed(data: Path, config_bytes: bytes) -> PageInputs:
     # Checkpoints, not a lock. The UI only receives the captured bytes even if a
     # non-cooperating writer changes the on-disk set after this final checkpoint.
     for path, expected in {**{data / k: v for k, v in captured.items()},
-                           **model_reads, data / CONFIG_FILE: config_bytes}.items():
-        if _read(path) != expected:
+                           **model_reads}.items():
+        if read_input(path) != expected:
             raise PageDataError(f'{path.name} changed while the managed release was being checked')
+    if version == 2:
+        _reject_links(config_path.absolute())
+    if _read(config_path) != config_bytes:
+        raise PageDataError('the managed release configuration changed while inputs were checked')
+    if runtime is not None:
+        if _external_runtime(cfg['runtime_root'], app_root, package_input) != runtime:
+            raise PageDataError('the managed runtime location changed')
     _, after_manifest, after = rm.read_package(package)
     if after_manifest != mbytes or any(after[k] != v for k, v in contents.items()):
         raise PageDataError('the managed package changed while the page inputs were being checked')

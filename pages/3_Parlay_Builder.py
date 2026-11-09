@@ -125,7 +125,10 @@ except PageDataError as exc:
 
 # Containment notice (player_props/containment.py), before any prop output.
 from player_props.containment import latest_stats_date, notice_markdown, single_season
-st.warning(notice_markdown(latest_stats_date(Path('data_files')), single_season(predictions_df)))
+stats_date = (latest_stats_date(Path('data_files'),
+                                captured=_page_load.payloads if _page_load.managed else None)
+              if _load_problem is None else None)
+st.warning(notice_markdown(stats_date, single_season(predictions_df)))
 if _load_problem:
     st.error(f"Player prop outputs unavailable: {_load_problem}")
     st.stop()
