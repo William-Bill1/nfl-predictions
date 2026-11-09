@@ -155,7 +155,7 @@ def aggregate_passing_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     passing_plays = pbp[pbp['passer_player_id'].notna()].copy()
     
     if passing_plays.empty:
-        print("⚠️  No passing plays found in dataset")
+        print("WARNING: No passing plays found in dataset")
         return pd.DataFrame()
     passing_plays = _canonical_play_labels(passing_plays, 'passer_player_id',
                                            'passer_player_name', 'passing')
@@ -193,7 +193,7 @@ def aggregate_passing_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     agg_stats = agg_stats.sort_values(['player_id', 'season', 'week'])
     agg_stats.attrs = notes
 
-    print(f"✅ Aggregated {len(agg_stats):,} player-game passing records")
+    print(f"OK: Aggregated {len(agg_stats):,} player-game passing records")
     print(f"   Players: {agg_stats['player_id'].nunique():,}")
     print(f"   Games: {agg_stats['game_id'].nunique():,}")
     
@@ -212,7 +212,7 @@ def aggregate_rushing_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     rushing_plays = pbp[pbp['rusher_player_id'].notna()].copy()
     
     if rushing_plays.empty:
-        print("⚠️  No rushing plays found in dataset")
+        print("WARNING: No rushing plays found in dataset")
         return pd.DataFrame()
     rushing_plays = _canonical_play_labels(rushing_plays, 'rusher_player_id',
                                            'rusher_player_name', 'rushing')
@@ -245,7 +245,7 @@ def aggregate_rushing_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     agg_stats = agg_stats.sort_values(['player_id', 'season', 'week'])
     agg_stats.attrs = notes
 
-    print(f"✅ Aggregated {len(agg_stats):,} player-game rushing records")
+    print(f"OK: Aggregated {len(agg_stats):,} player-game rushing records")
     print(f"   Players: {agg_stats['player_id'].nunique():,}")
     
     return agg_stats
@@ -264,7 +264,7 @@ def aggregate_receiving_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     receiving_plays = pbp[pbp['receiver_player_id'].notna()].copy()
     
     if receiving_plays.empty:
-        print("⚠️  No receiving plays found in dataset")
+        print("WARNING: No receiving plays found in dataset")
         return pd.DataFrame()
     receiving_plays = _canonical_play_labels(receiving_plays, 'receiver_player_id',
                                              'receiver_player_name', 'receiving')
@@ -312,7 +312,7 @@ def aggregate_receiving_stats(pbp: pd.DataFrame) -> pd.DataFrame:
     agg_stats = agg_stats.sort_values(['player_id', 'season', 'week'])
     agg_stats.attrs = notes
 
-    print(f"✅ Aggregated {len(agg_stats):,} player-game receiving records")
+    print(f"OK: Aggregated {len(agg_stats):,} player-game receiving records")
     print(f"   Players: {agg_stats['player_id'].nunique():,}")
     
     return agg_stats
@@ -355,7 +355,7 @@ def calculate_rolling_averages(
 
     for stat_col in stat_cols:
         if stat_col not in player_stats.columns:
-            print(f"⚠️  Column '{stat_col}' not found, skipping")
+            print(f"WARNING: Column {ascii(stat_col)} not found, skipping")
             continue
 
         for window in windows:
@@ -365,7 +365,7 @@ def calculate_rolling_averages(
                 lambda x: x.shift(1).ewm(span=window, adjust=False).mean()
             )
 
-    print(f"✅ Calculated exponentially-weighted rolling averages: windows={windows}")
+    print(f"OK: Calculated exponentially-weighted rolling averages: windows={windows}")
 
     return player_stats
 
@@ -684,7 +684,7 @@ def aggregate_all_stats(
     Returns:
         Tuple of (passing_stats, rushing_stats, receiving_stats)
     """
-    print("\n🏈 Aggregating Player Stats...")
+    print("\nAggregating Player Stats...")
     print("=" * 60)
     if schedule is None:
         schedule = load_matchup_schedule()
@@ -700,13 +700,13 @@ def aggregate_all_stats(
             manifest_for = stats_manifest(source, rolling_windows)
         written = write_player_stats(tables, save_to_dir, rolling_windows, manifest_for)
         for stat_type in STATS_FILES:
-            print(f"💾 Saved {written[stat_type].name} ({len(tables[stat_type]):,} rows)")
+            print(f"Saved {written[stat_type].name} ({len(tables[stat_type]):,} rows)")
         if 'manifest' in written:
-            print(f"💾 Saved {written['manifest'].name}")
+            print(f"Saved {written['manifest'].name}")
         else:
-            print("⚠️  No provenance manifest written (no source observation); the stats are unverified")
+            print("WARNING: No provenance manifest written (no source observation); the stats are unverified")
 
-    print("\n✅ All stats aggregated successfully!")
+    print("\nOK: All stats aggregated successfully!")
 
     return tables['passing'], tables['rushing'], tables['receiving']
 
@@ -719,7 +719,7 @@ if __name__ == '__main__':
     sys.path.insert(0, str(Path(__file__).parent.parent))
     from player_props.provenance import read_source
 
-    print("🏈 NFL Player Stats Aggregator")
+    print("NFL Player Stats Aggregator")
     print("=" * 60)
     
     # Load play-by-play data
@@ -727,13 +727,13 @@ if __name__ == '__main__':
     pbp_file = DATA_DIR / 'nfl_play_by_play_historical.csv.gz'
     
     if not pbp_file.exists():
-        print(f"\n❌ File not found: {pbp_file}")
+        print(f"\nERROR: File not found: {pbp_file}")
         print("Please ensure nfl_play_by_play_historical.csv.gz exists")
         sys.exit(1)
     
-    print(f"\n📂 Loading {pbp_file.name}...")
+    print(f"\nLoading {pbp_file.name}...")
     pbp, source = read_source(pbp_file)
-    print(f"✅ Loaded {len(pbp):,} plays from {pbp['season'].min()}-{pbp['season'].max()}")
+    print(f"OK: Loaded {len(pbp):,} plays from {pbp['season'].min()}-{pbp['season'].max()}")
 
     # Aggregate all stats
     passing, rushing, receiving = aggregate_all_stats(
@@ -744,7 +744,7 @@ if __name__ == '__main__':
     )
     
     print("\n" + "=" * 60)
-    print("✅ Aggregation complete! Ready for model training.")
+    print("OK: Aggregation complete! Ready for model training.")
     print("\nNext steps:")
     print("  1. Review generated CSV files in data_files/")
     print("  2. Run player_props/models.py to train baseline models")
