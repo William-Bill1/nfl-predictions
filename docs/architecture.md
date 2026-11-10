@@ -2539,3 +2539,7 @@ Regression tests use synthetic temporary releases, real junctions on Windows (or
 symlinks on other platforms), a hard-linked file, denied overlaps, configuration
 switches, injected corruption and AppTest page renders. Listing the new suite in
 the existing Python 3.12 job is not evidence it has run in CI.
+
+### Training and prediction diagnostics
+
+`player_props.console.say` formats diagnostics for the current stdout encoding. Characters that cannot be encoded use backslash escapes; UTF-8 output is preserved. It does not reconfigure streams, alter data or suppress write failures. Training and prediction route their console messages through this helper, including interpolated player names and errors.

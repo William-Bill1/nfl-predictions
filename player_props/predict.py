@@ -21,6 +21,8 @@ except ImportError:  # run from inside player_props/
     _sys.path.append(str(Path(__file__).parent.parent))
     from season_utils import upcoming_or_current_season
 
+from player_props.console import say as _say
+
 # Import injury functions
 try:
     from .injuries import get_injury_report, find_player_injury, adjust_prediction_for_injury
@@ -95,7 +97,7 @@ def load_players():
     eligibility field is refused (never a silent fall back to position)."""
     players_path = DATA_DIR / 'players.csv'
     if not players_path.exists():
-        print(f"❌ Players data not found: {players_path}")
+        _say(f"❌ Players data not found: {players_path}")
         return None
     df = pd.read_csv(players_path, dtype={'gsis_id': str})
     missing = [c for c in PLAYER_COLUMNS if c not in df.columns]
@@ -116,7 +118,7 @@ def load_schedule(season=None, week=None):
     season = season or upcoming_or_current_season()
     schedule_path = DATA_DIR / f'nfl_schedule_{season}.csv'
     if not schedule_path.exists():
-        print(f"❌ Schedule not found: {schedule_path}")
+        _say(f"❌ Schedule not found: {schedule_path}")
         return None
 
     df = pd.read_csv(schedule_path)
@@ -129,7 +131,7 @@ def load_schedule(season=None, week=None):
 
     if week is not None:
         wk = df[df['week'] == int(week)].copy()
-        print(f"✅ Week {week}, {season}: {len(wk)} games")
+        _say(f"✅ Week {week}, {season}: {len(wk)} games")
         return wk
 
     now_utc = pd.Timestamp.now(tz='UTC')
@@ -138,13 +140,13 @@ def load_schedule(season=None, week=None):
     if not upcoming.empty:
         target_week = int(upcoming['week'].min())
         upcoming = upcoming[upcoming['week'] == target_week].copy()
-        print(f"✅ Next up: Week {target_week}, {season} ({len(upcoming)} games)")
+        _say(f"✅ Next up: Week {target_week}, {season} ({len(upcoming)} games)")
         return upcoming
 
     # Whole season already in the past -> earliest week (useful off-season / testing).
     first_week = int(df['week'].min())
     wk = df[df['week'] == first_week].copy()
-    print(f"⚠️  No upcoming games for {season}; using Week {first_week} ({len(wk)} games)")
+    _say(f"⚠️  No upcoming games for {season}; using Week {first_week} ({len(wk)} games)")
     return wk
 
 
@@ -162,9 +164,9 @@ def load_player_stats():
         file_path = DATA_DIR / file_map[stat_type]
         if file_path.exists():
             stats[stat_type] = pd.read_csv(file_path)
-            print(f"✅ Loaded {len(stats[stat_type]):,} {stat_type} records")
+            _say(f"✅ Loaded {len(stats[stat_type]):,} {stat_type} records")
         else:
-            print(f"⚠️  {stat_type} stats not found")
+            _say(f"⚠️  {stat_type} stats not found")
             stats[stat_type] = None
     
     return stats
@@ -185,7 +187,7 @@ def load_models():
     try:
         return load_model_bundle()['models']
     except BundleError as exc:
-        print("⛔ No verified model bundle - " + "; ".join(exc.problems[:5]))
+        _say("⛔ No verified model bundle - " + "; ".join(exc.problems[:5]))
         return {}
 
 
@@ -217,7 +219,7 @@ def load_active_roster(season):
         import nfl_data_py as nfl
         r = nfl.import_seasonal_rosters([int(season)])
     except Exception as e:  # offline, season not published yet, etc.
-        print(f"[predict] roster fetch for {season} failed ({e}); no roster filter")
+        _say(f"[predict] roster fetch for {season} failed ({e}); no roster filter")
         return None
     if r is None or r.empty or 'player_id' not in r.columns:
         return None
@@ -225,7 +227,7 @@ def load_active_roster(season):
         r.loc[r['position'].isin(SKILL_POSITIONS), 'player_id'].dropna().astype(str)
     )
     if len(ids) < _MIN_SANE_SKILL_IDS:
-        print(f"[predict] {season} roster only has {len(ids)} skill players; "
+        _say(f"[predict] {season} roster only has {len(ids)} skill players; "
               "looks incomplete, skipping roster filter")
         return None
     return ids
@@ -468,7 +470,7 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
     for team in teams:
         names, report = candidate_players(all_stats, team, roster_ids=roster_ids)
         if report['latest_elsewhere']:
-            print(f"   {team}: {len(report['latest_elsewhere'])} recent player(s) excluded - their "
+            _say(f"   {team}: {len(report['latest_elsewhere'])} recent player(s) excluded - their "
                   f"latest appearance was for another team, so current team is unknown")
         rosters[team] = names
     target_rows = pd.DataFrame([
@@ -641,7 +643,7 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                         except _SkipWeather:
                             pass
                         except Exception as e:
-                            print(f"⚠️ Weather adjustment failed for {player_name}: {e}")
+                            _say(f"⚠️ Weather adjustment failed for {player_name}: {e}")
                             prediction['weather_adjusted'] = False
                             prediction['weather_conditions'] = "Unknown"
 
@@ -659,11 +661,11 @@ def predict_props_for_game(game_row, all_stats, models, skip_injuries=False, ski
                 except Exception as e:
                     # Injury / weather / market post-processing only; model
                     # inputs and the model call above fail loudly.
-                    print(f"⚠️  Post-processing failed for {player_name} {prop_type}: {e}")
+                    _say(f"⚠️  Post-processing failed for {player_name} {prop_type}: {e}")
                     continue
 
     if ineligible:
-        print(f"   {len(ineligible)} candidate(s) get no props: their players-reference record can't "
+        _say(f"   {len(ineligible)} candidate(s) get no props: their players-reference record can't "
               f"select an eligibility group ({ELIGIBILITY_POLICY}): " + "; ".join(ineligible[:10]))
     return predictions
 
@@ -717,16 +719,16 @@ def _generate_predictions(season=None, week=None, freeze=True,
     before the target week. See docs/architecture.md ("Stage 2 freshness and
     provenance").
     """
-    print("=" * 70)
-    print("🎯 NFL Player Props Prediction Pipeline")
-    print("=" * 70)
-    print()
+    _say("=" * 70)
+    _say("🎯 NFL Player Props Prediction Pipeline")
+    _say("=" * 70)
+    _say()
 
     # Load data
-    print("📂 Loading data...")
+    _say("📂 Loading data...")
     schedule = load_schedule(season=season, week=week)
     if schedule is None or schedule.empty:
-        print("❌ No games to predict")
+        _say("❌ No games to predict")
         return
 
     resolved_season = int(schedule['season'].dropna().iloc[0]) if 'season' in schedule.columns and schedule['season'].notna().any() else (season or upcoming_or_current_season())
@@ -738,12 +740,12 @@ def _generate_predictions(season=None, week=None, freeze=True,
         check = check_inputs(resolved_season, resolved_week, DATA_DIR,
                              prediction_matchups=set(zip(schedule['home_team'], schedule['away_team'])))
     except Exception as exc:  # noqa: BLE001 - an unfinished check is a failed check
-        print(f"❌ The player-prop input check could not complete ({type(exc).__name__}: {exc}) - "
+        _say(f"❌ The player-prop input check could not complete ({type(exc).__name__}: {exc}) - "
               f"no predictions written; existing files are unchanged.")
         return 1
-    print(format_report(check))
+    _say(format_report(check))
     if not check.ok:
-        print("❌ Player-prop inputs are not verified fresh for this week - no predictions "
+        _say("❌ Player-prop inputs are not verified fresh for this week - no predictions "
               "written; existing files are unchanged.")
         return 1
     # Only rows from completed games before the target week.
@@ -755,12 +757,12 @@ def _generate_predictions(season=None, week=None, freeze=True,
     try:
         bundle = load_model_bundle()
     except BundleError as exc:
-        print("❌ No verified model bundle (" + "; ".join(exc.problems[:5]) + ") - no "
+        _say("❌ No verified model bundle (" + "; ".join(exc.problems[:5]) + ") - no "
               "predictions written; existing files are unchanged.")
         return 1
     trained_through = bundle['manifest']['training_source']['last_game_date']
     if trained_through >= check.summary['feature_cutoff']:
-        print(f"❌ Model bundle {bundle['manifest']['bundle_id']} was trained on games through "
+        _say(f"❌ Model bundle {bundle['manifest']['bundle_id']} was trained on games through "
               f"{trained_through}, on or after this week's first game "
               f"({check.summary['feature_cutoff']}) - no predictions written; existing files "
               f"are unchanged.")
@@ -776,15 +778,15 @@ def _generate_predictions(season=None, week=None, freeze=True,
         else fetch_market_odds(resolved_season, resolved_week, schedule)
     )
 
-    print()
-    print("🔮 Generating predictions...")
-    print("-" * 70)
+    _say()
+    _say("🔮 Generating predictions...")
+    _say("-" * 70)
 
     # Generate predictions for each game
     all_predictions = []
 
     for idx, game_row in schedule.iterrows():
-        print(f"\n📅 {game_row['away_team']} @ {game_row['home_team']} (Week {game_row['week']})")
+        _say(f"\n📅 {game_row['away_team']} @ {game_row['home_team']} (Week {game_row['week']})")
 
         try:
             game_predictions = predict_props_for_game(
@@ -796,13 +798,13 @@ def _generate_predictions(season=None, week=None, freeze=True,
         except (FeatureContractError, FeatureValidationError) as exc:
             # Nothing has been written yet; a feature that can't be built
             # stops the whole run rather than dropping players silently.
-            print(f"❌ Features could not be built for {game_row['away_team']} @ "
+            _say(f"❌ Features could not be built for {game_row['away_team']} @ "
                   f"{game_row['home_team']}: {exc} - no predictions written; existing files "
                   f"are unchanged.")
             return 1
         all_predictions.extend(game_predictions)
         
-        print(f"   Generated {len(game_predictions)} prop predictions")
+        _say(f"   Generated {len(game_predictions)} prop predictions")
     
     # Save predictions
     if all_predictions:
@@ -815,10 +817,10 @@ def _generate_predictions(season=None, week=None, freeze=True,
         output_path = DATA_DIR / 'player_props_predictions.csv'
         pred_df.to_csv(output_path, index=False)
 
-        print()
-        print("=" * 70)
-        print(f"✅ Generated {len(pred_df)} total prop predictions")
-        print(f"💾 Saved to: {output_path}")
+        _say()
+        _say("=" * 70)
+        _say(f"✅ Generated {len(pred_df)} total prop predictions")
+        _say(f"💾 Saved to: {output_path}")
 
         # Frozen per-week snapshot (write once, never overwrite)
         if freeze and 'week' in pred_df.columns and pred_df['week'].notna().any():
@@ -826,36 +828,36 @@ def _generate_predictions(season=None, week=None, freeze=True,
             szn = int(pred_df['season'].dropna().iloc[0]) if 'season' in pred_df.columns and pred_df['season'].notna().any() else (season or upcoming_or_current_season())
             snap_path = DATA_DIR / f'player_props_predictions_week{wk}_{szn}.csv'
             if snap_path.exists():
-                print(f"🔒 Snapshot already frozen: {snap_path.name} (not overwriting)")
+                _say(f"🔒 Snapshot already frozen: {snap_path.name} (not overwriting)")
             else:
                 pred_df.to_csv(snap_path, index=False)
-                print(f"🔒 Froze Week {wk} {szn} snapshot -> {snap_path.name}")
-        print()
+                _say(f"🔒 Froze Week {wk} {szn} snapshot -> {snap_path.name}")
+        _say()
         
         # Summary statistics
-        print("📊 Prediction Summary:")
-        print(f"   Total props: {len(pred_df)}")
-        print(f"   High confidence (≥65%): {len(pred_df[pred_df['confidence'] >= 0.65])}")
-        print(f"   Medium confidence (60-65%): {len(pred_df[(pred_df['confidence'] >= 0.60) & (pred_df['confidence'] < 0.65)])}")
-        print(f"   Standard confidence (55-60%): {len(pred_df[(pred_df['confidence'] >= 0.55) & (pred_df['confidence'] < 0.60)])}")
-        print()
+        _say("📊 Prediction Summary:")
+        _say(f"   Total props: {len(pred_df)}")
+        _say(f"   High confidence (≥65%): {len(pred_df[pred_df['confidence'] >= 0.65])}")
+        _say(f"   Medium confidence (60-65%): {len(pred_df[(pred_df['confidence'] >= 0.60) & (pred_df['confidence'] < 0.65)])}")
+        _say(f"   Standard confidence (55-60%): {len(pred_df[(pred_df['confidence'] >= 0.55) & (pred_df['confidence'] < 0.60)])}")
+        _say()
         
         # Top recommendations
-        print("🔥 Top 10 Recommendations:")
-        print("-" * 70)
+        _say("🔥 Top 10 Recommendations:")
+        _say("-" * 70)
         top_props = pred_df.head(10)
         for idx, row in top_props.iterrows():
-            print(f"{row['player_name']:20s} {row['team']:3s} | "
+            _say(f"{row['player_name']:20s} {row['team']:3s} | "
                   f"{row['prop_type']:15s} {row['recommendation']:5s} {row['line_value']:6.1f} | "
                   f"Conf: {row['confidence']:.1%} | L3: {row['avg_L3']:.1f}")
         
-        print()
-        print("=" * 70)
-        print("✅ Prediction pipeline complete!")
-        print("\nNext step: View predictions in Player Props UI page")
-        print("=" * 70)
+        _say()
+        _say("=" * 70)
+        _say("✅ Prediction pipeline complete!")
+        _say("\nNext step: View predictions in Player Props UI page")
+        _say("=" * 70)
     else:
-        print("\n⚠️  No predictions generated. Check if player stats are available.")
+        _say("\n⚠️  No predictions generated. Check if player stats are available.")
 
 
 if __name__ == '__main__':
