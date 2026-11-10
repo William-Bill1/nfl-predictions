@@ -2283,3 +2283,7 @@ Totals >=50%), team colour markers. Setup via `EMAIL_FROM` / `EMAIL_TO` /
 - Bug fixes: `pred_totalsProb` -> `prob_overHit`; added `moneyline_bet_return`;
   nested-tab indentation errors; column-existence guards before dataframe
   access.
+
+### Training and prediction console encoding
+
+- Escape diagnostic characters unavailable in the current console encoding, including player names. UTF-8 diagnostics and stored data remain unchanged. Stream write failures still propagate.

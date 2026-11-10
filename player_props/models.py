@@ -15,6 +15,7 @@ import xgboost as xgb
 import sys
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+from player_props.console import say as _say
 from player_props.aggregators import read_stats_csv
 from player_props.features import (
     FEATURE_CONTRACT, PROP_LINES, PROP_STAT, FeatureContractError, model_features, model_matrix,
@@ -73,12 +74,12 @@ def load_player_stats(stat_type='passing'):
     
     file_path = DATA_DIR / file_map[stat_type]
     if not file_path.exists():
-        print(f"❌ File not found: {file_path}")
-        print(f"   Run 'python player_props/aggregators.py' first")
+        _say(f"❌ File not found: {file_path}")
+        _say(f"   Run 'python player_props/aggregators.py' first")
         return None
     
     df = read_stats_csv(file_path)
-    print(f"✅ Loaded {len(df):,} {stat_type} records")
+    _say(f"✅ Loaded {len(df):,} {stat_type} records")
     return df
 
 
@@ -117,7 +118,7 @@ def training_feature_contract(data_dir=None):
     helper; training_inputs is what training uses)."""
     inputs, problems = training_inputs(data_dir)
     if inputs is None:
-        print("⚠️  No feature contract: " + "; ".join(problems))
+        _say("⚠️  No feature contract: " + "; ".join(problems))
         return None
     return {**FEATURE_CONTRACT, 'stats_manifest_sha256': inputs['source']['stats_manifest_sha256']}
 
@@ -169,7 +170,7 @@ def _prepare(df, prop_type):
     missing or bad value raises (features.training_rows)."""
     rows, report = training_rows(df, prop_type)
     feature_cols = model_features(prop_type)
-    print(f"📊 {prop_type}: {len(feature_cols)} features {feature_cols}; "
+    _say(f"📊 {prop_type}: {len(feature_cols)} features {feature_cols}; "
           f"{report['used']:,} rows, {report['excluded_no_history']:,} first appearances excluded")
     return rows.copy(), feature_cols
 
@@ -222,7 +223,7 @@ def train_prop_model(df, features, prop_type, line_type, line_value):
         return None, f"only {len(X_all)} rows"
 
     class_dist = y_all.value_counts()
-    print(f"\n{name}: over {class_dist.get(1, 0):,} / under {class_dist.get(0, 0):,}")
+    _say(f"\n{name}: over {class_dist.get(1, 0):,} / under {class_dist.get(0, 0):,}")
     if min(class_dist.get(0, 0), class_dist.get(1, 0)) / len(y_all) < 0.1:
         return None, "too imbalanced (under 10% of one class)"
 
@@ -268,7 +269,7 @@ def train_prop_model(df, features, prop_type, line_type, line_value):
         'reliable': reliable,
         'note': TD_NOTE if is_td else ('' if reliable else 'No out-of-time edge over the base rate.'),
     }
-    print(f"   holdout {holdout_season}: accuracy {accuracy:.3f} (base {base_rate:.3f}), "
+    _say(f"   holdout {holdout_season}: accuracy {accuracy:.3f} (base {base_rate:.3f}), "
           f"AUC {roc_auc:.3f}, reliable {reliable}")
     entry = {
         'data': data, 'prop_type': prop_type, 'line_type': line_type, 'line_value': line_value,
@@ -301,13 +302,13 @@ def train_all_models(data_dir=None, models_dir=None):
     Returns {'published': bool, 'bundle': path or None, 'models': [...],
     'skipped': {name: reason}, 'problems': [...]}.
     """
-    print("=" * 70)
-    print("🏈 NFL Player Props Model Training (XGBoost, one bundle)")
-    print("=" * 70)
+    _say("=" * 70)
+    _say("🏈 NFL Player Props Model Training (XGBoost, one bundle)")
+    _say("=" * 70)
     models_dir = Path(models_dir or MODELS_DIR)
     inputs, problems = training_inputs(data_dir)
     if inputs is None:
-        print("⛔ Not training: the stats can't be verified - " + "; ".join(problems))
+        _say("⛔ Not training: the stats can't be verified - " + "; ".join(problems))
         return {'published': False, 'bundle': None, 'models': [], 'skipped': {}, 'problems': problems}
 
     entries, skipped = {}, {}
@@ -319,17 +320,17 @@ def train_all_models(data_dir=None, models_dir=None):
             name = f'{prop_type}_{line_type}'
             if entry is None:
                 skipped[name] = reason
-                print(f"   skipped {name}: {reason}")
+                _say(f"   skipped {name}: {reason}")
             else:
                 entries[name] = entry
     if not entries:
         problems = ["no model could be trained"]
-        print("⛔ " + problems[0])
+        _say("⛔ " + problems[0])
         return {'published': False, 'bundle': None, 'models': [], 'skipped': skipped, 'problems': problems}
 
     path = publish_bundle(models_dir, entries, inputs['source'], PROP_LINES)
     reliable = sum(e['metrics']['reliable'] for e in entries.values())
-    print(f"\n✅ Published bundle {path.name}: {len(entries)} models "
+    _say(f"\n✅ Published bundle {path.name}: {len(entries)} models "
           f"({reliable} clear the out-of-time bar), {len(skipped)} skipped")
     return {'published': True, 'bundle': path, 'models': sorted(entries), 'skipped': skipped,
             'problems': []}
