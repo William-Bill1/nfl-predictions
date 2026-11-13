@@ -117,3 +117,36 @@ For the selected team, season and game type within one assessment, every game fa
 - **What the conditions mean:** roof and surface are retrospective source records. They are not confirmed roof state or confirmed pregame knowledge.
 - **What completion means:** an assessment states what the source file showed, judged as of the evaluation date. It is not an authoritative final status. It doesn't show when upstream published a score.
 - **Neutral sites:** "home" is the source's designation.
+
+
+## Coverage-first analysis (uncommitted follow-up)
+
+A database containing every scheduled row may still have missing or incorrect fields. Raw SQL results do not establish a complete record. The `sql` command now prints `COVERAGE_NOT_CHECKED`; the original `record` command labels its output as an unverified `source_subset` (or incomplete where conditions are missing), with `complete_record: null`. Its underlying source-based calculation remains available for inspection.
+
+For the separately retained 2026 audit dataset, use `scripts/football_query.py`. This command reads the audit metadata and game-level evidence view; it never imports, creates or modifies a database. It requires an explicit assessment ID. Example:
+
+```powershell
+python scripts/football_query.py --db reports/football_repository_pilot/captures/20261113T203523Z/pilot_2026_roofresolved.sqlite3 --assessment-id 1 --team KC --season 2026
+```
+
+By default it checks verified scores, roof and surface before presenting an outdoor-natural-grass record. `--all-conditions` requests a scores-only record and does not require irrelevant condition fields. Regular season is the default; `--game-type` selects another game type.
+
+- `complete_for_snapshot`: all required fields for the query are resolved within the captured schedule; exit 0. This is not an independent guarantee that upstream listed every game.
+- `incomplete`: at least one relevant game has missing, conflicting or unverified required evidence. The complete record is null; any known subset is labelled separately; exit 3.
+- `no_data`: no games in the selected scope; no complete record; exit 3.
+- `not_checked`: absent/incompatible audit data or another read error; no fallback to raw results; exit 2.
+
+Future and same-day games remain pending. Past or undated games without final evidence block a complete-so-far claim. A known nonmatching condition can exclude a game even when another condition is unresolved (for example artificial turf excludes a game from a natural-grass query despite an unresolved roof). Unverified scores are never graded as losses.
+
+The audit retains original source values and PDF evidence. It prefers game-specific official gamebooks for surface classification, including five disagreements with populated nflverse values. The later roof-resolved snapshot records the reviewed roof classifications described below; unresolved future disagreements must remain flagged rather than guessed. Melbourne's U.S./Australian date difference is reconciled explicitly by time zone, not by permitting arbitrary date mismatches.
+
+This command supports the named audit dataset's fixed evidence view, not arbitrary third-party databases or automatic SQL meaning validation. Weather, injury, officiating and forecast queries are not covered by these core checks. The audit files stay outside Git. There is no app or probability-engine integration.
+
+
+### Reviewed roof classifications and owner-supplied facts
+
+The newer retained `pilot_2026_roofresolved.sqlite3` resolves the three international-game roof classifications using game-specific gamebooks plus primary venue/structural evidence. A roof over spectator stands does not make the uncovered playing field indoors. `open` refers to an open retractable playing-field roof; an open-air fixed venue uses `outdoors`.
+
+SoFi retains the source's fixed-roof `dome` code with its open-sided enclosure documented separately in the resolution evidence. The gamebook phrase "Open Stadium" is not used alone to infer an uncovered field or a retractable roof. The fixed-roof code does not imply full enclosure or immunity to wind/weather. All original strings and prior issues remain retained.
+
+Manual information is an accepted fallback when electronic evidence is insufficient. The owner can send the specific game ID, field, observed value, units, observation date/time and a source/reference in chat; no direct SQLite editing is needed. Store the submission separately as user-supplied, preserve the original provider value, validate identity/units/evidence, and only then clear any affected coverage blocker. An unverified manual assertion does not make the record complete. This documents a curation procedure, not an automatic manual-entry importer.
