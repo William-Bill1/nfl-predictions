@@ -82,6 +82,11 @@ SPREAD_CONVENTION = ("nflverse spread_line: points the HOME team is favored by "
 PROBABILITY_MEANING = ("prob_underdog_covers = model P(underdog covers spread_line), pushes "
                        "excluded; null when there is no valid line. A model estimate, not a "
                        "demonstrated betting edge.")
+CONDITIONAL_SPREAD_BASIS = "conditional_no_push"
+CONDITIONAL_PROBABILITY_MEANING = (
+    "prob_underdog_covers = model P(underdog covers spread_line | no push); "
+    "pushes excluded from fitting and calibration. No push probability is estimated. "
+    "Null when there is no valid line. Calibration and betting value are not established.")
 CHECKSUM_FIELD = "payload_sha256"
 SEASON_BOUNDS, WEEK_BOUNDS = (1920, 2100), (1, 22)
 
@@ -281,6 +286,9 @@ def validate_manifest(m: dict, where: str = "manifest") -> None:
             _fail(where, f"malformed {key} {m[key]!r}")
     if not isinstance(m["config"], dict) or _short_hash(m["config"]) != m["config_id"]:
         _fail(where, "config_id doesn't match config")
+    if ("spread_probability_basis" in m["config"]
+            and m["config"]["spread_probability_basis"] != CONDITIONAL_SPREAD_BASIS):
+        _fail(where, "unsupported spread_probability_basis")
     feats = m["features"]
     if not (isinstance(feats, list) and feats and all(isinstance(f, str) and f for f in feats)
             and feats == sorted(feats)):
@@ -379,6 +387,9 @@ def validate_snapshot(doc, where: str = "snapshot") -> None:
     for key in ("spread_convention", "probability"):
         if not isinstance(doc[key], str) or not doc[key]:
             _fail(where, f"{key} must be a non-empty string")
+    if (doc["run"]["config"].get("spread_probability_basis") == CONDITIONAL_SPREAD_BASIS
+            and doc["probability"] != CONDITIONAL_PROBABILITY_MEANING):
+        _fail(where, "probability meaning disagrees with conditional_no_push run")
     games, skipped, counts = doc["games"], doc["skipped"], doc["counts"]
     if not isinstance(games, list) or not isinstance(skipped, list) or not isinstance(counts, dict):
         _fail(where, "games/skipped must be lists and counts an object")
@@ -580,7 +591,9 @@ def build_snapshot(manifest: dict, schedule: pd.DataFrame, predictions: pd.DataF
         "run": manifest,
         "kickoff_timezone": SOURCE_TZ.key,
         "spread_convention": SPREAD_CONVENTION,
-        "probability": PROBABILITY_MEANING,
+        "probability": (CONDITIONAL_PROBABILITY_MEANING
+                        if manifest["config"].get("spread_probability_basis") == CONDITIONAL_SPREAD_BASIS
+                        else PROBABILITY_MEANING),
         "counts": counts,
         "games": games,
         "skipped": skipped,

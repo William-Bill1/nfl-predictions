@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — conditional spread target
+
+- Exclude pushes from spread fitting/calibration only; record conditional-on-no-push probability and conditional EV semantics in new outputs and snapshots. Preserve other targets, settlement and historical snapshot compatibility. No production artifacts regenerated.
+- Show the declared basis on the home page, game details and PDF export. Legacy and mixed/unknown inputs are explicitly distinguished; displayed prediction values are unchanged.
+
+
 History moved out of `README.md`. Newest first. Dates are as recorded in the
 original notes; undated dashboard/infra work from late 2025 is grouped at the
 bottom.

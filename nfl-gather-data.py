@@ -23,7 +23,7 @@ import random
 from sklearn.calibration import CalibratedClassifierCV
 
 from team_features import compute_team_features
-from pregame_snapshots import parse_tsv, read_bytes_once, remove_stale_manifest, write_run_manifest
+from pregame_snapshots import parse_tsv, read_bytes_once, remove_stale_manifest, write_run_manifest, CONDITIONAL_SPREAD_BASIS
 
 
 def _blend_proba(xgb_model, lgbm_model, X):
@@ -131,6 +131,15 @@ def require_chronological(games: pd.DataFrame) -> None:
             f"comes after {prev_gid} ({season[i - 1]} wk {week[i - 1]}). "
             "Sort the schedule by season and week (as nfl_data_py returns it) and rerun."
         )
+
+
+def spread_nonpush_mask(played, valid_line, spread_push):
+    """Eligible spread rows: strict covers conditional on a non-push outcome.
+
+    Other targets keep their own eligibility. Never use an unplayed game's
+    placeholder push label to make it eligible.
+    """
+    return played & valid_line & spread_push.eq(0)
 
 
 def temporal_split_3way(X, y, val_frac=0.2, test_frac=0.2):
@@ -427,12 +436,14 @@ def main(now=None):
     # the tuning never saw. (Was a 2-way split that picked the threshold on the
     # same games it then scored - optimistic by construction.)
     # Train/evaluate only on played games with a valid line (a game without a
-    # line has no spread label). Every played game in the schedule has one, so
-    # this matches the previous `_played` split exactly; it guards against a
-    # lineless game ever being trained as a fake pick'em.
+    # line has no spread label). A lineless game must never be trained as a
+    # fake pick'em. Spread fitting
+    # additionally excludes pushes; other targets retain this base sample.
     _trainable = _played & _valid_line
+    _spread_trainable = spread_nonpush_mask(
+        _played, _valid_line, historical_game_level_data['spreadPush'])
     X_train_spread, X_val_spread, X_test_spread, y_spread_train, y_spread_val, y_spread_test = \
-        temporal_split_3way(X_spread[_trainable], y_spread[_trainable])
+        temporal_split_3way(X_spread[_spread_trainable], y_spread[_spread_trainable])
 
     X_moneyline = historical_game_level_data[best_features_moneyline].select_dtypes(include=["number", "bool", "category"])
     if set(best_features_moneyline) - set(X_moneyline.columns):
@@ -668,15 +679,16 @@ def main(now=None):
     y_totals_proba = _blend_proba(model_totals, lgbm_totals, X_test_tot)
 
     # Predict probabilities for all data.
-    # The spread model is trained on `spreadCovered` = P(the FAVORITE covers).
-    # The dashboard and EV code work in P(the UNDERDOG covers), which is the
-    # complement (a push is neither; handled via spreadPush). This is a change of
-    # convention applied once here - NOT a fix for a "backwards" model.
+    # Spread fitting/calibration exclude pushes: this complement estimates
+    # P(underdog covers | no push), not unconditional P(underdog covers).
+    # No push probability is estimated. Settlement still handles pushes separately.
     _prob_favorite_covers = _blend_proba(model_spread, lgbm_spread, X_spread)
     # No valid line -> no underdog -> no spread probability (NaN), so ev_spread,
     # edge_underdog_spread and the bet signal below are empty/0 for those games.
     historical_game_level_data['prob_underdogCovered'] = pd.Series(
         1.0 - _prob_favorite_covers, index=historical_game_level_data.index).where(_valid_line)
+    historical_game_level_data['spread_probability_basis'] = CONDITIONAL_SPREAD_BASIS
+    historical_game_level_data['spread_ev_basis'] = 'per_100_non_push_stakes_assumed_minus110'
 
     # Totals: the trained model is noise out-of-time (temporal AUC ~0.50, i.e.
     # a coin flip; worse-calibrated than the P(over) base rate; shipped signal
@@ -699,14 +711,17 @@ def main(now=None):
     )
     historical_game_level_data['prob_underdogWon'] = implied_prob(_ud_ml_odds)
 
-    print(f"Spread: P(underdog covers) range "
+    print(f"Spread: P(underdog covers | no push) range "
           f"{historical_game_level_data['prob_underdogCovered'].min():.1%}"
           f" - {historical_game_level_data['prob_underdogCovered'].max():.1%}")
 
     # Calculate Expected Value (EV) for each bet type
     # EV = (win_probability * payout) - (loss_probability * stake)
 
-    # Spread EV (using standard -110 odds)
+    # Conditional spread EV per $100 of NON-PUSH stakes at assumed -110.
+    # Unconditional EV per original stake additionally needs P(no push), which
+    # is not estimated here. The sign, but not magnitude, carries over when
+    # a non-push outcome is possible. Never interpret this as unconditional EV.
     historical_game_level_data['ev_spread'] = (
         historical_game_level_data['prob_underdogCovered'] * 90.91 - 
         (1 - historical_game_level_data['prob_underdogCovered']) * 100
@@ -1042,13 +1057,17 @@ def main(now=None):
         "Optimal Moneyline Threshold": float(optimal_moneyline_threshold),
         "Optimal Totals Threshold": float(optimal_totals_threshold),
         "Spread Note": (
-            "prob_underdogCovered = 1 - P(favorite covers) from model_spread "
-            "(a change of convention, not an inversion fix). Three-way temporal "
+            "prob_underdogCovered = P(underdog covers | no push), the complement "
+            "of the favorite-cover model fitted and calibrated without pushes. "
+            "No push probability or unconditional EV magnitude is estimated. "
+            "Three-way temporal "
             "split: models trained on the earliest ~60%, the EV threshold fitted "
             "on the next ~20% (validation), and Spread Accuracy/MAE plus "
             "Spread_OOS_Test below reported on the last ~20% (test) that tuning "
-            "never saw. All in P(underdog covers) space, pushes excluded."
+            "never saw. All in conditional P(underdog covers | no push) space."
         ),
+        "Spread Probability Basis": CONDITIONAL_SPREAD_BASIS,
+        "Spread EV Note": "ev_spread is conditional EV per $100 non-push stakes at assumed -110; not per original stake.",
         "Moneyline Note": (
             "prob_underdogWon is the market implied probability. model_moneyline "
             "is trained for the accuracy/MAE/threshold diagnostics above but is "
@@ -1144,6 +1163,8 @@ def main(now=None):
         repo_dir=Path(__file__).resolve().parent,
         config={
             "spread_target": target_spread,
+            "spread_probability_basis": CONDITIONAL_SPREAD_BASIS,
+            "spread_ev_basis": "per_100_non_push_stakes_assumed_minus110",
             "spread_models": {name: m.get_params(deep=True)
                               for name, m in (("xgb", model_spread), ("lgbm", lgbm_spread)) if m is not None},
             "lgbm_available": bool(_LGBM_AVAILABLE),

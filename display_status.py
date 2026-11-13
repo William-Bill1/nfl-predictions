@@ -86,6 +86,36 @@ REGENERATED_NOTE = ("These predictions come from the latest nightly run, which r
 FROZEN_PAGE = "pages/9_Frozen_Performance.py"
 
 
+def spread_basis_notice(frame: pd.DataFrame | None) -> str:
+    """Describe declared spread semantics without inferring them for legacy rows.
+
+    Display only: preserve every value, row and order. Partial/mixed metadata
+    never turns a whole table into a conditional-probability claim.
+    """
+    if frame is None or frame.empty:
+        return ""
+    if "spread_probability_basis" not in frame.columns:
+        return ("Spread probability basis: legacy file (not declared). Do not assume "
+                "these outputs are conditional on no push; calibration and betting "
+                "value are not established.")
+    basis = frame["spread_probability_basis"]
+    if not (basis.notna().all() and basis.eq("conditional_no_push").all()):
+        return ("Spread probability basis is mixed, missing or unrecognized. Rows may "
+                "not share the same probability or EV meaning; do not compare EV "
+                "values as unconditional returns.")
+    text = ("Spread probabilities are conditional on no push: "
+            "P(underdog covers | no push). Push probability is not estimated. ")
+    if ("spread_ev_basis" in frame.columns
+            and frame["spread_ev_basis"].notna().all()
+            and frame["spread_ev_basis"].eq("per_100_non_push_stakes_assumed_minus110").all()):
+        text += ("Displayed spread EV is per $100 of non-push stakes at assumed -110, "
+                 "not unconditional EV per original stake. ")
+    else:
+        text += ("Spread EV basis is unavailable or unrecognized; do not interpret "
+                 "its magnitude as EV per original stake. ")
+    return text + "Calibration and betting value are not established."
+
+
 def tier_label(value) -> str:
     """Neutral display label for a stored tier value; other values unchanged."""
     if value is None or (isinstance(value, float) and pd.isna(value)):
