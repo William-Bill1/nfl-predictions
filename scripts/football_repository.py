@@ -498,6 +498,7 @@ def main(argv=None) -> int:
     ps_.add_argument("query")
     a = p.parse_args(argv)
     if a.cmd == "sql":
+        print("COVERAGE_NOT_CHECKED: raw SQL does not verify data completeness or source conflicts.", file=sys.stderr)
         try:
             cols, rows = run_sql(a.db, a.query)
         except (sqlite3.DatabaseError, FileNotFoundError) as exc:
@@ -534,7 +535,10 @@ def main(argv=None) -> int:
                 print(f"error: {exc}", file=sys.stderr)
                 return 2
             roofs = ("outdoors", "open") if a.include_open else ("outdoors",)
-            out = team_record(conn, assessment_id, a.team, a.season, game_type=a.game_type, roofs=roofs)
+            subset = team_record(conn, assessment_id, a.team, a.season, game_type=a.game_type, roofs=roofs)
+            out = {"coverage_status": "incomplete" if subset["eligibility_undetermined_unknown_condition"] else "not_verified",
+                   "coverage_message": "Source-based subset only; missing or conflicting source data may change the record. Use football_query.py for an audited coverage check.",
+                   "complete_record": None, "source_subset": subset}
     finally:
         conn.close()
     print(json.dumps(out, indent=1))

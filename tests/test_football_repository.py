@@ -408,6 +408,8 @@ def test_record_command_leaves_a_supported_database_unchanged(tmp_path, source, 
     assert fr.main(["record", "--db", str(path), "--import-id", "1", "--date", "2026-11-13",
                     "--team", "AAA", "--season", "2025"]) == 0
     out = json.loads(capsys.readouterr().out)
-    assert (out["W"], out["L"], out["T"], out["assessment_id"]) == (1, 1, 1, 1)
+    assert out["coverage_status"] == "incomplete" and out["complete_record"] is None
+    subset = out["source_subset"]
+    assert (subset["W"], subset["L"], subset["T"], subset["assessment_id"]) == (1, 1, 1, 1)
     assert digest(path) == before
     assert sorted(tmp_path.iterdir()) == sorted([path, tmp_path / "games.csv"])
