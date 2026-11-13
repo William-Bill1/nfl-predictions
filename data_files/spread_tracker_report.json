@@ -1,148 +1,148 @@
 {
-  "generated_at": "2026-11-04T19:29:36",
+  "generated_at": "2026-11-11T19:21:20",
   "source": "spread_tracker_log.csv",
   "note": "deviation_pts = a book's home-side spread minus nflverse's spread_line, in nflverse's home-favorite-positive convention. A positive per-book mean means that book systematically gives the home side more points than nflverse; mean_abs_deviation_pts is the direction-agnostic 'how far off nflverse' ranking metric.",
   "anomaly_threshold_pts": 1.5,
   "overall": {
-    "n_weeks": 8,
-    "n_games": 120,
-    "n_quotes": 1939,
+    "n_weeks": 9,
+    "n_games": 134,
+    "n_quotes": 2176,
     "per_book": {
       "betano_ca_on": {
         "book_title": "Betano (CA - ON)",
         "region": "ca",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": -0.037,
-        "mean_abs_deviation_pts": 0.296
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": -0.034,
+        "mean_abs_deviation_pts": 0.265
       },
       "betmgm": {
         "book_title": "BetMGM",
         "region": "us",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": -0.076,
-        "mean_abs_deviation_pts": 0.328
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.083,
+        "mean_abs_deviation_pts": 0.323
       },
       "betmgm_ca_on": {
         "book_title": "BetMGM (CA - ON)",
         "region": "ca",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": -0.076,
-        "mean_abs_deviation_pts": 0.328
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.083,
+        "mean_abs_deviation_pts": 0.323
       },
       "betonlineag": {
         "book_title": "BetOnline.ag",
         "region": "us",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": 0.029,
-        "mean_abs_deviation_pts": 0.298
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": 0.0,
+        "mean_abs_deviation_pts": 0.308
       },
       "betrivers": {
         "book_title": "BetRivers",
         "region": "us",
-        "n_quotes": 118,
-        "n_with_comparison": 118,
-        "mean_deviation_pts": -0.072,
-        "mean_abs_deviation_pts": 0.275
+        "n_quotes": 132,
+        "n_with_comparison": 132,
+        "mean_deviation_pts": -0.068,
+        "mean_abs_deviation_pts": 0.265
       },
       "betrivers_ca_on": {
         "book_title": "BetRivers (CA - ON)",
         "region": "ca",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": -0.076,
-        "mean_abs_deviation_pts": 0.277
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.071,
+        "mean_abs_deviation_pts": 0.267
       },
       "betus": {
         "book_title": "BetUS",
         "region": "us",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": 0.088,
-        "mean_abs_deviation_pts": 0.349
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": 0.053,
+        "mean_abs_deviation_pts": 0.353
       },
       "bovada": {
         "book_title": "Bovada",
         "region": "us",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": 0.004,
-        "mean_abs_deviation_pts": 0.321
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": 0.011,
+        "mean_abs_deviation_pts": 0.31
       },
       "draftkings": {
         "book_title": "DraftKings",
         "region": "us",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": -0.037,
-        "mean_abs_deviation_pts": 0.154
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": -0.045,
+        "mean_abs_deviation_pts": 0.149
       },
       "fanduel": {
         "book_title": "FanDuel",
         "region": "us",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": -0.042,
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": -0.049,
         "mean_abs_deviation_pts": 0.25
       },
       "lowvig": {
         "book_title": "LowVig.ag",
         "region": "us",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": 0.034,
-        "mean_abs_deviation_pts": 0.277
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": 0.011,
+        "mean_abs_deviation_pts": 0.297
       },
       "mybookieag": {
         "book_title": "MyBookie.ag",
         "region": "us",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": -0.021,
-        "mean_abs_deviation_pts": 0.263
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.023,
+        "mean_abs_deviation_pts": 0.256
       },
       "playalberta": {
         "book_title": "Play Alberta",
         "region": "us",
-        "n_quotes": 29,
-        "n_with_comparison": 29,
-        "mean_deviation_pts": 0.034,
-        "mean_abs_deviation_pts": 0.345
+        "n_quotes": 43,
+        "n_with_comparison": 43,
+        "mean_deviation_pts": 0.0,
+        "mean_abs_deviation_pts": 0.279
       },
       "playnow_ca": {
         "book_title": "PlayNow (CA)",
         "region": "ca",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": 0.192,
-        "mean_abs_deviation_pts": 1.775
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": 0.224,
+        "mean_abs_deviation_pts": 1.791
       },
       "pointsbetca": {
         "book_title": "PointsBet (CA - ON)",
         "region": "ca",
-        "n_quotes": 120,
-        "n_with_comparison": 120,
-        "mean_deviation_pts": -0.021,
-        "mean_abs_deviation_pts": 0.287
+        "n_quotes": 134,
+        "n_with_comparison": 134,
+        "mean_deviation_pts": -0.041,
+        "mean_abs_deviation_pts": 0.28
       },
       "proline_ca_on": {
         "book_title": "PROLINE (CA - ON)",
         "region": "ca",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": -0.071,
-        "mean_abs_deviation_pts": 0.29
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.068,
+        "mean_abs_deviation_pts": 0.278
       },
       "sportsinteraction_ca_on": {
         "book_title": "Sports Interaction (CA - ON)",
         "region": "ca",
-        "n_quotes": 119,
-        "n_with_comparison": 119,
-        "mean_deviation_pts": -0.08,
-        "mean_abs_deviation_pts": 0.307
+        "n_quotes": 133,
+        "n_with_comparison": 133,
+        "mean_deviation_pts": -0.086,
+        "mean_abs_deviation_pts": 0.305
       }
     }
   },
@@ -1232,6 +1232,148 @@
           "n_with_comparison": 15,
           "mean_deviation_pts": -0.1,
           "mean_abs_deviation_pts": 0.567
+        }
+      }
+    },
+    {
+      "week": 10,
+      "n_games": 14,
+      "per_book": {
+        "betano_ca_on": {
+          "book_title": "Betano (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": 0.0,
+          "mean_abs_deviation_pts": 0.0
+        },
+        "betmgm": {
+          "book_title": "BetMGM",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.143,
+          "mean_abs_deviation_pts": 0.286
+        },
+        "betmgm_ca_on": {
+          "book_title": "BetMGM (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.143,
+          "mean_abs_deviation_pts": 0.286
+        },
+        "betonlineag": {
+          "book_title": "BetOnline.ag",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.25,
+          "mean_abs_deviation_pts": 0.393
+        },
+        "betrivers": {
+          "book_title": "BetRivers",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.036,
+          "mean_abs_deviation_pts": 0.179
+        },
+        "betrivers_ca_on": {
+          "book_title": "BetRivers (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.036,
+          "mean_abs_deviation_pts": 0.179
+        },
+        "betus": {
+          "book_title": "BetUS",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.25,
+          "mean_abs_deviation_pts": 0.393
+        },
+        "bovada": {
+          "book_title": "Bovada",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": 0.071,
+          "mean_abs_deviation_pts": 0.214
+        },
+        "draftkings": {
+          "book_title": "DraftKings",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.107,
+          "mean_abs_deviation_pts": 0.107
+        },
+        "fanduel": {
+          "book_title": "FanDuel",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.107,
+          "mean_abs_deviation_pts": 0.25
+        },
+        "lowvig": {
+          "book_title": "LowVig.ag",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.179,
+          "mean_abs_deviation_pts": 0.464
+        },
+        "mybookieag": {
+          "book_title": "MyBookie.ag",
+          "region": "us",
+          "n_quotes": 13,
+          "n_with_comparison": 13,
+          "mean_deviation_pts": -0.038,
+          "mean_abs_deviation_pts": 0.192
+        },
+        "playalberta": {
+          "book_title": "Play Alberta",
+          "region": "us",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.071,
+          "mean_abs_deviation_pts": 0.143
+        },
+        "playnow_ca": {
+          "book_title": "PlayNow (CA)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": 0.5,
+          "mean_abs_deviation_pts": 1.929
+        },
+        "pointsbetca": {
+          "book_title": "PointsBet (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.214,
+          "mean_abs_deviation_pts": 0.214
+        },
+        "proline_ca_on": {
+          "book_title": "PROLINE (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.036,
+          "mean_abs_deviation_pts": 0.179
+        },
+        "sportsinteraction_ca_on": {
+          "book_title": "Sports Interaction (CA - ON)",
+          "region": "ca",
+          "n_quotes": 14,
+          "n_with_comparison": 14,
+          "mean_deviation_pts": -0.143,
+          "mean_abs_deviation_pts": 0.286
         }
       }
     }
@@ -2796,6 +2938,188 @@
       "best_away_book": "betano_ca_on",
       "best_away_book_title": "Betano (CA - ON)",
       "best_away_point": 6.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_BUF_NYJ",
+      "home_team": "NYJ",
+      "away_team": "BUF",
+      "best_home_book": "betonlineag",
+      "best_home_book_title": "BetOnline.ag",
+      "best_home_point": 9.0,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": -6.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_CAR_NO",
+      "home_team": "NO",
+      "away_team": "CAR",
+      "best_home_book": "betonlineag",
+      "best_home_book_title": "BetOnline.ag",
+      "best_home_point": -1.0,
+      "best_away_book": "betano_ca_on",
+      "best_away_book_title": "Betano (CA - ON)",
+      "best_away_point": 2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_HOU_CLE",
+      "home_team": "CLE",
+      "away_team": "HOU",
+      "best_home_book": "pointsbetca",
+      "best_home_book_title": "PointsBet (CA - ON)",
+      "best_home_point": 5.5,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": -3.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_JAX_TEN",
+      "home_team": "TEN",
+      "away_team": "JAX",
+      "best_home_book": "playnow_ca",
+      "best_home_book_title": "PlayNow (CA)",
+      "best_home_point": 13.5,
+      "best_away_book": "betano_ca_on",
+      "best_away_book_title": "Betano (CA - ON)",
+      "best_away_point": -10.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_KC_ATL",
+      "home_team": "ATL",
+      "away_team": "KC",
+      "best_home_book": "playnow_ca",
+      "best_home_book_title": "PlayNow (CA)",
+      "best_home_point": 6.0,
+      "best_away_book": "betonlineag",
+      "best_away_book_title": "BetOnline.ag",
+      "best_away_point": -3.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_LAC_BAL",
+      "home_team": "BAL",
+      "away_team": "LAC",
+      "best_home_book": "betmgm",
+      "best_home_book_title": "BetMGM",
+      "best_home_point": -4.0,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": 7.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_LA_ARI",
+      "home_team": "ARI",
+      "away_team": "LA",
+      "best_home_book": "betonlineag",
+      "best_home_book_title": "BetOnline.ag",
+      "best_home_point": 10.0,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": -7.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_MIA_IND",
+      "home_team": "IND",
+      "away_team": "MIA",
+      "best_home_book": "betano_ca_on",
+      "best_home_book_title": "Betano (CA - ON)",
+      "best_home_point": -3.5,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": 5.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_MIN_GB",
+      "home_team": "GB",
+      "away_team": "MIN",
+      "best_home_book": "betmgm",
+      "best_home_book_title": "BetMGM",
+      "best_home_point": -3.0,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": 5.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_NE_DET",
+      "home_team": "DET",
+      "away_team": "NE",
+      "best_home_book": "betano_ca_on",
+      "best_home_book_title": "Betano (CA - ON)",
+      "best_home_point": -2.5,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": 5.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_PIT_CIN",
+      "home_team": "CIN",
+      "away_team": "PIT",
+      "best_home_book": "playnow_ca",
+      "best_home_book_title": "PlayNow (CA)",
+      "best_home_point": -1.5,
+      "best_away_book": "betano_ca_on",
+      "best_away_book_title": "Betano (CA - ON)",
+      "best_away_point": 3.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_SEA_LV",
+      "home_team": "LV",
+      "away_team": "SEA",
+      "best_home_book": "betano_ca_on",
+      "best_home_book_title": "Betano (CA - ON)",
+      "best_home_point": 6.5,
+      "best_away_book": "playnow_ca",
+      "best_away_book_title": "PlayNow (CA)",
+      "best_away_point": -4.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_SF_DAL",
+      "home_team": "DAL",
+      "away_team": "SF",
+      "best_home_book": "betmgm",
+      "best_home_book_title": "BetMGM",
+      "best_home_point": 4.5,
+      "best_away_book": "betano_ca_on",
+      "best_away_book_title": "Betano (CA - ON)",
+      "best_away_point": -3.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_WAS_NYG",
+      "home_team": "NYG",
+      "away_team": "WAS",
+      "best_home_book": "betus",
+      "best_home_book_title": "BetUS",
+      "best_home_point": -1.0,
+      "best_away_book": "betano_ca_on",
+      "best_away_book_title": "Betano (CA - ON)",
+      "best_away_point": 2.5
     }
   ],
   "anomalies": [
@@ -3120,6 +3444,17 @@
     },
     {
       "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_JAX_TEN",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -13.5,
+      "field_median_home_spread": -10.5,
+      "diff_from_field_median": -3.0
+    },
+    {
+      "season": 2026,
       "week": 3,
       "game_id": "2026_03_ATL_GB",
       "book_key": "playnow_ca",
@@ -3237,6 +3572,61 @@
       "region": "ca",
       "book_home_spread": 6.0,
       "field_median_home_spread": 3.5,
+      "diff_from_field_median": 2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_BUF_NYJ",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -6.0,
+      "field_median_home_spread": -8.5,
+      "diff_from_field_median": 2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_KC_ATL",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -6.0,
+      "field_median_home_spread": -3.5,
+      "diff_from_field_median": -2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_LAC_BAL",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": 7.0,
+      "field_median_home_spread": 4.5,
+      "diff_from_field_median": 2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_LA_ARI",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -7.0,
+      "field_median_home_spread": -9.5,
+      "diff_from_field_median": 2.5
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_SEA_LV",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -4.0,
+      "field_median_home_spread": -6.5,
       "diff_from_field_median": 2.5
     },
     {
@@ -3403,6 +3793,50 @@
       "book_home_spread": 12.0,
       "field_median_home_spread": 10.0,
       "diff_from_field_median": 2.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_HOU_CLE",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": -3.0,
+      "field_median_home_spread": -5.0,
+      "diff_from_field_median": 2.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_MIN_GB",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": 5.0,
+      "field_median_home_spread": 3.0,
+      "diff_from_field_median": 2.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_NE_DET",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": 5.0,
+      "field_median_home_spread": 3.0,
+      "diff_from_field_median": 2.0
+    },
+    {
+      "season": 2026,
+      "week": 10,
+      "game_id": "2026_10_PIT_CIN",
+      "book_key": "playnow_ca",
+      "book_title": "PlayNow (CA)",
+      "region": "ca",
+      "book_home_spread": 1.5,
+      "field_median_home_spread": 3.5,
+      "diff_from_field_median": -2.0
     },
     {
       "season": 2026,
