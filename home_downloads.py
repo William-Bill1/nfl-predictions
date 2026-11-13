@@ -22,6 +22,8 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+import display_status as ds
+
 try:
     from reportlab.lib.pagesizes import letter, landscape
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
@@ -90,6 +92,11 @@ def generate_predictions_pdf(df: pd.DataFrame, max_rows: int = 200) -> bytes:
             df_to_use = df.copy()
     except Exception:
         df_to_use = df.copy()
+
+    basis_note = ds.spread_basis_notice(df_to_use)
+    if basis_note:
+        story.append(Paragraph(basis_note, styles['Normal']))
+        story.append(Spacer(1, 8))
 
     # If there are no upcoming games, emit a short message instead of a table
     if df_to_use is None or len(df_to_use) == 0:

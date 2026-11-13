@@ -95,7 +95,7 @@ Step 2 — UI:
 Three XGBoost classifiers (binary):
 | Model | Target | Threshold | Notes |
 |-------|--------|-----------|-------|
-| Spread | trained on `spreadCovered` (favorite covers); ships `prob_underdogCovered = 1 - that` | EV-based | the only model that drives a bet signal |
+| Spread | trained on `spreadCovered` without pushes; ships P(underdog covers given no push) as the favorite-cover complement | EV-based | the only model that drives a bet signal |
 | Moneyline | trained on `underdogWon`; **not shipped** — ships market implied prob (no out-of-time edge) | — | — |
 | Totals | trained on `overHit`; **not shipped** — ships market implied P(over) (coin flip out-of-time) | — | — |
 
@@ -387,15 +387,37 @@ the newer data, which this step deliberately does not do.
 - An unrelated `continue-on-error` step that fails (see the list above) still
   leaves the run green.
 
+### Conditional spread probability (November 2026)
+
+New spread fitting and calibration exclude push outcomes. The legacy column
+`prob_underdogCovered` now estimates **P(underdog covers | no push)**, recorded
+as `spread_probability_basis=conditional_no_push` in the CSV, metrics and run
+configuration. Snapshot probability text states the same condition; existing
+snapshots without the configuration key keep their original recorded wording.
+Moneyline/totals training samples and push settlement are unchanged. The home
+page, per-game view and PDF export show the declared basis through `spread_basis_notice`;
+legacy, mixed and unknown metadata are not relabelled as conditional.
+
+
+`ev_spread` remains its existing numeric formula, but is conditional EV per
+$100 **non-push** stakes at assumed -110, identified by `spread_ev_basis`.
+Unconditional EV magnitude per original stake additionally requires P(no push),
+which is not estimated. This correction establishes target semantics, not
+calibration, predictive value or production approval. The oldest-60% training
+policy, ensemble, calibration method and decision thresholds are unchanged.
+Historical backtest tools retain their documented legacy targets; they are not
+silently relabelled as evaluating this corrected estimator.
+
 ### Spread convention (Aug 2026 — was the "inversion fix")
 
-`model_spread` predicts `P(favorite covers)`. The dashboard and EV code work in
-`P(underdog covers)`, so `nfl-gather-data.py` computes the complement **once**:
+`model_spread` now fits only non-push games and estimates `P(favorite covers | no push)`.
+The pipeline computes its conditional underdog-cover complement **once**:
 `prob_underdogCovered = 1 - _blend_proba(model_spread, ...)`. A push
 (`spreadPush = 1`, favorite's margin lands exactly on the line) is neither a
 cover nor an underdog cover and is excluded from accuracy/ROI. The EV threshold,
 `Spread Accuracy`, `Spread MAE` and `predictedSpreadCovered` are all in
-underdog-covers space. This is a change of convention, not a fix for a
+conditional underdog-covers space for new runs. Legacy snapshots retain their
+recorded meaning. The earlier complement convention was not a fix for a
 "backwards" model — the earlier "-90% → +60% ROI" story was a variable mix-up
 (favorite-covers probability fed into underdog-covers bet logic).
 

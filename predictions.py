@@ -828,6 +828,7 @@ def home_page():
         if game_row is None:
             st.warning(f"Game {game_id} not found in predictions dataset.")
         else:
+            st.caption(ds.spread_basis_notice(game_row.to_frame().T))
             # Basic header: teams, gameday, lines
             home = game_row.get('home_team', '')
             away = game_row.get('away_team', '')
@@ -1850,6 +1851,11 @@ def home_page():
             pass
 
     # Data loading complete (terminal logs suppressed)
+    _spread_basis_note = ds.spread_basis_notice(predictions_df)
+    if _spread_basis_note:
+        st.caption("Current predictions file. " + _spread_basis_note +
+                   " Historical recommendation-log and frozen records retain their own recorded meaning.")
+
 
     # Populate sidebar download placeholders (created earlier) now that data is loaded.
     # They are locals of this function; home_downloads reports a missing input
