@@ -186,3 +186,8 @@ create the audited query view, promote a new approved snapshot, update the app,
 or schedule refreshes. Missing or changed facts need review before audited
 queries can use them. Referee, injury and weather coverage is not established.
 The existing recurring automation checks freshness; it does not run this writer.
+
+
+## Injury history (separate pilot)
+
+Retained injury captures have their own research database and commands; see `docs/INJURY_HISTORY_PILOT.md`. They are not part of the game database or its coverage checks.
