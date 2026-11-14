@@ -342,24 +342,104 @@ def _weather(conn, game: dict, cutoff: datetime, now: datetime) -> dict:
 
 
 # --------------------------------------------------------------------------
-# One game
+# One or several games
 # --------------------------------------------------------------------------
 
-def build(games: pd.DataFrame, game_id: str, *, environ=None, now: datetime | None = None) -> dict:
-    """Everything the panel shows for one game. Never raises for data problems."""
-    now = now or utc_now()
-    cfg = load_config(environ)
-    if cfg["state"] != "ok":
-        return {"state": cfg["state"], "message": cfg["message"]}
+AVAILABILITY_NOTE = ("The ESPN injury/news feed does not establish official game-day availability: "
+                     "official inactives are announced separately before kickoff and are not stored here.")
+AGE_NOTE = ("Age is the time since this system received the capture. It is not a forecast issue time "
+            "and does not show that the source itself was current.")
+
+
+def _section(conns: dict, errors: dict, key: str, label: str, read) -> dict:
+    """One database's result for one game, from the shared connection."""
+    if key in errors:
+        return {"state": "error", "message": errors[key]}
+    if key not in conns:
+        return {"state": "not_configured", "message": NOT_CONFIGURED}
+    try:
+        return read(conns[key])
+    except sqlite3.DatabaseError as exc:
+        return {"state": "error", "message": f"{label} database could not be read: {exc}"}
+
+
+def _one(games: pd.DataFrame, game_id: str, conns: dict, errors: dict, now: datetime) -> dict:
     try:
         game = game_identity(games, game_id)
     except GameIdentityError as exc:
-        return {"state": "identity_error", "message": str(exc)}
+        return {"state": "identity_error", "message": str(exc), "now": now}
     cutoff = cutoff_for(game["kickoff_utc"], now)
-    not_cfg = {"state": "not_configured", "message": NOT_CONFIGURED}
     return {
         "state": "ok", "game": game, "now": now, "cutoff": cutoff,
         "cutoff_basis": "kickoff" if cutoff == game["kickoff_utc"] else "current time",
-        "injuries": injury_context(cfg["injury_db"], game, cutoff) if cfg["injury_db"] else not_cfg,
-        "weather": weather_context(cfg["weather_db"], game, cutoff, now) if cfg["weather_db"] else not_cfg,
+        "injuries": _section(conns, errors, "injury_db", "Injury", lambda c: _injury(c, game, cutoff)),
+        "weather": _section(conns, errors, "weather_db", "Weather", lambda c: _weather(c, game, cutoff, now)),
     }
+
+
+def build_all(games: pd.DataFrame, game_ids, *, environ=None, now: datetime | None = None) -> dict:
+    """Context for several games from one read of each database: one guarded
+    read-only connection per database for the whole call, each game evaluated
+    once with its own cutoff, all against the same `now`. Nothing is cached
+    between calls, so a newly imported capture shows on the next call.
+    Returns {'state', 'message'?, 'now', 'contexts': {game_id: context}}."""
+    now = now or utc_now()
+    cfg = load_config(environ)
+    if cfg["state"] != "ok":
+        return {"state": cfg["state"], "message": cfg["message"], "now": now, "contexts": {}}
+    conns, errors = {}, {}
+    for key, opener, label in (("injury_db", ih.open_read_only, "Injury"),
+                               ("weather_db", wh.open_read_only, "Weather")):
+        if cfg[key] is not None:
+            try:
+                conns[key] = opener(cfg[key])
+            except _DB_ERRORS as exc:
+                errors[key] = f"{label} database unavailable: {exc}"
+    try:
+        contexts = {str(g): _one(games, str(g), conns, errors, now) for g in game_ids}
+    finally:
+        for conn in conns.values():
+            conn.close()
+    return {"state": "ok", "now": now, "contexts": contexts}
+
+
+def build(games: pd.DataFrame, game_id: str, *, environ=None, now: datetime | None = None) -> dict:
+    """Everything the panel shows for one game. Never raises for data problems."""
+    res = build_all(games, [game_id], environ=environ, now=now)
+    if res["state"] != "ok":
+        return {"state": res["state"], "message": res["message"]}
+    ctx = res["contexts"][str(game_id)]
+    return {k: v for k, v in ctx.items() if k != "now"} if ctx["state"] != "ok" else ctx
+
+
+# --------------------------------------------------------------------------
+# Coverage and capture age
+# --------------------------------------------------------------------------
+
+COVERAGE_STATES = ("usable", "missing", "error", "not_configured")
+
+
+def coverage_state(ctx: dict | None, key: str) -> str:
+    """'usable' only for context accepted by the identity, venue and cutoff
+    checks; 'missing' when nothing usable was received by the cutoff; 'error'
+    for an unidentifiable game or a capture/database that failed a check."""
+    if ctx is None or ctx.get("state") != "ok":
+        return "error"
+    return {"ok": "usable", "none": "missing", "not_configured": "not_configured"}.get(ctx[key]["state"], "error")
+
+
+def coverage(result: dict, game_ids) -> dict:
+    """Counts over exactly these games; each game once per context type."""
+    ids = list(dict.fromkeys(str(g) for g in game_ids))
+    out = {"total": len(ids)}
+    for kind, key in (("injury", "injuries"), ("weather", "weather")):
+        counts = dict.fromkeys(COVERAGE_STATES, 0)
+        for gid in ids:
+            counts[coverage_state(result["contexts"].get(gid), key)] += 1
+        out[kind] = counts
+    return out
+
+
+def receipt_age_hours(received: datetime | None, now: datetime) -> float | None:
+    """Hours since this system received a capture (not a source or issue time)."""
+    return None if received is None else (now - received).total_seconds() / 3600
