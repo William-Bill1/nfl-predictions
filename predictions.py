@@ -3257,6 +3257,13 @@ def home_page():
                                     hide_index=True
                                 )
 
+                    # Read-only stored injury/weather context for these games (display only).
+                    try:
+                        import stored_context_panel
+                        stored_context_panel.render(spread_bets_all)
+                    except Exception as _ctx_exc:
+                        st.error(f"Stored game context failed: {_ctx_exc}")
+
                     # Summary statistics
                     st.info(f"""
                     **📊 MODEL-PROBABILITY BANDS** (model P(underdog covers), *not* a promised win rate):
