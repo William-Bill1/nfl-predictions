@@ -1,16 +1,16 @@
 {
   "artifact": {
     "path": "nfl_games_historical_with_predictions.csv",
-    "sha256": "249d44a5f3552b7779532f37c1de9d27a8956c09d44a049339076350bc0ad80b"
+    "sha256": "7048f513bcd46fa6f1be43cd522c4c2c1997ecced9da51589285abcecb7ca47e"
   },
   "ci_run": {
     "GITHUB_RUN_ATTEMPT": "1",
-    "GITHUB_RUN_ID": "43408765992",
+    "GITHUB_RUN_ID": "43581699394",
     "GITHUB_WORKFLOW": "Nightly NFL Data Update"
   },
   "code_dirty": false,
-  "code_revision": "d6c3a666577b0d29d96c4476f588088962b7d764",
-  "code_sha256": "553e07e1ebae1be7df1b1cc4b771077471d35685974ceb0db1bded4100571c07",
+  "code_revision": "72c2716fa35767de29143eefb0d4317cc617ecb1",
+  "code_sha256": "56c05eac5fd1c06531053b6ad846d13d818c157c5ca9d082789b3d204a2bd6a9",
   "config": {
     "lgbm_available": true,
     "libraries": {
@@ -20,6 +20,7 @@
       "scikit-learn": "1.9.0",
       "xgboost": "3.4.1"
     },
+    "spread_ev_basis": "per_100_non_push_stakes_assumed_minus110",
     "spread_ev_min_edge": 0.02,
     "spread_models": {
       "lgbm": {
@@ -97,13 +98,14 @@
         "n_jobs": null
       }
     },
+    "spread_probability_basis": "conditional_no_push",
     "spread_target": "spreadCovered",
     "temporal_split": {
       "test_frac": 0.2,
       "val_frac": 0.2
     }
   },
-  "config_id": "6a5f60a60640b03e",
+  "config_id": "2fd0928d39e2d720",
   "data_cutoff": {
     "gameday": "2026-11-12",
     "games": 1830,
@@ -121,21 +123,21 @@
     "homeTeamWinPct",
     "spread_line"
   ],
-  "generated_at": "2026-11-13T10:26:51Z",
+  "generated_at": "2026-11-14T09:43:26Z",
   "platform": {
     "python": "3.12.16"
   },
-  "run_id": "20261113T102651Z-b220e1f5480c",
+  "run_id": "20261114T094326Z-514f580c2f9b",
   "schedule": {
     "path": "nfl_games_historical.csv",
-    "sha256": "ca6edf92a5779f81cc6a563f1ea52c68304e484a506b2acb7ddabcfb3ff75176"
+    "sha256": "26e3ca0b495901e4d5a27b0cc1ae5fc700d2f3618b5d3d10d949d1e47d942dc2"
   },
   "schema_version": 1,
-  "settled_as_of": "2026-11-13T10:26:32Z",
-  "spread_threshold": 0.5438587031705955,
+  "settled_as_of": "2026-11-14T09:43:09Z",
+  "spread_threshold": 0.5438128454988184,
   "training_cutoff": {
     "gameday": "2024-01-07",
-    "games": 1098,
+    "games": 1073,
     "season": 2023,
     "week": 18
   }
