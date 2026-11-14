@@ -61,7 +61,7 @@ The output records the assessment ID, import ID, evaluation date and rule versio
 |---|---|
 | Missing or empty | Initialized with the current schema |
 | Exactly the current schema | Opened as is, with no schema statements run |
-| Anything else (the first pilot's schema, a partial schema, changed columns, or extra objects) | Refused with `unsupported database schema â€¦` and exit code 2. The file is left byte-identical. |
+| Anything else (the first pilot's schema, a partial schema, changed columns, or extra objects) | Refused with `unsupported database schema …` and exit code 2. The file is left byte-identical. |
 
 There are no migrations. Use a new database file instead. The first pilot's `reports/football_repository_pilot/pilot.sqlite3` uses the old schema and is refused.
 
@@ -104,7 +104,7 @@ The view's columns are:
 For the selected team, season and game type within one assessment, every game falls into exactly one category. The four counts add up to `games_in_scope`.
 
 1. **Included:** final, and both the roof and the surface are known and match the filter.
-2. **`excluded_unfinished_or_unverifiable`:** not final in this assessment. That covers scheduled games, same-day games, 0â€“0 placeholders, inconsistent scores and invalid dates, each with the rule's reason. These games are never counted as losses.
+2. **`excluded_unfinished_or_unverifiable`:** not final in this assessment. That covers scheduled games, same-day games, 0–0 placeholders, inconsistent scores and invalid dates, each with the rule's reason. These games are never counted as losses.
 3. **`excluded_by_known_conditions`:** final, but at least one known value rules the game out. For example, a dome, a closed roof, an open roof unless `--include-open` is used, or artificial turf. A dome game with a blank surface belongs here: it is definitely not outdoors.
 4. **`eligibility_undetermined_unknown_condition`:** final, and no known value rules it out, but a required condition is unknown. For example, `outdoors` with a blank surface, or a blank roof on grass. It's not counted as a match or a non-match.
 
