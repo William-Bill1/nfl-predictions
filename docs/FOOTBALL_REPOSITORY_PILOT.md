@@ -61,7 +61,7 @@ The output records the assessment ID, import ID, evaluation date and rule versio
 |---|---|
 | Missing or empty | Initialized with the current schema |
 | Exactly the current schema | Opened as is, with no schema statements run |
-| Anything else (the first pilot's schema, a partial schema, changed columns, or extra objects) | Refused with `unsupported database schema …` and exit code 2. The file is left byte-identical. |
+| Anything else (the first pilot's schema, a partial schema, changed columns, or extra objects) | Refused with `unsupported database schema â€¦` and exit code 2. The file is left byte-identical. |
 
 There are no migrations. Use a new database file instead. The first pilot's `reports/football_repository_pilot/pilot.sqlite3` uses the old schema and is refused.
 
@@ -104,7 +104,7 @@ The view's columns are:
 For the selected team, season and game type within one assessment, every game falls into exactly one category. The four counts add up to `games_in_scope`.
 
 1. **Included:** final, and both the roof and the surface are known and match the filter.
-2. **`excluded_unfinished_or_unverifiable`:** not final in this assessment. That covers scheduled games, same-day games, 0–0 placeholders, inconsistent scores and invalid dates, each with the rule's reason. These games are never counted as losses.
+2. **`excluded_unfinished_or_unverifiable`:** not final in this assessment. That covers scheduled games, same-day games, 0â€“0 placeholders, inconsistent scores and invalid dates, each with the rule's reason. These games are never counted as losses.
 3. **`excluded_by_known_conditions`:** final, but at least one known value rules the game out. For example, a dome, a closed roof, an open roof unless `--include-open` is used, or artificial turf. A dome game with a blank surface belongs here: it is definitely not outdoors.
 4. **`eligibility_undetermined_unknown_condition`:** final, and no known value rules it out, but a required condition is unknown. For example, `outdoors` with a blank surface, or a blank roof on grass. It's not counted as a match or a non-match.
 
@@ -150,3 +150,39 @@ The newer retained `pilot_2026_roofresolved.sqlite3` resolves the three internat
 SoFi retains the source's fixed-roof `dome` code with its open-sided enclosure documented separately in the resolution evidence. The gamebook phrase "Open Stadium" is not used alone to infer an uncovered field or a retractable roof. The fixed-roof code does not imply full enclosure or immunity to wind/weather. All original strings and prior issues remain retained.
 
 Manual information is an accepted fallback when electronic evidence is insufficient. The owner can send the specific game ID, field, observed value, units, observation date/time and a source/reference in chat; no direct SQLite editing is needed. Store the submission separately as user-supplied, preserve the original provider value, validate identity/units/evidence, and only then clear any affected coverage blocker. An unverified manual assertion does not make the record complete. This documents a curation procedure, not an automatic manual-entry importer.
+
+
+## Repeatable research refresh
+
+`scripts/football_refresh.py` captures the current season into a new timestamped
+folder below `reports/football_repository_pilot/refreshes/`. It preserves the
+exact downloaded bytes, a season-only TSV, a normalized copy of the comparison
+source, a new SQLite database, and `report.json` written last. An attempt without
+`report.json` did not finish; do not use it as a successful snapshot. Failed
+attempts are left in place for inspection. Existing snapshots are never replaced.
+
+```powershell
+python scripts/football_refresh.py --download --previous-source reports/football_repository_pilot/captures/20261113T203523Z/games_2026.tsv --season 2026 --date 2026-11-14
+```
+
+Alternatively use `--source path/to/saved/games.csv` instead of `--download`.
+Input can be comma- or tab-separated. Select the season and Toronto evaluation
+date explicitly. For the next comparison, pass the previous successful refresh's
+`games.tsv` as `--previous-source`; do not automatically select the newest folder.
+The download fetches only the fixed public nflverse schedule, with TLS defaults,
+a 45-second timeout and an 8 MiB size limit. No live odds or injury API is called.
+
+The report lists added/removed games, changed raw fields (including formatting
+changes), newly completed games, games no longer assessed as complete, and
+completed games missing recognized roof/surface values. Both source versions
+are assessed on the **same** specified date, so the completion delta measures
+source differences, not a comparison against an earlier assessment date.
+Raw hashes identify the inputs; the database records the normalized TSV hashes.
+Unchanged input still creates a separate refresh attempt for the requested date.
+
+A successful refresh exits 0 but is **captured_not_audited**, not verified complete.
+Errors exit 2. This command does not copy gamebook corrections or manual facts,
+create the audited query view, promote a new approved snapshot, update the app,
+or schedule refreshes. Missing or changed facts need review before audited
+queries can use them. Referee, injury and weather coverage is not established.
+The existing recurring automation checks freshness; it does not run this writer.
