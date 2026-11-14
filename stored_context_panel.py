@@ -6,6 +6,7 @@ every rerun, nothing cached) and never changes picks, probabilities or exports.
 """
 from __future__ import annotations
 
+import math
 from datetime import datetime
 
 import pandas as pd
@@ -51,8 +52,14 @@ def render(games: pd.DataFrame, *, environ=None, now: datetime | None = None) ->
     if not options:
         st.info("No games to show context for.")
         return
+    # One shared read of each database per render: every offered game once.
+    result = sc.build_all(games, list(options), environ=environ, now=now)
+    if result["state"] != "ok":
+        st.error(_md(result["message"]))
+        return
+    _coverage(sc.coverage(result, list(options)), _span(games, options))
     game_id = st.selectbox("Game", list(options), format_func=lambda g: options.get(g, g), key=GAME_KEY)
-    ctx = sc.build(games, game_id, environ=environ, now=now)
+    ctx = result["contexts"][str(game_id)]
     if ctx["state"] != "ok":
         st.error(_md(f"Context not shown: {ctx['message']}"))
         return
@@ -60,10 +67,91 @@ def render(games: pd.DataFrame, *, environ=None, now: datetime | None = None) ->
     st.caption(_md(f"Cutoff {sc.toronto(ctx['cutoff'])} - the earlier of now and kickoff "
                    f"({ctx['cutoff_basis']}). Kickoff {sc.toronto(g['kickoff_utc'])}. Captures received "
                    "after the cutoff are excluded; source entry dates are not capture times."))
+    _receipt_times(ctx)
     with st.container(border=True):
         _injuries(ctx["injuries"], g)
     with st.container(border=True):
         _weather(ctx["weather"], g)
+
+
+# --------------------------------------------------------------------------
+# Coverage across the selector and the selected game's receipt times
+# --------------------------------------------------------------------------
+
+COVERAGE_COLUMNS = {"usable": "Usable", "missing": "Missing (nothing usable by cutoff)",
+                    "error": "Invalid or error", "not_configured": "Not configured"}
+
+
+WEEKS = range(1, 23)    # nflverse schedule weeks: 1-18 regular season, 19-22 postseason
+
+
+def _week(value) -> int | None:
+    """A finite, whole-number week in WEEKS, else None (unknown). Never truncates."""
+    try:
+        w = float(sc._text(value))
+    except ValueError:
+        return None
+    if not math.isfinite(w) or not w.is_integer() or int(w) not in WEEKS:
+        return None
+    return int(w)
+
+
+def _span(games: pd.DataFrame, options: dict) -> str:
+    """Describe the selector's actual population (it may cover several weeks).
+
+    Display only: week metadata never affects which games are offered or their context.
+    A game whose rows lack a valid week, or disagree on it, is counted as week unknown.
+    """
+    rows = games[games["game_id"].astype(str).isin(list(options))]
+    per_game: dict[str, set] = {}
+    for gid, w in zip(rows["game_id"].astype(str), rows["week"] if "week" in rows.columns else [None] * len(rows)):
+        per_game.setdefault(gid, set()).add(_week(w))
+    weeks = sorted({next(iter(s)) for s in per_game.values() if len(s) == 1 and None not in s})
+    unknown = sum(1 for s in per_game.values() if len(s) != 1 or None in s)
+    parts = []
+    if weeks:
+        parts.append(f"week {weeks[0]}" if len(weeks) == 1 else "weeks " + ", ".join(str(w) for w in weeks))
+    if unknown:
+        parts.append(f"week unknown for {unknown} game(s)")
+    days = sorted(d for d in (sc._text(v)[:10] for v in rows.get("gameday", [])) if d)
+    if days:
+        parts.append(days[0] if days[0] == days[-1] else f"{days[0]} to {days[-1]}")
+    return "; ".join(parts) or "dates unknown"
+
+
+def _coverage(cov: dict, span: str) -> None:
+    n = cov["total"]
+    st.write(_md(f"**Coverage across the {n} game(s) in this selector** ({span})"))
+    rows = [{"Context": label, **{COVERAGE_COLUMNS[s]: cov[kind][s] for s in sc.COVERAGE_STATES},
+             "Games in selector": n}
+            for kind, label in (("injury", "Injury reports"), ("weather", "Weather forecasts"))]
+    st.dataframe(pd.DataFrame(rows), hide_index=True)
+    st.caption("Usable means accepted by the exact game, team, kickoff, venue (weather) and pregame-cutoff "
+               "checks. Missing means nothing usable was received by the cutoff; it does not mean healthy, "
+               "indoor or neutral weather. Invalid or error means a game, capture or database failed a check "
+               "or could not be read. Injury and weather are counted separately, each game once per type.")
+
+
+def _receipt_line(section: dict, received: datetime | None, now: datetime) -> str:
+    state = section["state"]
+    if state == "ok":
+        return (f"received {_when(received)}; {sc.receipt_age_hours(received, now):.1f} h since receipt")
+    if state == "none":
+        return "missing: no usable capture was received by the cutoff"
+    if state == "not_configured":
+        return "not configured"
+    return "invalid or error: " + section.get("message", "unknown problem")
+
+
+def _receipt_times(ctx: dict) -> None:
+    now = ctx["now"]
+    inj, wx = ctx["injuries"], ctx["weather"]
+    st.write("**Selected game: capture receipt times**")
+    st.markdown(_md(
+        f"- Injury report: {_receipt_line(inj, (inj.get('latest') or {}).get('received_at_utc'), now)}\n"
+        f"- Weather forecast: {_receipt_line(wx, (wx.get('capture') or {}).get('received_at_utc'), now)}"))
+    st.caption(sc.AGE_NOTE)
+    st.caption(sc.AVAILABILITY_NOTE)
 
 
 # --------------------------------------------------------------------------

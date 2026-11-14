@@ -485,6 +485,156 @@ def test_newly_imported_capture_appears_on_rerun(tmp_path, monkeypatch):
     assert w["capture_id"] in all_text(at)
 
 
+# ---------------------------------------------------------------- 6. coverage and receipt ages
+
+G11 = "2026_11_NYJ_KC"           # a later week, nothing captured
+NOVENUE = "2026_10_MIA_DEN"      # no venue identity: weather invalid, injuries merely missing
+DUP = "2026_10_SEA_LV"           # two rows for one game_id: identity error for both contexts
+
+
+def _g(gid, week, day, home, away, sid="KAN00", stadium="Fixture Arrowhead"):
+    return {"game_id": gid, "week": week, "gameday": day, "gametime": "13:00", "home_team": home,
+            "away_team": away, "stadium_id": sid, "stadium": stadium, "prob_underdogCovered": 0.6, "spread_line": 2.5}
+
+
+MIXED = pd.DataFrame([_g(G, 10, "2026-11-15", "KC", "BUF"), _g(G11, 11, "2026-11-22", "KC", "NYJ"),
+                      _g(NOVENUE, 10, "2026-11-15", "DEN", "MIA", sid="", stadium=""),
+                      _g(DUP, 10, "2026-11-15", "LV", "SEA", "VEG00", "Allegiant"),
+                      _g(DUP, 10, "2026-11-15", "LV", "SEA", "VEG00", "Allegiant")])
+MIXED_IDS = [G, G11, NOVENUE, DUP]
+
+
+def test_coverage_counts_accepted_context_once_per_game_and_type(stores):
+    res = sc.build_all(MIXED, MIXED_IDS + [G], environ=stores["env"], now=NOW)   # G repeated: counted once
+    cov = sc.coverage(res, MIXED_IDS + [G])
+    assert cov["total"] == 4
+    assert cov["injury"] == {"usable": 1, "missing": 2, "error": 1, "not_configured": 0}
+    assert cov["weather"] == {"usable": 1, "missing": 1, "error": 2, "not_configured": 0}
+    states = {g: (sc.coverage_state(res["contexts"][g], "injuries"), sc.coverage_state(res["contexts"][g], "weather"))
+              for g in MIXED_IDS}
+    assert states == {G: ("usable", "usable"), G11: ("missing", "missing"),
+                      NOVENUE: ("missing", "error"), DUP: ("error", "error")}
+
+
+def test_coverage_database_error_is_error_not_missing_and_types_are_independent(stores, tmp_path):
+    env = config(tmp_path, injury_db=tmp_path / "absent.sqlite3", weather_db=stores["dir"] / "weather.sqlite3")
+    cov = sc.coverage(sc.build_all(MIXED, MIXED_IDS, environ=env, now=NOW), MIXED_IDS)
+    assert cov["injury"] == {"usable": 0, "missing": 0, "error": 4, "not_configured": 0}
+    assert cov["weather"] == {"usable": 1, "missing": 1, "error": 2, "not_configured": 0}
+    only_weather = config(tmp_path, weather_db=stores["dir"] / "weather.sqlite3")
+    cov = sc.coverage(sc.build_all(MIXED, MIXED_IDS, environ=only_weather, now=NOW), MIXED_IDS)
+    assert cov["injury"]["not_configured"] == 3 and cov["injury"]["error"] == 1      # DUP is still an identity error
+
+
+def test_shared_read_opens_each_database_once_and_matches_single_game_build(stores, monkeypatch):
+    opened = {"injury": 0, "weather": 0}
+    for mod, key in ((ih, "injury"), (wh, "weather")):
+        real = mod.open_read_only
+        monkeypatch.setattr(mod, "open_read_only",
+                            lambda p, _r=real, _k=key: (opened.__setitem__(_k, opened[_k] + 1), _r(p))[1])
+    res = sc.build_all(MIXED, MIXED_IDS, environ=stores["env"], now=NOW)
+    assert opened == {"injury": 1, "weather": 1}
+    single = sc.build(MIXED, G, environ=stores["env"], now=NOW)
+    assert res["contexts"][G]["injuries"] == single["injuries"]
+    assert res["contexts"][G]["weather"] == single["weather"]
+
+
+def run_mixed_panel(tmp_path, env, monkeypatch, games=MIXED, now=NOW):
+    csv = tmp_path / "mixed.csv"
+    games.to_csv(csv, index=False)
+    monkeypatch.delenv(sc.CONFIG_ENV, raising=False)
+    for k, v in env.items():
+        monkeypatch.setenv(k, v)
+    at = AppTest.from_function(panel_app, args=(str(csv), now.isoformat()), default_timeout=60)
+    at.run()
+    assert not at.exception, [e.message for e in at.exception]
+    return at
+
+
+def coverage_frame(at):
+    return [e.value for e in at.dataframe if "Games in selector" in e.value.columns][0].set_index("Context")
+
+
+def test_panel_coverage_uses_the_selectors_own_games_and_span(stores, tmp_path, monkeypatch):
+    at = run_mixed_panel(tmp_path, stores["env"], monkeypatch)
+    n = len(at.selectbox(key="stored_context_game").options)
+    assert n == 4
+    text = all_text(at)
+    assert "Coverage across the 4 game(s) in this selector** (weeks 10, 11; 2026-11-15 to 2026-11-22)" in text
+    assert "this week" not in text.lower()
+    f = coverage_frame(at)
+    assert f.loc["Injury reports", "Usable"] == 1 and f.loc["Weather forecasts", "Usable"] == 1
+    assert f.loc["Injury reports", "Missing (nothing usable by cutoff)"] == 2
+    assert f.loc["Weather forecasts", "Invalid or error"] == 2
+    assert set(f["Games in selector"]) == {4}
+    assert "does not mean healthy, indoor or neutral weather" in text
+
+
+def test_malformed_week_metadata_is_unknown_and_hides_nothing(stores, tmp_path, monkeypatch):
+    import stored_context_panel as scp
+    for bad in ("unknown", "10.5", None, float("nan"), "", "inf", "0", "23", "-1", "1e400"):
+        assert scp._week(bad) is None, bad
+    assert [scp._week(v) for v in (10, "10", "10.0", 10.0, " 11 ", 1, 22)] == [10, 10, 10, 10, 11, 1, 22]
+    one = {G: ""}
+    for bad in ("unknown", "10.5", None):
+        frame = MIXED[MIXED["game_id"] == G].assign(week=bad)
+        assert scp._span(frame, one) == "week unknown for 1 game(s); 2026-11-15"   # never "week 10"
+    assert scp._span(MIXED.drop(columns="week"), dict.fromkeys(MIXED_IDS)) == \
+        "week unknown for 4 game(s); 2026-11-15 to 2026-11-22"
+    # Mixed valid/unknown in the panel: G malformed, NOVENUE fractional, DUP's rows disagree (one missing).
+    bad = MIXED.astype({"week": object}).copy()
+    bad.loc[bad["game_id"] == G, "week"] = "unknown"
+    bad.loc[bad["game_id"] == NOVENUE, "week"] = 10.5
+    bad.loc[bad.index[bad["game_id"] == DUP][0], "week"] = None
+    good = run_mixed_panel(tmp_path, stores["env"], monkeypatch)
+    at = run_mixed_panel(tmp_path, stores["env"], monkeypatch, games=bad)
+    text = all_text(at)
+    assert "Coverage across the 4 game(s) in this selector** (week 11; week unknown for 3 game(s); " \
+           "2026-11-15 to 2026-11-22)" in text
+    assert "week 10" not in text
+    assert at.selectbox(key="stored_context_game").options == good.selectbox(key="stored_context_game").options
+    assert coverage_frame(at).equals(coverage_frame(good))                    # same counts, same denominator
+    assert "Injury report: received Sat Nov 14, 2026 05:00 AM EST" in text    # G's context still shown
+    assert "; 24.0 h since receipt" in text
+
+
+def test_panel_receipt_ages_and_missing_or_error_states(stores, tmp_path, monkeypatch):
+    at = run_mixed_panel(tmp_path, stores["env"], monkeypatch)
+    text = all_text(at)
+    # sat injury capture received 10:00, forecast received 12:00 the day before; NOW is 12:00.
+    assert "Injury report: received Sat Nov 14, 2026 05:00 AM EST (2026-11-14 10:00:00 UTC); 2.0 h since receipt" in text
+    assert "Weather forecast: received Fri Nov 13, 2026 07:00 AM EST" in text and "; 24.0 h since receipt" in text
+    assert sc.AGE_NOTE in text and sc.AVAILABILITY_NOTE in text
+    assert sc.INJURY_SOURCE_NOTE in text and sc.ATTRIBUTION in text           # existing notices kept
+    at.selectbox(key="stored_context_game").select(G11).run()
+    text = all_text(at)
+    assert "Injury report: missing: no usable capture was received by the cutoff" in text
+    assert "Weather forecast: missing: no usable capture was received by the cutoff" in text
+    assert sc.WEATHER_MISSING_NOTE in text
+    at.selectbox(key="stored_context_game").select(NOVENUE).run()
+    text = all_text(at)
+    assert "Injury report: missing" in text
+    assert "Weather forecast: invalid or error: The selected game has no complete venue identity" in text
+    at.selectbox(key="stored_context_game").select(DUP).run()
+    assert any("appears 2 times" in e.value for e in at.error)
+    assert coverage_frame(at).loc["Injury reports", "Usable"] == 1             # summary unchanged by selection
+
+
+def test_panel_coverage_reflects_new_import_on_next_rerun(tmp_path, monkeypatch):
+    d = tmp_path / "s"
+    d.mkdir()
+    db = d / "w.sqlite3"
+    wh.connect_for_import(db).close()
+    at = run_mixed_panel(tmp_path, config(d, weather_db=db), monkeypatch)
+    assert coverage_frame(at).loc["Weather forecasts", "Usable"] == 0
+    assert "Weather forecast: missing" in all_text(at)
+    weather_import(db, weather_capture(tmp_path, datetime(2026, 11, 13, 12, tzinfo=UTC), ok_body()))
+    at.run()
+    assert not at.exception
+    assert coverage_frame(at).loc["Weather forecasts", "Usable"] == 1
+    assert "24.0 h since receipt" in all_text(at)
+
+
 # ---------------------------------------------------------------- 7. no writes
 
 
@@ -514,7 +664,7 @@ def test_panel_never_imports_captures_or_makes_requests(stores, monkeypatch):
 from test_home_downloads import UPCOMING, links, write_home_fixture  # noqa: E402
 
 
-PANEL_COLUMNS = {"Valid time (UTC)", "Identity", "Change", "Reason"}
+PANEL_COLUMNS = {"Valid time (UTC)", "Identity", "Change", "Reason", "Games in selector"}
 
 
 def home_stores(tmp_path, game_id, gameday, kickoff, stadium_id, stadium):
