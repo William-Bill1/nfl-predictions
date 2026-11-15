@@ -1,10 +1,70 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-14T09:43:37.462234+00:00",
+    "generated_at": "2026-11-15T10:17:19.499595+00:00",
     "model_version": "1.1.0",
-    "season": "2026",
-    "notes": "No spread signals for 2026-11-14"
+    "season": "2026"
   },
-  "bets": []
+  "bets": [
+    {
+      "game_date": "2026-11-15",
+      "game_time": "09:30",
+      "game": "NE @ DET",
+      "home_team": "DET",
+      "away_team": "NE",
+      "bet_type": "Spread",
+      "pick": "NE +2.5",
+      "confidence": 0.551992942605151,
+      "edge": 0.047042447555646,
+      "tier": "Strong",
+      "odds": -102,
+      "line": 2.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-15",
+      "game_time": "13:00",
+      "game": "BUF @ NYJ",
+      "home_team": "NYJ",
+      "away_team": "BUF",
+      "bet_type": "Spread",
+      "pick": "NYJ +8.5",
+      "confidence": 0.7166558307579804,
+      "edge": 0.1817721098277479,
+      "tier": "Elite",
+      "odds": -115,
+      "line": 8.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-15",
+      "game_time": "16:05",
+      "game": "LA @ ARI",
+      "home_team": "ARI",
+      "away_team": "LA",
+      "bet_type": "Spread",
+      "pick": "ARI +9.5",
+      "confidence": 0.5812271681681178,
+      "edge": 0.0619963989373485,
+      "tier": "Strong",
+      "odds": -108,
+      "line": 9.5,
+      "notes": null
+    },
+    {
+      "game_date": "2026-11-15",
+      "game_time": "16:25",
+      "game": "SF @ DAL",
+      "home_team": "DAL",
+      "away_team": "SF",
+      "bet_type": "Spread",
+      "pick": "DAL +4.5",
+      "confidence": 0.5482269811556175,
+      "edge": 0.0199250943631646,
+      "tier": "Good",
+      "odds": -112,
+      "line": 4.5,
+      "notes": null
+    }
+  ]
 }
