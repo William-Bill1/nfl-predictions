@@ -62,3 +62,37 @@ Do not combine different assessments or silently merge revised snapshots.
 
 This first card contains efficiency metrics only. Market prices, injury/weather
 display, opponent adjustment and historical meetings are future extensions.
+
+## Readable matchup report
+
+The optional report wrapper formats the same query results as side-by-side
+Markdown, including season and last-four-game samples, selected game IDs,
+coverage notices and source hashes. It does not change the database or calculation.
+
+```powershell
+venv\Scripts\python.exe -B scripts/football_scorecard.py --db reports/football_repository_pilot/epa_20261116/epa.sqlite3 --teams LAC BAL --before 2026-11-16 --output reports/football_repository_pilot/epa_20261116/LAC_BAL.md
+```
+
+Output files must be new; existing files are refused. Omit `--output` to print the
+report, or use `--format json` for structured results. The database's latest game
+date describes the retained snapshot, not proof that it includes every game
+completed before a future requested cutoff. Use the source coverage audit when
+deciding whether a snapshot is sufficiently current for the question.
+
+The head-to-head table shows measured offensive/defensive EPA, offensive success,
+recent net EPA and descriptive edges. Optional `--context-db` adds verified score
+point differential/game; its bytes must match the EPA snapshot's audit hash.
+Passing/rushing offense and opposing defense are shown separately. No weights,
+combined score, point adjustment or betting recommendation is assigned.
+Strength of schedule, turnovers, injury impact, game site and a composite matchup
+rating are explicitly uncalculated or unavailable. Turnovers need a separately
+verified rule for return fumbles and multiple possession changes.
+
+With `--context-db`, records also include overall and last-four W-L-T, home,
+away, neutral and unknown-location splits, current streak, latest result and the
+last included game date. Source-reported `Home`/`Neutral` comes from the exact
+assessment's game observations; it is not independently verified home advantage.
+Absent or unfamiliar locations remain unknown. A tie ends a win/loss streak;
+bye weeks do not interrupt it. Zero-game splits show their zero sample explicitly.
+Optional `--game-id` selects an on/after-cutoff game for the same two teams and
+highlights the applicable site record, without adding that game to past results.
