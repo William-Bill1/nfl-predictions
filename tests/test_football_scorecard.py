@@ -141,3 +141,65 @@ def test_selected_game_without_iso_date_is_refused(inputs, day):
     epa.build(source,audit,output,assessment_id=1,season=2026)
     with pytest.raises(ValueError, match="on/after the cutoff"):
         scorecard.matchup(output,["KC","BUF"],"2026-09-09",audit,"future")
+
+
+def test_opponent_records_exclude_subject_and_repeat_opponents():
+    finals=[('g1','2026-09-01','KC','BUF',21,14),
+            ('g2','2026-09-08','BUF','KC',7,14),
+            ('g3','2026-09-02','BUF','NYJ',10,10),
+            ('g4','2026-09-03','MIA','BUF',0,7)]
+    result=scorecard.opponent_records(finals,'KC',['g1','g2'])
+    assert result['subject_games']==2
+    assert (result['opponent_wins'],result['opponent_losses'],result['opponent_ties'])==(2,0,2)
+    assert result['opponent_game_observations']==4
+    assert result['opponent_win_fraction']==.75
+    assert [d['opponent'] for d in result['details']]==['BUF','BUF']
+    assert result['status']=='covered_for_snapshot'
+
+
+def test_opponent_record_missing_sample_does_not_become_zero():
+    finals=[('g1','2026-09-01','KC','BUF',21,14)]
+    result=scorecard.opponent_records(finals,'KC',['g1'])
+    assert result['status']=='incomplete'
+    assert result['opponent_win_fraction'] is None
+    assert result['games_without_opponent_sample']==['g1']
+    assert scorecard.opponent_records(finals,'KC',[])['status']=='no_data'
+    with pytest.raises(ValueError,match='duplicate'):
+        scorecard.opponent_records(finals+finals,'KC',['g1'])
+
+
+def test_opponent_cutoff_and_season_filter_integration(inputs):
+    import sqlite3
+    source,audit,output,_,_=inputs
+    with sqlite3.connect(audit) as conn:
+        conn.execute('ALTER TABLE query_coverage_games ADD COLUMN home_score INTEGER')
+        conn.execute('ALTER TABLE query_coverage_games ADD COLUMN away_score INTEGER')
+        conn.execute('UPDATE query_coverage_games SET home_score=21,away_score=14')
+        conn.executemany("INSERT INTO query_coverage_games VALUES(1,?,'REG','final',1,?,?,'BUF','NYJ',?,?)",
+                         [(2026,'early','2026-09-02',21,7),(2026,'same_day','2026-09-08',0,7),
+                          (2026,'future','2026-09-09',0,7),(2025,'old','2025-09-01',0,7)])
+    epa.build(source,audit,output,assessment_id=1,season=2026)
+    report=scorecard.matchup(output,['KC','BUF'],'2026-09-08',audit)
+    result=report['opponent_records']['KC']['season']
+    assert result['opponent_win_fraction']==1
+    assert result['opponent_game_observations']==1
+    assert 'Schedule context: opponent win fraction | 100.0%' in scorecard.markdown(report)
+    assert 'Not a team edge' in scorecard.markdown(report)
+
+
+def test_opponent_records_say_snapshot_omissions_are_not_live_standings(inputs):
+    import sqlite3
+    source,audit,output,_,_=inputs
+    with sqlite3.connect(audit) as conn:
+        conn.execute('ALTER TABLE query_coverage_games ADD COLUMN home_score INTEGER')
+        conn.execute('ALTER TABLE query_coverage_games ADD COLUMN away_score INTEGER')
+        conn.execute('UPDATE query_coverage_games SET home_score=21,away_score=14')
+        conn.executemany("INSERT INTO query_coverage_games VALUES(1,2026,'REG','final',?,?,?,?,?,?,?)",
+                         [(1,'g3','2026-09-02','BUF','NYJ',21,7),(0,'g4','2026-09-03','MIA','BUF',30,0)])
+    conn.close()
+    epa.build(source,audit,output,assessment_id=1,season=2026)
+    report=scorecard.matchup(output,['KC','BUF'],'2026-09-30',audit)
+    result=report['opponent_records']['KC']['season']
+    assert (result['opponent_wins'],result['opponent_losses'])==(2,0)  # BUF 1-0 per meeting; unverified g4 not counted
+    assert 'not complete or live standings' in result['basis']
+    assert 'not counted, so these are not complete or live standings' in scorecard.markdown(report)

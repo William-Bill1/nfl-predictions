@@ -114,3 +114,20 @@ exact EPA database hash are retained. Season/last-four summaries follow the EPA
 selection. Missing selections withhold totals; no supplied supplement displays
 Unavailable. Ad hoc read-only SQL can query `team_game_turnovers`, including
 giveaways, takeaways and differential by exact game/team. No engine integration.
+
+## Opponent-record schedule context
+
+Supplying the pinned `--context-db` also calculates schedule context without new
+downloads or database writes. Each selected opponent's REG record uses all
+score-verified finals in that assessment, same season, strictly before the cutoff,
+excluding every game against the subject team. Repeated opponents are counted
+once per meeting. The pooled fraction is `(wins + 0.5 * ties) / games`, weighted
+by available opponent-game observations. Last-four selects the subject's last
+four games; opponent records still cover their full season before the cutoff.
+
+No opponent sample means an unavailable percentage, never zero. Samples, combined
+W-L-T and status are shown. This describes past schedule difficulty, not a team
+edge, league ranking, opponent-adjusted EPA, power rating or betting value.
+The retained snapshot can omit games; coverage is relative to that snapshot.
+Per-opponent detail and the definition version are in JSON `opponent_records`.
+For ad hoc reproduction, retain the read-only SQL alongside the research report.

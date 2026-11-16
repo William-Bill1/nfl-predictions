@@ -42,6 +42,40 @@ def _record(games):
             "losses": sum(m<0 for m in margins), "ties": sum(m==0 for m in margins)}
 
 
+def opponent_records(finals, team, game_ids):
+    """Pooled opponent W-L-T excluding all games against subject; repeats intentional."""
+    games = {}
+    for gid,day,home,away,hs,aws in finals:
+        if gid in games or not _iso_date(day) or home == away or any(not isinstance(s,int) or s<0 for s in (hs,aws)):
+            raise ValueError(f"Invalid or duplicate audited opponent game: {gid}")
+        games[gid] = (day,home,away,hs,aws)
+    details=[]
+    for gid in game_ids:
+        if gid not in games or team not in games[gid][1:3]:
+            raise ValueError(f"Selected game missing from opponent population: {gid}")
+        day,home,away,_,_ = games[gid]
+        opponent = away if team==home else home
+        wins=losses=ties=0
+        for _,other_home,other_away,hs,aws in games.values():
+            if opponent not in (other_home,other_away) or team in (other_home,other_away):
+                continue
+            margin = hs-aws if opponent==other_home else aws-hs
+            wins += margin>0
+            losses += margin<0
+            ties += margin==0
+        details.append({"game_id":gid,"gameday":day,"opponent":opponent,
+                        "wins":wins,"losses":losses,"ties":ties,"games":wins+losses+ties})
+    w,l,t = (sum(d[k] for d in details) for k in ("wins","losses","ties"))
+    missing=[d["game_id"] for d in details if not d["games"]]
+    return {"status":"no_data" if not details else "incomplete" if missing else "covered_for_snapshot",
+            "subject_games":len(details),"opponent_wins":w,"opponent_losses":l,"opponent_ties":t,
+            "opponent_game_observations":w+l+t,
+            "opponent_win_fraction":(w+.5*t)/(w+l+t) if w+l+t and not missing else None,
+            "games_without_opponent_sample":missing,"details":details,
+            "definition_version":"opponent-record-v1-exclude-subject-pooled",
+            "basis":"Retained audited finals before cutoff; games missing from the snapshot are not counted, so not complete or live standings; exclude games against subject team; repeat opponents counted per meeting; ties half-win. Opponent records use the full season-to-cutoff even for last-four subject selection. Not opponent-adjusted EPA or a power rating."}
+
+
 def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
     if len(teams) != 2 or teams[0] == teams[1]:
         raise ValueError("Provide two different teams")
@@ -55,6 +89,7 @@ def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
                                    "last_four": team_summary(db, team, before, 4)} for team in teams}}
     report["score_results"] = {}
     report["selected_game"] = None
+    report["opponent_records"] = {}
     if game_id and context_db is None:
         raise ValueError("A selected game requires --context-db")
     if context_db is not None:
@@ -62,6 +97,10 @@ def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
             raise ValueError("Context database does not match the EPA snapshot's pinned audit hash")
         with closing(open_read_only(context_db, require_current_schema=False)) as conn:
             assessment_id = int(provenance["assessment_id"])
+            opponent_finals = conn.execute("SELECT game_id,gameday,home_team,away_team,home_score,away_score "
+                                           "FROM query_coverage_games WHERE assessment_id=? AND season=? AND game_type='REG' "
+                                           "AND completion_status='final' AND scores_verified=1 AND gameday<?",
+                                           (assessment_id,int(provenance["season"]),before)).fetchall()
             if game_id:
                 rows = conn.execute("SELECT home_team,away_team,gameday FROM query_coverage_games "
                                     "WHERE assessment_id=? AND game_id=?", (assessment_id,game_id)).fetchall()
@@ -73,7 +112,9 @@ def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
                 report["selected_game"] = {"game_id":game_id,"gameday":day,"home_team":home,"away_team":away,
                                            "location":location,"basis":"source-reported location; not independently verified home-field advantage"}
             for team in teams:
+                report["opponent_records"][team] = {}
                 for window, summary in report["comparisons"][team].items():
+                    report["opponent_records"][team][window] = opponent_records(opponent_finals,team,summary["game_ids"])
                     margins = []
                     results = []
                     for gid in summary["game_ids"]:
@@ -197,8 +238,9 @@ def markdown(report):
                   ("Home" if t==selected["home_team"] else "Away") if selected["location"]=="Home" else "Unknown")
                  for t in (a,b)]
     turnover_values = [report.get("turnovers",{}).get(t,{}).get("season",{}).get("differential") for t in (a,b)]
+    schedule_values = [report.get("opponent_records",{}).get(t,{}).get("season",{}).get("opponent_win_fraction") for t in (a,b)]
     lines += [f"| Point differential/game | {value(x)} | {value(y)} | {edge(x,y)} |",
-              "| Strength of schedule | Not calculated | Not calculated | Not assessed |",
+              f"| Schedule context: opponent win fraction | {value(schedule_values[0],True)} | {value(schedule_values[1],True)} | Not a team edge |",
               f"| Turnover differential (season total) | {count(turnover_values[0])} | {count(turnover_values[1])} | {edge(*turnover_values)} |",
               f"| Game site (no point adjustment) | {sites[0]} | {sites[1]} | Not assessed |"]
     x,y = (report["comparisons"][t]["last_four"]["net_epa_per_play"] for t in (a,b))
@@ -208,6 +250,23 @@ def markdown(report):
               "No weights or combined total. Descriptive edges compare unrounded values; they are not betting edges.",
               "Turnover differential is takeaways minus giveaways; takeaways use the opponent's interceptions thrown plus total fumbles lost, including touchbacks and special teams. Unavailable means no matching complete turnover snapshot was supplied.",
               ""]
+    lines += ["## Opponent-record schedule context", "",
+              "Higher opponent win fraction describes a tougher past schedule by this measure, not a stronger team or a betting edge.",
+              "Records exclude every game against the subject team. Repeat opponents count once per meeting; ties count as half a win. Pooled records weight opponents by their available game counts.",
+              "Only the retained audited season-to-cutoff finals are used; later corrections may be present. Missing opponent samples withhold the percentage.",
+              "Games missing from the snapshot (for example, finals not yet score-verified) are not counted, so these are not complete or live standings.", ""]
+    for team in (a,b):
+        for window in ("season","last_four"):
+            context = report.get("opponent_records",{}).get(team,{}).get(window)
+            if context is None:
+                lines += [f"{team} {window}: unavailable; no audited context supplied."]
+                continue
+            lines += [f"{team} {window}: opponents {context['opponent_wins']}-{context['opponent_losses']}-{context['opponent_ties']}, "
+                      f"{value(context['opponent_win_fraction'],True)} over {context['opponent_game_observations']} opponent-game observations "
+                      f"from {context['subject_games']} subject games; {context['status']}."]
+            if context['games_without_opponent_sample']:
+                lines += [f"No opponent sample for: {', '.join(context['games_without_opponent_sample'])}."]
+    lines += ["", "For the last-four selection, opponent records still use the full season before the cutoff.", ""]
     for offense, defense in ((a,b),(b,a)):
         for kind,label in (("dropback","Passing"),("designed_rush","Rushing")):
             x=measure(offense,"season","offense",kind,"epa_per_play")
