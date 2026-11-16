@@ -1,17 +1,17 @@
 {
-  "generated_at": "2026-11-09T14:52:05",
+  "generated_at": "2026-11-16T14:28:04",
   "source": "betting_recommendations_log.csv",
   "note": "Spread bets only. Profit per $100 risk at recorded odds; legacy rows assume -110 (win +90.91 / loss -100 / push 0). ROI = profit / (settled non-push bets * 100). Unresolved rows (no team recorded) are excluded from all totals.",
   "overall": {
-    "pending": 11,
+    "pending": 5,
     "unresolved": 2,
-    "settled": 70,
-    "win": 32,
-    "loss": 34,
+    "settled": 80,
+    "win": 36,
+    "loss": 40,
     "push": 4,
-    "win_rate": 0.4848,
-    "profit": -490.88,
-    "roi_pct": -7.44
+    "win_rate": 0.4737,
+    "profit": -727.24,
+    "roi_pct": -9.57
   },
   "by_week": [
     {
@@ -124,7 +124,19 @@
     },
     {
       "week": 10,
-      "pending": 11,
+      "pending": 1,
+      "unresolved": 0,
+      "settled": 10,
+      "win": 4,
+      "loss": 6,
+      "push": 0,
+      "win_rate": 0.4,
+      "profit": -236.36,
+      "roi_pct": -23.64
+    },
+    {
+      "week": 11,
+      "pending": 4,
       "unresolved": 0,
       "settled": 0,
       "win": 0,
@@ -148,37 +160,37 @@
       "roi_pct": -68.18
     },
     "Strong": {
-      "pending": 2,
+      "pending": 1,
       "unresolved": 1,
-      "settled": 13,
+      "settled": 15,
       "win": 4,
-      "loss": 7,
+      "loss": 9,
       "push": 2,
-      "win_rate": 0.3636,
-      "profit": -336.36,
-      "roi_pct": -30.58
+      "win_rate": 0.3077,
+      "profit": -536.36,
+      "roi_pct": -41.26
     },
     "Good": {
-      "pending": 6,
+      "pending": 3,
       "unresolved": 1,
-      "settled": 34,
-      "win": 21,
-      "loss": 11,
+      "settled": 39,
+      "win": 24,
+      "loss": 13,
       "push": 2,
-      "win_rate": 0.6562,
-      "profit": 809.11,
-      "roi_pct": 25.28
+      "win_rate": 0.6486,
+      "profit": 881.84,
+      "roi_pct": 23.83
     },
     "Lean": {
-      "pending": 3,
+      "pending": 1,
       "unresolved": 0,
-      "settled": 17,
-      "win": 6,
-      "loss": 11,
+      "settled": 20,
+      "win": 7,
+      "loss": 13,
       "push": 0,
-      "win_rate": 0.3529,
-      "profit": -554.54,
-      "roi_pct": -32.62
+      "win_rate": 0.35,
+      "profit": -663.63,
+      "roi_pct": -33.18
     }
   },
   "unresolved_games": [
