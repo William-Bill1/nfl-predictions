@@ -42,7 +42,7 @@ def _record(games):
             "losses": sum(m<0 for m in margins), "ties": sum(m==0 for m in margins)}
 
 
-def matchup(db, teams, before, context_db=None, game_id=None):
+def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
     if len(teams) != 2 or teams[0] == teams[1]:
         raise ValueError("Provide two different teams")
     with closing(open_read_only(db, require_current_schema=False)) as conn:
@@ -118,6 +118,12 @@ def matchup(db, teams, before, context_db=None, game_id=None):
                         "record_basis":"final, score-verified games in the retained audited snapshot only; games missing from it are not counted"}
         if digest(context_db) != provenance["audit_sha256"]:
             raise ValueError("Context database changed during score query")
+    report["turnovers"] = {}
+    if turnover_db is not None:
+        from scripts.football_turnovers import summary as turnover_summary
+        for team in teams:
+            report["turnovers"][team] = {window:turnover_summary(turnover_db,db,team,s["game_ids"])
+                                         for window,s in report["comparisons"][team].items()}
     return report
 
 
@@ -134,6 +140,9 @@ def markdown(report):
 
     def value(v, percent=False):
         return "Unavailable" if v is None else f"{v:.1%}" if percent else f"{v:+.3f}"
+
+    def count(v):
+        return "Unavailable" if v is None else f"{v:+d}"
 
     def record(s):
         return "Unavailable" if not s else f"{s['wins']}-{s['losses']}-{s['ties']} ({s['games']} games)"
@@ -187,16 +196,17 @@ def markdown(report):
         sites = [("Neutral" if selected["location"]=="Neutral" else
                   ("Home" if t==selected["home_team"] else "Away") if selected["location"]=="Home" else "Unknown")
                  for t in (a,b)]
+    turnover_values = [report.get("turnovers",{}).get(t,{}).get("season",{}).get("differential") for t in (a,b)]
     lines += [f"| Point differential/game | {value(x)} | {value(y)} | {edge(x,y)} |",
               "| Strength of schedule | Not calculated | Not calculated | Not assessed |",
-              "| Turnover differential | Not calculated | Not calculated | Not assessed |",
+              f"| Turnover differential (season total) | {count(turnover_values[0])} | {count(turnover_values[1])} | {edge(*turnover_values)} |",
               f"| Game site (no point adjustment) | {sites[0]} | {sites[1]} | Not assessed |"]
     x,y = (report["comparisons"][t]["last_four"]["net_epa_per_play"] for t in (a,b))
     lines += [f"| Recent form: last-four net EPA/play | {value(x)} | {value(y)} | {edge(x,y)} |",
               "| Injury impact | Insufficient data for numeric impact | Insufficient data for numeric impact | Not assessed |",
               "| Composite matchup advantage | Not calculated | Not calculated | Not assessed |", "",
               "No weights or combined total. Descriptive edges compare unrounded values; they are not betting edges.",
-              "Turnover aggregation is deferred: return fumbles and multiple possession changes require verified attribution.",
+              "Turnover differential is takeaways minus giveaways; takeaways use the opponent's interceptions thrown plus total fumbles lost, including touchbacks and special teams. Unavailable means no matching complete turnover snapshot was supplied.",
               ""]
     for offense, defense in ((a,b),(b,a)):
         for kind,label in (("dropback","Passing"),("designed_rush","Rushing")):
@@ -230,6 +240,9 @@ def markdown(report):
               "Coverage does not establish that every provider play is present. Raw ad hoc SQL does not automatically apply scorecard coverage checks.",
               "Injuries, forecasts, prices and prior meetings are not included in this EPA-only report.", ""]
     lines += [f"- {key}: `{val}`" for key, val in sorted(report["provenance"].items())]
+    for team,windows in report.get("turnovers",{}).items():
+        for window,summary in windows.items():
+            lines += [f"- {team} {window} turnovers: {json.dumps(summary,sort_keys=True)}"]
     return "\n".join(lines) + "\n"
 
 
@@ -240,11 +253,12 @@ def main():
     parser.add_argument("--before", required=True)
     parser.add_argument("--context-db", help="Optional audited score database; must match pinned audit hash")
     parser.add_argument("--game-id", help="Optional selected matchup; highlights applicable site record")
+    parser.add_argument("--turnover-db",help="Optional team-stat turnover snapshot pinned to this EPA database")
     parser.add_argument("--format", choices=("markdown", "json"), default="markdown")
     parser.add_argument("--output", help="New output file; existing files are never replaced")
     args = parser.parse_args()
     try:
-        report = matchup(args.db, args.teams, args.before, args.context_db, args.game_id)
+        report = matchup(args.db, args.teams, args.before, args.context_db, args.game_id,args.turnover_db)
         content = markdown(report) if args.format == "markdown" else json.dumps(report, indent=2) + "\n"
         if args.output:
             with Path(args.output).open("x", encoding="utf-8") as stream:

@@ -96,3 +96,21 @@ Absent or unfamiliar locations remain unknown. A tie ends a win/loss streak;
 bye weeks do not interrupt it. Zero-game splits show their zero sample explicitly.
 Optional `--game-id` selects an on/after-cutoff game for the same two teams and
 highlights the applicable site record, without adding that game to past results.
+
+## Turnover supplement
+
+`scripts/football_turnovers.py --source <weekly-team-stats.csv> --epa-db <epa.sqlite3>
+--output <new-turnovers.sqlite3>` builds a separate research database. It requires
+exactly one row for each team in every EPA-snapshot game, matching teams, opponent,
+season and REG type. Missing, duplicate or invalid counts refuse the build.
+The source is nflverse `stats_team_week_<season>.csv`; giveaways are interceptions
+thrown plus `fumbles_lost_total`, including special teams. Takeaways are the
+opponent's giveaways, which correctly includes end-zone fumble touchbacks where
+no player receives recovery credit. These are provider totals, not an independent
+gamebook audit or turnover-adjusted power rating.
+
+Pass `--turnover-db <path>` to the scorecard. Source hashes, definition and the
+exact EPA database hash are retained. Season/last-four summaries follow the EPA
+selection. Missing selections withhold totals; no supplied supplement displays
+Unavailable. Ad hoc read-only SQL can query `team_game_turnovers`, including
+giveaways, takeaways and differential by exact game/team. No engine integration.

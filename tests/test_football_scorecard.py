@@ -49,7 +49,7 @@ def test_verified_scores_and_measurement_edges(inputs):
     text = scorecard.markdown(report)
     assert "| Point differential/game | +7.000 | -7.000 | KC |" in text
     assert "No weights or combined total" in text
-    assert "Turnover differential | Not calculated" in text
+    assert "| Turnover differential (season total) | Unavailable | Unavailable | Not assessed |" in text
     assert "Passing matchup: KC offense" in text
     with sqlite3.connect(audit) as conn:
         conn.execute("UPDATE query_coverage_games SET home_score=99")
