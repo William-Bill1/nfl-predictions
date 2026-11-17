@@ -60,19 +60,28 @@ prices without a confirmed date/time are not imported.
 
 ## Schedule time changes
 
-Each quote keeps the kickoff that the schedule had when it was entered, and
-quotes are never rewritten. The timeline requires that stored kickoff to equal
-the current schedule's kickoff. It does not substitute times or skip the check.
+Quotes keep the original schedule hash and kickoff and are never rewritten.
+Default timeline behaviour still refuses a changed kickoff. To intentionally
+reassess historical quotes, supply a reviewed corrected schedule and pass
+`--reassess-kickoffs`. Game ID, teams, season, week, artifact integrity and both
+as-of cutoffs remain enforced. Observations at or after the evaluated kickoff
+are excluded, including the exact kickoff instant. Other games still report.
 
-- After the stored schedule is corrected, earlier quotes for that game no longer
-  match. The whole timeline run is refused ("Quote not anchored to current
-  pregame kickoff"), not only that game. Handling historical quotes after a
-  schedule correction is separate schedule work.
-- Until it is corrected, "pregame" is judged against the stored time. The
-  recorder can accept a quote taken after the real kickoff of a game moved
-  earlier, and refuses a real pregame quote for a game moved later.
-- Week 11 2026: the NFL moved PIT-PHI to 1:00 PM ET and JAX-NYG to 4:25 PM ET.
-  The stored schedule still says 4:25 PM and 1:00 PM. On November 22, do not
-  record PIT-PHI after 1:00 PM ET, because the recorder would accept in-game
-  prices as pregame. JAX-NYG quotes after 1:00 PM ET are refused. Check the
-  sportsbook's displayed kickoff before each near-kickoff observation.
+In this mode `timeline.json` records `kickoff_evaluation`, with each changed
+quote's original and evaluated kickoff and pregame decision. Included observations
+and SQLite `raw_json` remain the original documents. Excluded quotes remain in the
+source directory and are listed with their reason in the report. Querying SQLite
+alone omits these exclusions and reassessment metadata; consult timeline.json too.
+This is retrospective schedule reassessment, not proof the corrected time was
+known when a quote was entered.
+
+New quotes must use the same reviewed corrected schedule via the recorder's
+`--schedule` argument. Reassessment does not change the recorder's default schedule,
+fetch schedule updates or protect a command given a stale schedule. Do not use the
+production schedule for near-kickoff recording until its times have been checked.
+
+For Week 11 2026, the NFL's November 9 announcement moves PIT-PHI to November 22
+13:00 ET and JAX-NYG to November 22 16:25 ET:
+https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Schedule%20Change.pdf
+A research-only corrected snapshot and provenance can be kept under reports/;
+production data and immutable quotes need not be edited.
