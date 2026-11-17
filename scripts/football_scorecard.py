@@ -42,7 +42,7 @@ def _record(games):
             "losses": sum(m<0 for m in margins), "ties": sum(m==0 for m in margins)}
 
 
-def opponent_records(finals, team, game_ids):
+def opponent_records(finals, team, game_ids, coverage_gaps=None):
     """Pooled opponent W-L-T excluding all games against subject; repeats intentional."""
     games = {}
     for gid,day,home,away,hs,aws in finals:
@@ -67,13 +67,38 @@ def opponent_records(finals, team, game_ids):
                         "wins":wins,"losses":losses,"ties":ties,"games":wins+losses+ties})
     w,l,t = (sum(d[k] for d in details) for k in ("wins","losses","ties"))
     missing=[d["game_id"] for d in details if not d["games"]]
-    return {"status":"no_data" if not details else "incomplete" if missing else "covered_for_snapshot",
+    gaps = list(coverage_gaps or [])
+    return {"status":"incomplete" if gaps else "no_data" if not details else "incomplete" if missing else "covered_for_snapshot",
             "subject_games":len(details),"opponent_wins":w,"opponent_losses":l,"opponent_ties":t,
             "opponent_game_observations":w+l+t,
-            "opponent_win_fraction":(w+.5*t)/(w+l+t) if w+l+t and not missing else None,
-            "games_without_opponent_sample":missing,"details":details,
-            "definition_version":"opponent-record-v1-exclude-subject-pooled",
+            "opponent_win_fraction":(w+.5*t)/(w+l+t) if w+l+t and not missing and not gaps else None,
+            "games_without_opponent_sample":missing,"coverage_gaps":gaps,"details":details,
+            "definition_version":"opponent-record-v2-scheduled-game-gate",
             "basis":"Retained audited finals before cutoff; games missing from the snapshot are not counted, so not complete or live standings; exclude games against subject team; repeat opponents counted per meeting; ties half-win. Opponent records use the full season-to-cutoff even for last-four subject selection. Not opponent-adjusted EPA or a power rating."}
+
+
+def opponent_coverage_gaps(schedule, team, opponents, before, season_game_ids):
+    """Check known schedule rows, including unresolved subject games omitted by EPA."""
+    gaps=[]
+    seen=set()
+    for gid,day,home,away,status,verified,hs,aws in schedule:
+        if gid in seen:
+            raise ValueError(f"Duplicate scheduled game: {gid}")
+        seen.add(gid)
+        is_subject = team in (home,away)
+        is_opponent = bool(set((home,away)) & set(opponents)) and not is_subject
+        if not (is_subject or is_opponent):
+            continue
+        if not _iso_date(day):
+            gaps.append({"game_id":gid,"reason":"date missing or malformed"})
+            continue
+        if day >= before:
+            continue
+        if status != "final" or verified != 1 or any(not isinstance(s,int) or s<0 for s in (hs,aws)):
+            gaps.append({"game_id":gid,"reason":"subject result unresolved or unverified" if is_subject else "opponent result unresolved or unverified"})
+        elif is_subject and gid not in season_game_ids:
+            gaps.append({"game_id":gid,"reason":"verified subject game missing from EPA selection"})
+    return gaps
 
 
 def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
@@ -97,6 +122,9 @@ def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
             raise ValueError("Context database does not match the EPA snapshot's pinned audit hash")
         with closing(open_read_only(context_db, require_current_schema=False)) as conn:
             assessment_id = int(provenance["assessment_id"])
+            schedule = conn.execute("SELECT game_id,gameday,home_team,away_team,completion_status,scores_verified,home_score,away_score "
+                                    "FROM query_coverage_games WHERE assessment_id=? AND season=? AND game_type='REG'",
+                                    (assessment_id,int(provenance["season"]))).fetchall()
             opponent_finals = conn.execute("SELECT game_id,gameday,home_team,away_team,home_score,away_score "
                                            "FROM query_coverage_games WHERE assessment_id=? AND season=? AND game_type='REG' "
                                            "AND completion_status='final' AND scores_verified=1 AND gameday<?",
@@ -114,7 +142,11 @@ def matchup(db, teams, before, context_db=None, game_id=None, turnover_db=None):
             for team in teams:
                 report["opponent_records"][team] = {}
                 for window, summary in report["comparisons"][team].items():
-                    report["opponent_records"][team][window] = opponent_records(opponent_finals,team,summary["game_ids"])
+                    context = opponent_records(opponent_finals,team,summary["game_ids"])
+                    opponents = {d["opponent"] for d in context["details"]}
+                    gaps = opponent_coverage_gaps(schedule,team,opponents,before,
+                                                 report["comparisons"][team]["season"]["game_ids"])
+                    report["opponent_records"][team][window] = opponent_records(opponent_finals,team,summary["game_ids"],gaps)
                     margins = []
                     results = []
                     for gid in summary["game_ids"]:
@@ -255,6 +287,7 @@ def markdown(report):
               "Records exclude every game against the subject team. Repeat opponents count once per meeting; ties count as half a win. Pooled records weight opponents by their available game counts.",
               "Only the retained audited season-to-cutoff finals are used; later corrections may be present. Missing opponent samples withhold the percentage.",
               "Games missing from the snapshot (for example, finals not yet score-verified) are not counted, so these are not complete or live standings.", ""]
+    lines += ["Percentages are withheld if a known relevant past scheduled game is unresolved/unverified, has an unknown date, or a verified subject game is missing from the EPA selection. This cannot detect games absent from the retained schedule itself.", ""]
     for team in (a,b):
         for window in ("season","last_four"):
             context = report.get("opponent_records",{}).get(team,{}).get(window)
@@ -266,6 +299,8 @@ def markdown(report):
                       f"from {context['subject_games']} subject games; {context['status']}."]
             if context['games_without_opponent_sample']:
                 lines += [f"No opponent sample for: {', '.join(context['games_without_opponent_sample'])}."]
+            for gap in context.get('coverage_gaps',[]):
+                lines += [f"Percentage withheld: {gap['game_id']} — {gap['reason']}."]
     lines += ["", "For the last-four selection, opponent records still use the full season before the cutoff.", ""]
     for offense, defense in ((a,b),(b,a)):
         for kind,label in (("dropback","Passing"),("designed_rush","Rushing")):

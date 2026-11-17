@@ -131,3 +131,14 @@ edge, league ranking, opponent-adjusted EPA, power rating or betting value.
 The retained snapshot can omit games; coverage is relative to that snapshot.
 Per-opponent detail and the definition version are in JSON `opponent_records`.
 For ad hoc reproduction, retain the read-only SQL alongside the research report.
+
+The scorecard now checks known scheduled games in that assessment before showing
+the opponent win fraction. A relevant past unresolved/unverified result, an
+unknown/malformed date, or a verified subject game absent from the EPA selection
+sets `incomplete` and withholds the percentage. JSON `coverage_gaps` and Markdown
+list game IDs and reasons; retained W-L-T counts are partial observations only.
+Same-day/future games are excluded, and unrelated games do not block the measure.
+Subject-game completeness is checked season-wide even for last-four summaries,
+because missing subject results can change that selection. It cannot establish
+completeness against games absent from the retained schedule itself, and it does
+not change the existing overall-record or EPA coverage rules.
