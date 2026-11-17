@@ -201,5 +201,37 @@ def test_opponent_records_say_snapshot_omissions_are_not_live_standings(inputs):
     report=scorecard.matchup(output,['KC','BUF'],'2026-09-30',audit)
     result=report['opponent_records']['KC']['season']
     assert (result['opponent_wins'],result['opponent_losses'])==(2,0)  # BUF 1-0 per meeting; unverified g4 not counted
+    assert result['status']=='incomplete'
+    assert result['opponent_win_fraction'] is None
+    assert result['coverage_gaps']==[{'game_id':'g4','reason':'opponent result unresolved or unverified'}]
     assert 'not complete or live standings' in result['basis']
     assert 'not counted, so these are not complete or live standings' in scorecard.markdown(report)
+    assert 'Percentage withheld: g4' in scorecard.markdown(report)
+
+
+@pytest.mark.parametrize('status,verified,day,home,away,reason',[
+    ('final',0,'2026-09-03','BUF','NYJ','opponent result'),
+    ('pending',0,'2026-09-03','BUF','NYJ','opponent result'),
+    ('pending',0,'2026-09-03','KC','NYJ','subject result'),
+    ('final',1,'2026-09-03','KC','NYJ','missing from EPA'),
+    ('pending',0,None,'BUF','NYJ','date missing'),
+    ('pending',0,'unknown','KC','NYJ','date missing')])
+def test_known_schedule_gap_types(status,verified,day,home,away,reason):
+    schedule=[('gap',day,home,away,status,verified,21,7)]
+    gaps=scorecard.opponent_coverage_gaps(schedule,'KC',{'BUF'},'2026-09-08',{'g1'})
+    assert len(gaps)==1 and reason in gaps[0]['reason']
+    finals=[('g1','2026-09-01','KC','BUF',21,14),('other','2026-09-02','BUF','MIA',21,7)]
+    result=scorecard.opponent_records(finals,'KC',['g1'],gaps)
+    assert result['opponent_wins']==1
+    assert result['opponent_win_fraction'] is None
+    assert result['status']=='incomplete'
+
+
+def test_coverage_gate_ignores_future_same_day_and_unrelated_games():
+    schedule=[('same','2026-09-08','BUF','NYJ','pending',0,None,None),
+              ('future','2026-09-09','KC','NYJ','pending',0,None,None),
+              ('unrelated','2026-09-01','MIA','NYJ','pending',0,None,None),
+              ('verified','2026-09-01','KC','BUF','final',1,21,14)]
+    assert scorecard.opponent_coverage_gaps(schedule,'KC',{'BUF'},'2026-09-08',{'verified'})==[]
+    with pytest.raises(ValueError,match='Duplicate scheduled'):
+        scorecard.opponent_coverage_gaps(schedule+schedule,'KC',{'BUF'},'2026-09-08',{'verified'})
