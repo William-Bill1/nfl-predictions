@@ -1,25 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-16T10:29:49.893124+00:00",
+    "generated_at": "2026-11-17T11:25:19.577434+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-11-17"
   },
-  "bets": [
-    {
-      "game_date": "2026-11-16",
-      "game_time": "20:15",
-      "game": "LAC @ BAL",
-      "home_team": "BAL",
-      "away_team": "LAC",
-      "bet_type": "Spread",
-      "pick": "LAC +4.5",
-      "confidence": 0.5450896764804889,
-      "edge": 0.0258589072497196,
-      "tier": "Good",
-      "odds": -108,
-      "line": 4.5,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
