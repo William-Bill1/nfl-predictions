@@ -150,7 +150,9 @@ ranking or model work. Supply `--epa-db`, `--context-db`, optional `--turnover-d
 `--season`, `--week`, `--before` and a new `--output` directory. Repeat `--game-id`
 to select exact matchups for picks; omit it for every REG game in the selected
 week. A selected game before the exclusive cutoff is refused rather than silently
-skipped. Repository output must stay under `reports/`.
+skipped. Repository output must stay under `reports/`. Game IDs whose card names
+would collide with the reserved INDEX.json/README.md or with each other
+(case-insensitively) are refused before any output is created.
 
 The tool validates source identity and all reports before creating the directory.
 It writes Markdown/JSON cards and README, then INDEX.json last. A failed write may

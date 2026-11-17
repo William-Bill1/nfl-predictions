@@ -6,7 +6,7 @@ from tests.test_football_epa import inputs
 from scripts import football_epa as epa, football_weekly_scorecards as weekly
 
 
-def prepare(inputs):
+def prepare(inputs,extra=()):
     source,audit,db,_,_=inputs
     with sqlite3.connect(audit) as c:
         c.execute('ALTER TABLE query_coverage_games ADD COLUMN home_score INTEGER')
@@ -17,7 +17,10 @@ def prepare(inputs):
         c.execute('INSERT INTO completion_assessments VALUES(1,1)')
         c.executemany("INSERT INTO game_observations VALUES(1,?,?,?,?,2026,'REG',?,'Home')",
                       [('g1','2026-09-01','BUF','KC',1),('g2','2026-09-08','KC','BUF',2),('future','2026-09-15','KC','BUF',3)])
-        c.execute("INSERT INTO query_coverage_games VALUES(1,2026,'REG','pending',0,'future','2026-09-15','BUF','KC',NULL,NULL)")
+        c.executemany("INSERT INTO game_observations VALUES(1,?,'2026-09-15','KC','BUF',2026,'REG',3,'Home')",
+                      [(gid,) for gid in extra])
+        c.executemany("INSERT INTO query_coverage_games VALUES(1,2026,'REG','pending',0,?,'2026-09-15','BUF','KC',NULL,NULL)",
+                      [(gid,) for gid in ('future',*extra)])
     epa.build(source,audit,db,assessment_id=1,season=2026)
     return db,audit,db.parent/'weekly'
 
@@ -62,3 +65,11 @@ def test_write_failure_never_writes_completion_index(inputs,monkeypatch):
     with pytest.raises(OSError,match='disk error'):
         weekly.build_week(db,audit,out,season=2026,week=3,before='2026-09-09')
     assert out.exists() and not (out/'INDEX.json').exists()
+
+
+@pytest.mark.parametrize('extra',[['INDEX'],['index'],['README'],['readme'],['gx','GX']])
+def test_output_name_collisions_refused_before_output(inputs,extra):
+    db,audit,out=prepare(inputs,extra)
+    with pytest.raises(ValueError,match='collide'):
+        weekly.build_week(db,audit,out,season=2026,week=3,before='2026-09-09')
+    assert not out.exists()

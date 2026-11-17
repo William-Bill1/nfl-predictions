@@ -48,6 +48,10 @@ def build_week(epa_db, context_db, output, *, season, week, before, turnover_db=
     if len(requested) != len(game_ids or requested) or requested - {r[0] for r in rows}:
         raise ValueError("Duplicate or unknown selected game IDs")
     selected = [r for r in rows if r[0] in requested]
+    # Reserved names and case-insensitive uniqueness: a card must never occupy INDEX.json or README.md.
+    planned = ["INDEX.json", "README.md"] + [r[0] + ext for r in selected for ext in (".md", ".json")]
+    if len({name.casefold() for name in planned}) != len(planned):
+        raise ValueError("Planned output filenames collide (reserved INDEX.json/README.md or game IDs differing only by case)")
     if any(day < before for _,day,_,_ in selected):
         raise ValueError("Selected week contains games before cutoff; choose explicit on/after-cutoff game IDs")
     reports=[]
