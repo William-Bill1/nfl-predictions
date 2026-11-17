@@ -142,3 +142,21 @@ Subject-game completeness is checked season-wide even for last-four summaries,
 because missing subject results can change that selection. It cannot establish
 completeness against games absent from the retained schedule itself, and it does
 not change the existing overall-record or EPA coverage rules.
+
+## Weekly batch generation
+
+`scripts/football_weekly_scorecards.py` wraps the existing report without downloads,
+ranking or model work. Supply `--epa-db`, `--context-db`, optional `--turnover-db`,
+`--season`, `--week`, `--before` and a new `--output` directory. Repeat `--game-id`
+to select exact matchups for picks; omit it for every REG game in the selected
+week. A selected game before the exclusive cutoff is refused rather than silently
+skipped. Repository output must stay under `reports/`.
+
+The tool validates source identity and all reports before creating the directory.
+It writes Markdown/JSON cards and README, then INDEX.json last. A failed write may
+leave an incomplete folder; absence of INDEX.json means incomplete. Existing
+folders are never overwritten or removed, and the operation is not crash-atomic.
+Index notices identify incomplete EPA, schedule context and supplied turnover
+coverage; `generated_with_coverage_gaps` is not a complete-data or approval claim.
+Missing injury/weather context remains disclosed by the reports. Ad hoc SQL over
+the same local databases is unchanged. No app, engine or scheduler integration.
