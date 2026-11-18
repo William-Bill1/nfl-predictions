@@ -12,7 +12,9 @@ Tables
                              attribution, HTTP metadata and provenance.
   injury_capture_feed_teams  the team blocks the source listed, with entry counts.
   injury_capture_teams       coverage state of each in-scope team (from the capture).
-  injury_capture_games       the scope week's games and their state at capture time.
+  injury_capture_games       the scope week's games and their state at capture time,
+                             with the kickoff's provenance (kickoff_basis and the
+                             source schedule's own kickoff; see KICKOFF_BASES).
   injury_observations        one row per listed entry, with every stored field
                              and the exact row JSON.
 
@@ -68,7 +70,7 @@ LIMITATIONS = (
     "no betting or probability impact is claimed or computed",
 )
 
-SCHEMA = """
+SCHEMA_V1 = """
 CREATE TABLE injury_captures (
     capture_import_id          INTEGER PRIMARY KEY,
     capture_id                 TEXT NOT NULL,
@@ -168,6 +170,29 @@ CREATE TABLE injury_observations (
 CREATE INDEX injury_observations_team_player ON injury_observations (team, player_id);
 """
 
+# Kickoff provenance (2026 Week 11 reviewed corrections). Added to the frozen
+# first schema by ALTER, so a new database and an upgraded copy of a first-schema
+# database end with identical schema text. Rows carried over by `upgrade` keep
+# their stored values and get the pre-provenance defaults: they were imported
+# before provenance was stored and are never reinterpreted.
+PRE_PROVENANCE = "imported_before_kickoff_provenance"
+KICKOFF_BASES = {
+    "source": "the source schedule's kickoff (game not under kickoff review)",
+    "reviewed_correction": "reviewed correction applied during collection; source_kickoff_utc is the source's time",
+    "source_already_corrected": "the source schedule already had the reviewed kickoff",
+    "capture_without_kickoff_review": "capture made before kickoff review existed; kickoff as captured",
+    PRE_PROVENANCE: "row imported before kickoff provenance was stored; kickoff as captured",
+}
+DOCUMENTED_REVIEW_BASES = ("reviewed_correction", "source_already_corrected")
+PROVENANCE_DDL = f"""
+ALTER TABLE injury_captures ADD COLUMN schedule_provenance TEXT NOT NULL DEFAULT '{PRE_PROVENANCE}';
+ALTER TABLE injury_captures ADD COLUMN schedule_sha256_basis TEXT;
+ALTER TABLE injury_captures ADD COLUMN schedule_kickoff_review_json TEXT;
+ALTER TABLE injury_capture_games ADD COLUMN source_kickoff_utc TEXT;
+ALTER TABLE injury_capture_games ADD COLUMN kickoff_basis TEXT NOT NULL DEFAULT '{PRE_PROVENANCE}';
+"""
+SCHEMA = SCHEMA_V1 + PROVENANCE_DDL
+
 
 class ImportRefused(ValueError):
     """The selected captures can't be imported. Nothing was written."""
@@ -181,18 +206,20 @@ class CompareRefused(ValueError):
 # Database files (same exact-schema rule as the football pilot)
 # --------------------------------------------------------------------------
 
-def _expected_schema() -> set:
+def _expected_schema(script: str = SCHEMA) -> set:
     ref = sqlite3.connect(":memory:")
     try:
-        ref.executescript(SCHEMA)
+        ref.executescript(script)
         return fr._schema_objects(ref)
     finally:
         ref.close()
 
 
 def schema_state(path: Path) -> str:
-    """'empty' (missing or no objects) or 'current'. Anything else raises
-    fr.SchemaRefused; the file is only read, through a read-only connection."""
+    """'empty' (missing or no objects), 'current', or 'legacy' (exactly the
+    first schema, without kickoff provenance: readable, but imports need an
+    explicit `upgrade` to a new file). Anything else raises fr.SchemaRefused;
+    the file is only read, through a read-only connection."""
     path = Path(path)
     if not path.exists() or path.stat().st_size == 0:
         return "empty"
@@ -207,6 +234,8 @@ def schema_state(path: Path) -> str:
         return "empty"
     if found == _expected_schema():
         return "current"
+    if found == _expected_schema(SCHEMA_V1):
+        return "legacy"
     raise fr.SchemaRefused(f"{path}: not an injury-history pilot database (schema differs); "
                            "use a new database file - this pilot has no migrations")
 
@@ -214,6 +243,10 @@ def schema_state(path: Path) -> str:
 def connect_for_import(db_path) -> sqlite3.Connection:
     path = Path(db_path)
     state = schema_state(path)
+    if state == "legacy":
+        raise fr.SchemaRefused(f"{path}: injury-history database without kickoff provenance; importing "
+                               "would lose it. Run `upgrade --from <this file> --to <new file>` and "
+                               "import into the new file")
     conn = sqlite3.connect(path, isolation_level=None)
     if state == "empty":
         conn.executescript(SCHEMA)
@@ -222,13 +255,79 @@ def connect_for_import(db_path) -> sqlite3.Connection:
 
 def open_read_only(db_path) -> sqlite3.Connection:
     """The football pilot's guarded connection (mode=ro, query_only, read-only
-    authorizer), after checking this pilot's schema."""
+    authorizer), after checking this pilot's schema (current, or legacy without
+    kickoff provenance; see has_kickoff_provenance)."""
     path = Path(db_path)
     if not path.exists():
         raise FileNotFoundError(f"database not found: {path}")
-    if schema_state(path) != "current":
+    if schema_state(path) not in ("current", "legacy"):
         raise fr.SchemaRefused(f"{path}: not an initialized injury-history database")
     return fr.open_read_only(path, require_current_schema=False)
+
+
+def has_kickoff_provenance(conn: sqlite3.Connection) -> bool:
+    """True when this connection's database stores kickoff provenance columns."""
+    return "kickoff_basis" in {r[1] for r in conn.execute("PRAGMA table_info(injury_capture_games)")}
+
+
+# --------------------------------------------------------------------------
+# Upgrade (explicit, to a new file; the original is only read)
+# --------------------------------------------------------------------------
+
+_TABLE_KEYS = {"injury_captures": "capture_import_id",
+               "injury_capture_feed_teams": "capture_import_id, team_index",
+               "injury_capture_teams": "capture_import_id, team",
+               "injury_capture_games": "capture_import_id, game_id",
+               "injury_observations": "capture_import_id, entry_index"}
+
+
+def _table_rows(conn, table: str, columns: list[str]) -> list[tuple]:
+    return conn.execute(f"SELECT {', '.join(columns)} FROM {table} ORDER BY {_TABLE_KEYS[table]}").fetchall()
+
+
+def upgrade_database(src, dst) -> dict:
+    """Copy a legacy (first-schema) database to the NEW file `dst` and add the
+    kickoff-provenance columns there. `src` is opened read-only and never
+    changed. Every carried-over capture and game row gets the
+    imported_before_kickoff_provenance basis; no stored value is changed or
+    reinterpreted. Verifies every original column of every row and returns the
+    row counts. On any failure `dst` is removed and nothing else is touched."""
+    src, dst = Path(src), Path(dst)
+    if schema_state(src) != "legacy":
+        raise fr.SchemaRefused(f"{src}: only a legacy injury-history database (first schema) can be upgraded")
+    if dst.exists():
+        raise fr.SchemaRefused(f"{dst}: upgrade writes a new file; it already exists")
+    original = fr._read_only_connection(src)
+    target = None
+    try:
+        tables = {t: [r[1] for r in original.execute(f"PRAGMA table_info({t})")] for t in _TABLE_KEYS}
+        before = {t: _table_rows(original, t, cols) for t, cols in tables.items()}
+        target = sqlite3.connect(dst, isolation_level=None)
+        original.backup(target)
+        target.executescript("BEGIN IMMEDIATE;" + PROVENANCE_DDL + "COMMIT;")
+        if fr._schema_objects(target) != _expected_schema():
+            raise fr.SchemaRefused(f"{dst}: upgraded schema differs from the current schema")
+        for t, cols in tables.items():
+            if _table_rows(target, t, cols) != before[t]:
+                raise fr.SchemaRefused(f"{dst}: rows of {t} changed during upgrade")
+        for t, col in (("injury_captures", "schedule_provenance"), ("injury_capture_games", "kickoff_basis")):
+            if target.execute(f"SELECT COUNT(*) FROM {t} WHERE {col} != ?", (PRE_PROVENANCE,)).fetchone()[0]:
+                raise fr.SchemaRefused(f"{dst}: carried-over {t} rows lack the pre-provenance basis")
+        for conn in (original, target):
+            if conn.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
+                raise fr.SchemaRefused("integrity check failed")
+        counts = {t: len(rows) for t, rows in before.items()}
+    except BaseException:
+        if target is not None:
+            target.close()
+            target = None
+        dst.unlink(missing_ok=True)
+        raise
+    finally:
+        original.close()
+        if target is not None:
+            target.close()
+    return {"from": str(src), "to": str(dst), "rows": counts, "carried_over_basis": PRE_PROVENANCE}
 
 
 # --------------------------------------------------------------------------
@@ -307,8 +406,30 @@ def import_captures(conn: sqlite3.Connection, paths, *, now: datetime | None = N
     return results
 
 
+def _game_provenance(doc: dict) -> tuple[str, dict]:
+    """(capture schedule_provenance, {game_id: (kickoff_basis, source_kickoff_utc)})
+    for an already validated capture. A legacy capture's kickoffs are kept as
+    captured, with no source kickoff claimed."""
+    games = doc["scope"].get("games") or []
+    if ir.schedule_kind(doc) == "legacy":
+        return "capture_without_kickoff_review", {g["game_id"]: ("capture_without_kickoff_review", None)
+                                                  for g in games}
+    records = {r["game_id"]: r for r in doc["schedule"]["kickoff_review"]["games"]}
+    out = {}
+    for g in games:
+        rec = records.get(g["game_id"])
+        if rec is None:
+            out[g["game_id"]] = ("source", g.get("kickoff_utc"))
+        else:
+            out[g["game_id"]] = ("reviewed_correction" if rec["status"] == "applied" else
+                                 "source_already_corrected", rec["source_kickoff_utc"])
+    return "reviewed", out
+
+
 def _insert_capture(conn, path: Path, doc: dict, data: bytes, file_sha: str, imported_at: str) -> int:
     slot, resp, cov, src = doc["slot"], doc["response"], doc["coverage"], doc["source"]
+    provenance, game_basis = _game_provenance(doc)
+    sched = doc["schedule"]
     cid = conn.execute(
         "INSERT INTO injury_captures (capture_id, payload_sha256, transformation_version, file_name, "
         "source_path, file_sha256, file_bytes, imported_at_utc, request_started_at_utc, received_at_utc, "
@@ -316,9 +437,10 @@ def _insert_capture(conn, path: Path, doc: dict, data: bytes, file_sha: str, imp
         "scope_season, scope_week, outcome, usable, source_name, source_official_nfl_report, "
         "source_json, http_status, http_date, http_last_modified, response_bytes, response_error_json, "
         "teams_in_feed, player_rows, malformed_entries_json, unmatched_source_teams_json, "
-        "source_entry_dates_json, schedule_path, schedule_sha256, code_revision, code_dirty) "
+        "source_entry_dates_json, schedule_path, schedule_sha256, code_revision, code_dirty, "
+        "schedule_provenance, schedule_sha256_basis, schedule_kickoff_review_json) "
         "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, "
-        "?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (doc["capture_id"], doc[CHECKSUM_FIELD], TRANSFORMATION_VERSION, path.name, str(path),
          file_sha, len(data), imported_at, doc["request_started_at"], doc["received_at"],
          slot["name"], slot["slot_id"], slot["status"], int(slot["fills_slot"]),
@@ -330,7 +452,9 @@ def _insert_capture(conn, path: Path, doc: dict, data: bytes, file_sha: str, imp
          cov["teams_in_feed"], cov["player_rows"], _dumps(cov["malformed_entries"]),
          _dumps(cov["unmatched_source_teams"]), _dumps(doc["source_entry_dates"]),
          doc["schedule"].get("path"), doc["schedule"].get("sha256"), doc["code_revision"],
-         None if doc["code_dirty"] is None else int(doc["code_dirty"]))).lastrowid
+         None if doc["code_dirty"] is None else int(doc["code_dirty"]), provenance,
+         sched.get("sha256_basis"),
+         None if "kickoff_review" not in sched else _dumps(sched["kickoff_review"]))).lastrowid
     for i, t in enumerate(doc["teams"]):
         conn.execute("INSERT INTO injury_capture_feed_teams VALUES (?, ?, ?, ?, ?, ?)",
                      (cid, i, t["source_team_name"], t["source_team_id"], t["team"], t["entries"]))
@@ -338,9 +462,12 @@ def _insert_capture(conn, path: Path, doc: dict, data: bytes, file_sha: str, imp
         conn.execute("INSERT INTO injury_capture_teams VALUES (?, ?, ?, ?)",
                      (cid, team, c["state"], c["rows"]))
     for g in doc["scope"].get("games") or []:
-        conn.execute("INSERT INTO injury_capture_games VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        basis, source_kickoff = game_basis[g.get("game_id")]
+        conn.execute("INSERT INTO injury_capture_games (capture_import_id, game_id, season, week, home_team, "
+                     "away_team, kickoff_utc, state, source_kickoff_utc, kickoff_basis) "
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                      (cid, g.get("game_id"), g.get("season"), g.get("week"), g.get("home_team"),
-                      g.get("away_team"), g.get("kickoff_utc"), g.get("state")))
+                      g.get("away_team"), g.get("kickoff_utc"), g.get("state"), source_kickoff, basis))
     for i, r in enumerate(doc["players"]):
         st, inj = r["source_status_type"] or {}, r["injury"] or {}
         conn.execute(
@@ -626,6 +753,9 @@ def main(argv=None) -> int:
     p.add_argument("--team", required=True)
     p.add_argument("--earlier", required=True, help="capture_id of the earlier capture")
     p.add_argument("--later", required=True, help="capture_id of the later capture")
+    p = sub.add_parser("upgrade", help="copy a legacy database to a NEW file with kickoff provenance columns")
+    p.add_argument("--from", dest="src", required=True, help="legacy database (only read)")
+    p.add_argument("--to", dest="dst", required=True, help="new database file to create")
     p = sub.add_parser("sql", help="one read-only query (football pilot safeguards)")
     p.add_argument("--db", required=True)
     p.add_argument("query")
@@ -638,6 +768,8 @@ def main(argv=None) -> int:
                 out = import_captures(conn, args.captures)
             finally:
                 conn.close()
+        elif args.cmd == "upgrade":
+            out = upgrade_database(args.src, args.dst)
         elif args.cmd == "sql":
             if not Path(args.db).exists():
                 raise FileNotFoundError(f"database not found: {args.db}")

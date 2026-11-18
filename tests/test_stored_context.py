@@ -69,7 +69,8 @@ def add_capture(conn, cid, received, *, players=(), games=((G, "KC", "BUF", KICK
         (cid, "p" + cid, ih.TRANSFORMATION_VERSION, cid + ".json", cid, "f" + cid, rec, rec, rec,
          f"{received:%Y-%m-%d}_slot", outcome, int(usable), len(players))).lastrowid
     for g, home, away, ko, state in games:
-        conn.execute("INSERT INTO injury_capture_games VALUES (?, ?, 2026, 10, ?, ?, ?, ?)",
+        conn.execute("INSERT INTO injury_capture_games (capture_import_id, game_id, season, week, home_team, "
+                     "away_team, kickoff_utc, state) VALUES (?, ?, 2026, 10, ?, ?, ?, ?)",
                      (imp, g, home, away, ko.strftime("%Y-%m-%dT%H:%M:%SZ"), state))
     if usable:
         for i, team in enumerate(("KC", "BUF")):
