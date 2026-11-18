@@ -93,3 +93,52 @@ def test_queryable_snapshot_and_no_overwrite(observations,monkeypatch,tmp_path):
     assert db.read_bytes()==before
     with pytest.raises(FileExistsError):pilot.write_report(report,out)
     with pytest.raises(ValueError):pilot.write_report(report,tmp_path/'data_files/output')
+
+
+@pytest.mark.parametrize('observed,included',[
+    ('2026-11-22T16:59:59Z',True),
+    ('2026-11-22T17:00:00Z',False),
+    ('2026-11-22T17:00:01Z',False),
+])
+def test_explicit_reassessment_of_earlier_kickoff(observations,observed,included):
+    directory,schedule,add=observations
+    original=add(observed,3.5,-110,'a',entered='2026-11-22T17:30:00Z')
+    before=(directory/'a.json').read_bytes()
+    df=pd.read_csv(schedule,sep='\t');df['gametime']='12:00';df.to_csv(schedule,sep='\t',index=False)
+    report=pilot.timeline(directory,schedule,'2026-11-22T19:00:00Z',reassess_kickoffs=True)
+    assert bool(report['groups']) is included
+    assert len(report['excluded'])==int(not included)
+    evaluation=report['kickoff_evaluation']['reassessments'][0]
+    assert evaluation=={'quote_id':original['quote_id'],'recorded_kickoff_utc':'2026-11-22T18:00:00Z',
+                        'evaluated_kickoff_utc':'2026-11-22T17:00:00Z','pregame':included}
+    if included:assert report['groups'][0]['observations']==[original]
+    else:assert report['excluded'][0]['reason']=='observed at or after evaluated kickoff'
+    assert (directory/'a.json').read_bytes()==before
+
+
+def test_later_kickoff_keeps_old_quote_and_accepts_new_quote(observations):
+    directory,schedule,add=observations
+    old=add('2026-11-17T17:00:00Z',3.5,-110,'old')
+    old_bytes=(directory/'old.json').read_bytes()
+    df=pd.read_csv(schedule,sep='\t');df['gametime']='16:25';df.to_csv(schedule,sep='\t',index=False)
+    new=add('2026-11-22T19:00:00Z',2.5,-105,'new',entered='2026-11-22T19:01:00Z')
+    report=pilot.timeline(directory,schedule,'2026-11-22T20:00:00Z',reassess_kickoffs=True)
+    assert report['groups'][0]['observations']==[old,new]
+    assert report['groups'][0]['spread_change']==-1
+    assert len(report['kickoff_evaluation']['reassessments'])==1
+    assert (directory/'old.json').read_bytes()==old_bytes
+    # The supplied corrected schedule also protects the recorder at kickoff.
+    with pytest.raises(ValueError,match='not before kickoff'):
+        add('2026-11-22T21:25:00Z',2.5,-105,'blocked',entered='2026-11-22T21:26:00Z')
+    assert not (directory/'blocked.json').exists()
+
+
+def test_reassessment_does_not_relax_identity_or_cutoff(observations):
+    directory,schedule,add=observations
+    add('2026-11-17T17:00:00Z',3.5,-110,'a')
+    df=pd.read_csv(schedule,sep='\t');df['home_team']='BAL';df.to_csv(schedule,sep='\t',index=False)
+    with pytest.raises(ValueError,match='identity/kickoff'):
+        pilot.timeline(directory,schedule,'2026-11-20T19:00:00Z',reassess_kickoffs=True)
+    report=pilot.timeline(directory,schedule,'2026-11-18T19:00:00Z',reassess_kickoffs=True)
+    assert not report['groups'] and len(report['excluded'])==1
+    assert report['kickoff_evaluation']['reassessments']==[]

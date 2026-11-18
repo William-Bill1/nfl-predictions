@@ -37,12 +37,12 @@ def compare_quotes(quotes):
     return result
 
 
-def timeline(manual_dir,schedule_path,as_of):
+def timeline(manual_dir,schedule_path,as_of,*,reassess_kickoffs=False):
     if not Path(manual_dir).is_dir():
         raise ValueError('Manual quote directory does not exist')
     cutoff=on._parse_observed(as_of)
     schedule,schedule_hash=on.load_schedule(Path(schedule_path))
-    groups={};excluded=[];identities={}
+    groups={};excluded=[];identities={};reassessments=[]
     for path in sorted(Path(manual_dir).glob('*.json')):
         doc=json.loads(path.read_text(encoding='utf-8'));on.validate_manual(doc,str(path))
         if doc['quote_id'] in identities:
@@ -56,13 +56,28 @@ def timeline(manual_dir,schedule_path,as_of):
         game=rows.iloc[0];kickoff,problem=ps.kickoff_utc(game['gameday'],game['gametime'])
         if kickoff is None or any(doc[k]!=game[k] for k in ('home_team','away_team')) or int(game['season'])!=doc['season'] or int(game['week'])!=doc['week']:
             raise ValueError(f"Quote identity/kickoff unverified: {doc['quote_id']}")
-        if on.parse_utc(doc['kickoff_utc'])!=kickoff or on.parse_utc(doc['observed_at'])>=kickoff:
+        changed=on.parse_utc(doc['kickoff_utc'])!=kickoff
+        if changed and not reassess_kickoffs:
             raise ValueError(f"Quote not anchored to current pregame kickoff: {doc['quote_id']}")
+        if changed:
+            reassessments.append({'quote_id':doc['quote_id'],'recorded_kickoff_utc':doc['kickoff_utc'],
+                                  'evaluated_kickoff_utc':on.iso(kickoff),
+                                  'pregame':on.parse_utc(doc['observed_at'])<kickoff})
+        if on.parse_utc(doc['observed_at'])>=kickoff:
+            if not reassess_kickoffs:
+                raise ValueError(f"Quote not anchored to current pregame kickoff: {doc['quote_id']}")
+            excluded.append({'quote_id':doc['quote_id'],'reason':'observed at or after evaluated kickoff',
+                             'evaluated_kickoff_utc':on.iso(kickoff)})
+            continue
         groups.setdefault((doc['game_id'],doc['team']),[]).append(doc)
-    return {'as_of':on.iso(cutoff),'schedule_sha256':schedule_hash,
+    report={'as_of':on.iso(cutoff),'schedule_sha256':schedule_hash,
             'book_key':'fanduel_on_manual','jurisdiction':'CA-ON','source':'manual',
             'groups':[{'game_id':gid,'team':team,**compare_quotes(quotes)} for (gid,team),quotes in sorted(groups.items())],
             'excluded':excluded,'limits':'First/last OBSERVED pregame quotes, not verified open/close. No missed-checkpoint inference, US fallback, injury causation or betting-edge claim.'}
+    if reassess_kickoffs:
+        report['kickoff_evaluation']={'basis':'supplied schedule; original quotes unchanged',
+                                      'reassessments':reassessments}
+    return report
 
 
 def write_report(report,output):
@@ -87,11 +102,12 @@ def main():
     parser.add_argument('--manual-dir',required=True)
     parser.add_argument('--schedule',required=True)
     parser.add_argument('--as-of',required=True)
+    parser.add_argument('--reassess-kickoffs',action='store_true',help='Explicitly reassess unchanged historical quotes against the supplied schedule')
     parser.add_argument('--output',help='New folder below reports/; omit to print JSON')
     args=parser.parse_args()
     try:
         if not Path(args.manual_dir).is_dir():raise ValueError('Manual quote directory does not exist')
-        report=timeline(args.manual_dir,args.schedule,args.as_of)
+        report=timeline(args.manual_dir,args.schedule,args.as_of,reassess_kickoffs=args.reassess_kickoffs)
         if args.output:write_report(report,args.output)
         else:print(json.dumps(report,indent=2))
         return 0
