@@ -18,6 +18,12 @@ that game's teams and kickoff; weather is also checked against the game's exact
 stadium_id and stadium name (missing or different venue: no forecast shown). The cutoff is the earlier of now and kickoff;
 captures RECEIVED after it are excluded. Source entry dates are never used as
 capture times.
+
+Reviewed kickoffs: for the two 2026 Week 11 games in kickoff_corrections.py the
+identity uses the reviewed kickoff (the table's own time is kept as
+source_kickoff_utc), and an injury capture must also carry a documented kickoff
+basis (reviewed_correction or source_already_corrected) to match. Unexpected values
+for those games are identity errors. Weather keeps its own kickoff check.
 """
 from __future__ import annotations
 
@@ -37,6 +43,7 @@ if str(ROOT / "scripts") not in sys.path:
 
 import football_repository as fr  # noqa: E402
 import injury_history as ih  # noqa: E402
+import kickoff_corrections as kc  # noqa: E402
 import pregame_snapshots as ps  # noqa: E402
 import weather_history as wh  # noqa: E402
 
@@ -162,9 +169,19 @@ def game_identity(games: pd.DataFrame, game_id: str) -> dict:
     kickoff, problem = ps.kickoff_utc(_text(r.get("gameday"))[:10] or None, _text(r.get("gametime")) or None)
     if kickoff is None:
         raise GameIdentityError(f"game {game_id!r} has no usable kickoff time ({problem})")
+    # The 2026 Week 11 reviewed kickoff corrections (kickoff_corrections.py), the
+    # same rule injury collection uses. The table's own kickoff is kept as
+    # source_kickoff_utc; the table itself is never changed.
+    try:
+        review = kc.resolve(game_id, season=r.get("season"), week=r.get("week"), away_team=away,
+                            home_team=home, gameday=r.get("gameday"), gametime=r.get("gametime"))
+    except kc.KickoffReviewError as exc:
+        raise GameIdentityError(str(exc)) from None
+    effective = kickoff if review is None else _parse(review["effective_kickoff_utc"])
     # Venue identity is kept as given (possibly empty); only weather needs it,
     # so a missing venue never blocks the injury section.
-    return {"game_id": str(game_id), "home_team": home, "away_team": away, "kickoff_utc": kickoff,
+    return {"game_id": str(game_id), "home_team": home, "away_team": away, "kickoff_utc": effective,
+            "source_kickoff_utc": kickoff, "kickoff_review": review,
             "stadium_id": _text(r.get("stadium_id")), "stadium": _text(r.get("stadium"))}
 
 
@@ -203,6 +220,7 @@ def injury_context(db_path: Path, game: dict, cutoff: datetime) -> dict:
 
 def _injury(conn, game: dict, cutoff: datetime) -> dict:
     gid, home, away, kickoff = game["game_id"], game["home_team"], game["away_team"], game["kickoff_utc"]
+    reviewed = game.get("kickoff_review") is not None
     caps = _rows(conn, "SELECT * FROM injury_captures WHERE transformation_version = ?",
                  (ih.TRANSFORMATION_VERSION,))
     caps.sort(key=lambda c: (_parse(c["received_at_utc"]) or datetime.min.replace(tzinfo=timezone.utc),
@@ -233,6 +251,12 @@ def _injury(conn, game: dict, cutoff: datetime) -> dict:
         if _parse(g["kickoff_utc"]) != kickoff:
             notices.append(f"capture {c['capture_id']} lists {gid} kicking off {g['kickoff_utc']}, not "
                            f"{kickoff:%Y-%m-%dT%H:%M}Z; excluded")
+            continue
+        # A game under kickoff review needs the capture's own recorded review: a
+        # matching time alone never shows the capture used the reviewed kickoff.
+        if reviewed and g.get("kickoff_basis", ih.PRE_PROVENANCE) not in ih.DOCUMENTED_REVIEW_BASES:
+            notices.append(f"capture {c['capture_id']} has no recorded kickoff review for {gid} "
+                           f"(kickoff basis {g.get('kickoff_basis', ih.PRE_PROVENANCE)}); excluded")
             continue
         if not c["usable"]:
             failed.append({**_summary(c), "scope": "this game"})

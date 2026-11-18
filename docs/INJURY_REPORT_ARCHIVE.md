@@ -306,3 +306,66 @@ spreads moved.
   determined.
 - **Few observations:** two per week, with books and sides that aren't
   independent.
+
+
+## Reviewed kickoff corrections (2026 Week 11)
+
+The historical schedule (`nfl_games_historical.csv`) and the predictions table built from it
+(`nfl_games_historical_with_predictions.csv`) still list the times from before the NFL's
+November 9, 2026 schedule change:
+https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Schedule%20Change.pdf
+
+| Game | Stale source time | Reviewed time |
+|---|---|---|
+| `2026_11_PIT_PHI` | 16:25 Eastern (21:25 UTC) | 13:00 Eastern (18:00 UTC) |
+| `2026_11_JAX_NYG` | 13:00 Eastern (18:00 UTC) | 16:25 Eastern (21:25 UTC) |
+
+`kickoff_corrections.py` holds these two corrections and the one rule that applies them. Injury
+collection and the stored-context panel both use it, in memory only. No schedule file, prediction
+input, probability or ranking changes. This is not schedule management: only these two games are
+known, and a later change that leaves the source at a recognized time can't be detected.
+
+**Rule.** A correction applies only when the exact game ID, both teams, season, week and date match,
+and the source time is the known old time or the reviewed time. Any other value, a duplicate row or
+missing identity columns stop collection before any request, and make the panel report an identity
+error for that game. Other games, including other seasons' meetings of the same teams, are untouched.
+
+**What a new capture records.** `schedule.sha256` is the SHA-256 of the raw source bytes as read,
+and `schedule.sha256_basis` says so; it is never a hash of corrected data.
+`schedule.kickoff_review` lists each reviewed game present in the source: identity, source and
+effective times (Eastern and UTC), the authority URL, and a status:
+- `applied`: the source had the old time, and the capture uses the reviewed one;
+- `source_already_corrected`: the source already had the reviewed time.
+
+A capture written before this change has no `kickoff_review` ("legacy") and stays valid as it was.
+
+**Validation checks consistency, not authenticity.** `validate_capture` requires:
+- exact record fields, types and values (each record must equal the one derived from its source time);
+- unique, known game IDs and the exact authority;
+- that every reviewed game in the scope has a record whose identity matches the scope row, and whose
+  effective kickoff equals the scope's kickoff;
+- that every recorded game is present when the scope is that week.
+
+A legacy capture that lists a reviewed game at its reviewed time is refused, because an undocumented
+correction is never inferred from the time alone. Validation can't prove which schedule bytes were
+read or that a record wasn't produced deliberately; the checksum only detects later edits.
+
+**Import.** The injury-history database stores the capture's kickoff review JSON and hash basis, and
+each game's `kickoff_basis` and source kickoff (`docs/INJURY_HISTORY_PILOT.md`). A legacy-schema
+database is still readable, but it must be copied with `injury_history.py upgrade` before new captures
+can be imported. Rows carried over get `imported_before_kickoff_provenance`.
+
+**Stored-context panel.** The panel builds each game's identity from the predictions table row.
+- For the two reviewed games it uses the reviewed kickoff, keeping the table's own time as
+  `source_kickoff_utc`, and shows a note when the two differ.
+- An injury capture is shown for a reviewed game only if its kickoff matches the reviewed kickoff and
+  its stored `kickoff_basis` is `reviewed_correction` or `source_already_corrected`.
+- Weather keeps its own identity, venue and kickoff checks. A forecast captured for the stale time no
+  longer matches and isn't shown.
+
+**Correction to earlier documentation.** An earlier version of this section said old PIT-PHI
+captures "remain withheld by the strict panel". That was wrong. Until this change, the panel's game
+identity came from the predictions table, which has the same stale kickoff as those captures. So the
+production panel could show a stale capture (for example the November 18 Wednesday capture, which
+lists PIT-PHI at 21:25 UTC) as if it matched. It also excluded correctly timed captures. With this
+change, stale captures are excluded for both games. Retained captures and databases are not rewritten.

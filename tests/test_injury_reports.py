@@ -1338,3 +1338,72 @@ class TestFinalWindowCheck:
         assert "status=window_closed" in out_f.read_text() and "written=false" in out_f.read_text()
         assert "::error::" in capsys.readouterr().out and "❌" in summary.read_text(encoding="utf-8")
         assert src.calls == []
+
+
+class TestReviewedKickoffs:
+    def schedule(self,tmp_path,times=('16:25','13:00')):
+        rows=[('2026_11_PIT_PHI',2026,11,'2026-11-22',times[0],'PIT','PHI',None,None),
+              ('2026_11_JAX_NYG',2026,11,'2026-11-22',times[1],'JAX','NYG',None,None)]
+        df=pd.DataFrame(rows,columns=['game_id','season','week','gameday','gametime',
+                                      'away_team','home_team','away_score','home_score'])
+        path=tmp_path/'schedule.tsv';df.to_csv(path,sep='\t',index=False);return path
+
+    def test_capture_corrects_times_and_records_provenance(self,tmp_path,cdir):
+        import hashlib
+        path=self.schedule(tmp_path);before=path.read_bytes()
+        result=run(path,cdir,Source(Resp(_payload(['PIT','PHI','JAX','NYG']))),
+                   datetime(2026,11,18,17,5,tzinfo=UTC))
+        games={g['game_id']:g for g in result.doc['scope']['games']}
+        assert games['2026_11_PIT_PHI']['kickoff_utc']=='2026-11-22T18:00:00Z'
+        assert games['2026_11_JAX_NYG']['kickoff_utc']=='2026-11-22T21:25:00Z'
+        evidence=result.doc['schedule'];assert evidence['sha256']==hashlib.sha256(before).hexdigest()
+        assert evidence['sha256_basis']==ir.SCHEDULE_SHA256_BASIS
+        records=evidence['kickoff_review']['games'];assert [r['status'] for r in records]==['applied','applied']
+        assert all(c['authority']==ir.SCHEDULE_CORRECTION_SOURCE for c in records)
+        ir.validate_capture(result.doc);assert path.read_bytes()==before
+
+    def test_corrected_input_unchanged(self,tmp_path):
+        path=self.schedule(tmp_path,('13:00','16:25'));before=path.read_bytes()
+        frame,_,review=ir.load_injury_schedule(path)
+        assert [r['status'] for r in review['games']]==['source_already_corrected']*2
+        assert list(frame.gametime)==['13:00','16:25'];assert path.read_bytes()==before
+
+    @pytest.mark.parametrize('field,value', [('gametime','20:20'),('gameday','2026-11-23'),
+        ('away_team','MIN'),('home_team','SF'),('season',2025),('week',12),('gametime',None)])
+    def test_unknown_change_refused_before_request(self,tmp_path,cdir,field,value):
+        path=self.schedule(tmp_path);df=pd.read_csv(path,sep='\t');df.loc[0,field]=value
+        df.to_csv(path,sep='\t',index=False);before=path.read_bytes();src=Source(Resp(_payload()))
+        with pytest.raises(ir.ValidationError,match='review required'):
+            run(path,cdir,src,datetime(2026,11,18,17,5,tzinfo=UTC))
+        assert not src.calls and not cdir.exists();assert path.read_bytes()==before
+
+    def test_duplicate_refused(self,tmp_path,cdir):
+        path=self.schedule(tmp_path);df=pd.read_csv(path,sep='\t')
+        pd.concat([df,df.iloc[:1]]).to_csv(path,sep='\t',index=False);src=Source(Resp(_payload()))
+        with pytest.raises(ir.ValidationError,match='duplicated'):
+            run(path,cdir,src,datetime(2026,11,18,17,5,tzinfo=UTC))
+        assert not src.calls and not cdir.exists()
+
+    def test_sunday_scope_drops_started_pit_but_keeps_jax(self,tmp_path):
+        frame,_,_=ir.load_injury_schedule(self.schedule(tmp_path))
+        _,games=ir.scope_games(frame,datetime(2026,11,22,19,0,tzinfo=UTC))
+        games={g['game_id']:g for g in games}
+        assert games['2026_11_PIT_PHI']['state']!='pregame'
+        assert games['2026_11_JAX_NYG']['state']=='pregame'
+
+
+    def test_corrected_capture_imports_and_matches_panel(self,tmp_path,cdir):
+        from scripts import injury_history as ih
+        import stored_context as sc
+        path=self.schedule(tmp_path)
+        result=run(path,cdir,Source(Resp(_payload(['PIT','PHI','JAX','NYG']))),
+                   datetime(2026,11,18,17,5,tzinfo=UTC))
+        db=tmp_path/'injuries.sqlite3'
+        with ih.connect_for_import(db) as conn:
+            imported=ih.import_captures(conn,[result.path])
+        assert imported[0]['created']
+        game={'game_id':'2026_11_PIT_PHI','home_team':'PHI','away_team':'PIT',
+              'kickoff_utc':datetime(2026,11,22,18,0,tzinfo=UTC)}
+        context=sc.injury_context(db,game,datetime(2026,11,18,18,0,tzinfo=UTC))
+        assert context['state']=='ok' and not context['notices']
+        assert context['latest']['capture_id']==result.doc['capture_id']

@@ -68,6 +68,7 @@ from typing import Callable
 
 import requests
 
+import kickoff_corrections as kc
 import ontario_spreads as on
 import pregame_snapshots as ps
 from player_props.injuries import ESPN_INJURIES_URL, HEADERS
@@ -270,6 +271,27 @@ def parse_entries(payload, api_key: str | None = None) -> tuple[list[dict], list
 # --------------------------------------------------------------------------
 # Scope, matching and coverage
 # --------------------------------------------------------------------------
+
+# Reviewed 2026 Week 11 kickoff corrections (kickoff_corrections.py): applied in
+# memory for injury scope only; never written back, never engine inputs.
+SCHEDULE_CORRECTION_SOURCE = kc.AUTHORITY
+SCHEDULE_SHA256_BASIS = ("raw source file bytes; reviewed kickoff corrections are listed in "
+                         "kickoff_review and are not reflected in this hash")
+
+
+def load_injury_schedule(path) -> tuple:
+    """(schedule with reviewed effective kickoffs, raw source SHA-256, kickoff_review).
+    The hash identifies the file's bytes as read; kickoff_review records each
+    reviewed game present, and whether the correction was applied or the source
+    already had the reviewed time. Unexpected identities, times or duplicates
+    raise ValidationError before any request."""
+    schedule, digest = on.load_schedule(path)
+    try:
+        effective, records = kc.apply_to_frame(schedule)
+    except kc.KickoffReviewError as exc:
+        raise ValidationError(f"injury schedule: {exc}") from None
+    return effective, digest, kc.review_block(records)
+
 
 def scope_games(schedule, at: datetime) -> tuple[dict | None, list[dict]]:
     """(season/week scope, that week's games with their pregame state) at `at`,
@@ -518,7 +540,8 @@ def _seal(doc: dict) -> dict:
 
 def build_capture(*, capture_id: str, resolved: dict, request_started_at: datetime,
                   received_at: datetime, payload, meta: dict, schedule, schedule_sha256: str,
-                  code: tuple[str, bool | None], api_key: str | None = None) -> dict:
+                  kickoff_review: dict, code: tuple[str, bool | None],
+                  api_key: str | None = None) -> dict:
     scope, games = scope_games(schedule, received_at)
     teams, rows, malformed, error = [], [], [], meta.get("error")
     if error is None:
@@ -555,7 +578,8 @@ def build_capture(*, capture_id: str, resolved: dict, request_started_at: dateti
         },
         "status_counts": _counts(r["status_class"] for r in rows),
         "teams": teams, "players": rows,
-        "schedule": {"path": ps.SCHEDULE_NAME, "sha256": schedule_sha256},
+        "schedule": {"path": ps.SCHEDULE_NAME, "sha256": schedule_sha256,
+                     "sha256_basis": SCHEDULE_SHA256_BASIS, "kickoff_review": kickoff_review},
         "code_revision": code[0], "code_dirty": code[1],
     }
     return _seal(doc)
@@ -698,6 +722,57 @@ def _validate(doc, where: str) -> None:
     if doc["outcome"] != "unavailable":
         expected = outcome_for(doc["teams"], rows, cov["malformed_entries"], cov["in_scope_teams"])
         _need(doc["outcome"] == expected, where, f"outcome should be {expected}")
+    _check_schedule(doc, where)
+
+
+_LEGACY_SCHEDULE = {"path", "sha256"}
+_REVIEWED_SCHEDULE = {"path", "sha256", "sha256_basis", "kickoff_review"}
+_SHA_RE = re.compile(r"^[0-9a-f]{64}$")
+
+
+def schedule_kind(doc) -> str:
+    """'legacy' (captured before kickoff review existed: no kickoff_review) or
+    'reviewed'. Only meaningful for a capture that passed validate_capture."""
+    return "reviewed" if "kickoff_review" in doc["schedule"] else "legacy"
+
+
+def _check_schedule(doc, where: str) -> None:
+    """Schedule provenance. Consistency only: the records must be exactly the
+    reviewed corrections and agree with the scope's kickoffs; they don't prove
+    which schedule bytes were read (the hash is of the raw source, as claimed)."""
+    sch = doc["schedule"]
+    _need(isinstance(sch, dict) and set(sch) in (_LEGACY_SCHEDULE, _REVIEWED_SCHEDULE), where,
+          "schedule fields")
+    games = doc["scope"].get("games") or []
+    _need(isinstance(games, list) and all(isinstance(g, dict) for g in games), where, "scope games")
+    reviewed = [g for g in games if g.get("game_id") in kc.REVIEWED]
+    if set(sch) == _LEGACY_SCHEDULE:
+        # Never infer an undocumented correction from the effective time alone.
+        for g in reviewed:
+            effective = kc.expected_record(g["game_id"], kc.REVIEWED[g["game_id"]].effective_gametime)
+            _need(g.get("kickoff_utc") != effective["effective_kickoff_utc"], where,
+                  f"{g['game_id']} has the reviewed kickoff but no kickoff_review record "
+                  "(undocumented correction)")
+        return
+    _need(isinstance(sch["sha256"], str) and _SHA_RE.match(sch["sha256"]), where, "schedule sha256")
+    _need(sch["sha256_basis"] == SCHEDULE_SHA256_BASIS, where, "schedule sha256_basis")
+    try:
+        records = kc.check_review_block(sch["kickoff_review"])
+    except kc.KickoffReviewError as exc:
+        raise ValidationError(f"{where}: {exc}") from None
+    for g in reviewed:
+        rec = records.get(g["game_id"])
+        _need(rec is not None, where, f"scope lists {g['game_id']} without its kickoff_review record")
+        _need((g.get("season"), g.get("week"), g.get("away_team"), g.get("home_team"))
+              == (rec["season"], rec["week"], rec["away_team"], rec["home_team"]), where,
+              f"scope identity of {g['game_id']} differs from its kickoff_review record")
+        _need(g.get("kickoff_utc") == rec["effective_kickoff_utc"], where,
+              f"scope kickoff of {g['game_id']} isn't its reviewed effective kickoff")
+    scope = doc["scope"]
+    listed = {g["game_id"] for g in reviewed}
+    for gid, rec in records.items():
+        if (scope.get("season"), scope.get("week")) == (rec["season"], rec["week"]):
+            _need(gid in listed, where, f"kickoff_review lists {gid} but the scope week omits it")
 
 
 # --------------------------------------------------------------------------
@@ -791,7 +866,7 @@ def capture(*, now: datetime | None = None, slot: str = "auto", clock: Callable 
     done = _already_captured(resolved, capture_dir)
     if done:
         return done
-    schedule, schedule_sha = on.load_schedule(schedule_path)
+    schedule, schedule_sha, kickoff_review = load_injury_schedule(schedule_path)
     if scope_games(schedule, now)[0] is None:
         return CaptureResult("no_games", "no upcoming games in scope; no request made")
     with on.SlotLock(capture_dir, resolved["slot_id"], "injury-" + on.new_id(now),
@@ -819,7 +894,7 @@ def capture(*, now: datetime | None = None, slot: str = "auto", clock: Callable 
         doc = build_capture(capture_id=on.new_id(started), resolved=resolved,
                             request_started_at=started, received_at=received, payload=payload,
                             meta=meta, schedule=schedule, schedule_sha256=schedule_sha,
-                            code=ps.code_revision(repo_dir))
+                            kickoff_review=kickoff_review, code=ps.code_revision(repo_dir))
         path, created = write_capture(doc, capture_dir)
     slot_text = f"slot {doc['slot']['slot_id']} ({doc['slot']['status']})"
     if doc["outcome"] == "unavailable":

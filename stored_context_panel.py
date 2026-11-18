@@ -67,6 +67,11 @@ def render(games: pd.DataFrame, *, environ=None, now: datetime | None = None) ->
     st.caption(_md(f"Cutoff {sc.toronto(ctx['cutoff'])} - the earlier of now and kickoff "
                    f"({ctx['cutoff_basis']}). Kickoff {sc.toronto(g['kickoff_utc'])}. Captures received "
                    "after the cutoff are excluded; source entry dates are not capture times."))
+    review = g.get("kickoff_review")
+    if review is not None and review["status"] == "applied":
+        st.caption(_md(f"Kickoff uses the NFL's reviewed Week 11 schedule change; the schedule table still "
+                       f"lists {sc.toronto(g['source_kickoff_utc'])}. Only captures that recorded this "
+                       "review can match. Source: " + review["authority"]))
     _receipt_times(ctx)
     with st.container(border=True):
         _injuries(ctx["injuries"], g)

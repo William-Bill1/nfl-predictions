@@ -35,10 +35,10 @@ So:
 
 | Table | One row per | Contents |
 |---|---|---|
-| `injury_captures` | capture (`capture_id`, under `transformation_version` `injury-history-pilot-1`) | file name, path, SHA-256 and size; the capture's own `payload_sha256`; request and receipt times; when it was imported; slot (name, id, status, whether it fills the slot, intended time, delay); scope season and week; outcome and whether it's usable; source attribution as JSON; HTTP status, Date, Last-Modified and size, plus any error; feed and row counts; malformed and unmatched entries; summary of entry dates; schedule SHA-256; code revision and whether it was dirty |
+| `injury_captures` | capture (`capture_id`, under `transformation_version` `injury-history-pilot-1`) | file name, path, SHA-256 and size; the capture's own `payload_sha256`; request and receipt times; when it was imported; slot (name, id, status, whether it fills the slot, intended time, delay); scope season and week; outcome and whether it's usable; source attribution as JSON; HTTP status, Date, Last-Modified and size, plus any error; feed and row counts; malformed and unmatched entries; summary of entry dates; schedule SHA-256 of the raw source file and its stated basis; `schedule_provenance`; the capture's kickoff review as JSON (null for a capture without one); code revision and whether it was dirty |
 | `injury_capture_feed_teams` | team block listed by the source | source team name and ID, nflverse abbreviation, entry count |
 | `injury_capture_teams` | in-scope team | coverage state (`rows_listed`, `listed_without_rows`, `absent_from_feed`) and row count |
-| `injury_capture_games` | game in the capture's scope week | teams, kickoff, state at capture time |
+| `injury_capture_games` | game in the capture's scope week | teams, kickoff used by the capture, state at capture time, `kickoff_basis` and `source_kickoff_utc` (see below) |
 | `injury_observations` | listed entry (`capture_import_id`, `entry_index`) | every stored field, plus the exact row as `raw_row_json` |
 
 The fields in `injury_observations` are:
@@ -53,6 +53,18 @@ The fields in `injury_observations` are:
 
 **Two separate times.** The capture time is `received_at_utc`, when the response arrived. The source's own time is `source_entry_date_raw` / `source_entry_date_utc`. They're never merged, and missing values stay null.
 
+**Kickoff provenance.** Since the 2026 Week 11 schedule change, injury collection corrects two kickoffs in memory (see `docs/INJURY_REPORT_ARCHIVE.md`). Each game row says why its kickoff is what it is:
+
+| `kickoff_basis` | Meaning | `source_kickoff_utc` |
+|---|---|---|
+| `source` | game not under kickoff review; the source schedule's time | same as `kickoff_utc` |
+| `reviewed_correction` | reviewed correction applied during collection | the source schedule's (stale) time |
+| `source_already_corrected` | the source schedule already had the reviewed time | same as `kickoff_utc` |
+| `capture_without_kickoff_review` | capture written before kickoff review existed | null (not claimed) |
+| `imported_before_kickoff_provenance` | row carried over by `upgrade` from a database without these columns | null (not claimed) |
+
+`injury_captures.schedule_provenance` is `reviewed`, `capture_without_kickoff_review` or `imported_before_kickoff_provenance`. `schedule_sha256` always identifies the raw source bytes; it is never a hash of corrected data.
+
 **Imports**
 - **Repeats:** a repeat of an identical capture returns the existing row and adds nothing.
 - **Conflicts:** the same `capture_id` with different content is refused.
@@ -61,8 +73,17 @@ The fields in `injury_observations` are:
 
 **Database files.** These follow the football pilot's rule:
 - a missing or empty file is initialized;
-- a file with exactly this schema is opened as is;
-- anything else is refused, unchanged, with exit code 2. There are no migrations.
+- a file with exactly the current schema is opened as is;
+- a file with exactly the first schema (before kickoff provenance, "legacy") can still be read by `list`, `compare`, `sql` and the stored-context panel, but `import` refuses it: importing there would drop provenance;
+- anything else is refused, unchanged, with exit code 2.
+
+**Upgrading a legacy database.** There is no in-place migration. `upgrade` copies a legacy database to a new file and adds the provenance columns there:
+- the original is opened read-only and never changed; the target must not exist;
+- every original column of every row is compared after the copy, and both files pass `PRAGMA integrity_check`;
+- carried-over capture and game rows get `imported_before_kickoff_provenance` and null provenance values. They are never reinterpreted: re-importing the same capture file afterwards is a no-op, so those rows keep that basis;
+- on any failure the new file is removed.
+
+Alternatively, rebuild: import the retained capture files into a new database. That gives every capture its full provenance. The stored-context panel's reviewed-game rule (`docs/INJURY_REPORT_ARCHIVE.md`) means rows without documented provenance are never shown for the two reviewed games, so a rebuild is the way to see captures for them.
 
 **Line endings.** Windows checkouts with `core.autocrlf=true` keep the capture JSON with CRLF line endings, so their file hashes differ from LF copies even though the content and `payload_sha256` are identical. Import one consistent copy, as the demonstration did with the worktree's LF files.
 
@@ -79,6 +100,9 @@ python scripts/injury_history.py list --db reports/football_repository_pilot/inj
 
 # One team between two explicitly selected captures (earlier first)
 python scripts/injury_history.py compare --db reports/football_repository_pilot/injury_history/injury_history.sqlite3 --team KC --earlier 20261104T170633Z-2f4233f6de94 --later 20261108T140610Z-1f36feff3f03
+
+# Copy a legacy database to a NEW file with kickoff provenance columns (the original is only read)
+python scripts/injury_history.py upgrade --from <legacy.sqlite3> --to <new.sqlite3>
 
 # One read-only query
 python scripts/injury_history.py sql --db reports/football_repository_pilot/injury_history/injury_history.sqlite3 "SELECT c.received_at_utc, o.source_status, o.injury_type FROM injury_observations o JOIN injury_captures c USING (capture_import_id) WHERE o.player_id = '3139477' ORDER BY c.received_at_utc"
