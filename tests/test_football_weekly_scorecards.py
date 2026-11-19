@@ -73,3 +73,10 @@ def test_output_name_collisions_refused_before_output(inputs,extra):
     with pytest.raises(ValueError,match='collide'):
         weekly.build_week(db,audit,out,season=2026,week=3,before='2026-09-09')
     assert not out.exists()
+
+
+def test_partial_market_options_refused_before_output(inputs):
+    db,audit,out=prepare(inputs)
+    with pytest.raises(ValueError,match='together'):
+        weekly.build_week(db,audit,out,season=2026,week=3,before='2026-09-09',manual_quotes='missing')
+    assert not out.exists()
