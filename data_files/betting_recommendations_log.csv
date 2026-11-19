@@ -87,3 +87,6 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-11-12 10:33:08,2026,11,2026_11_PIT_PHI,2026-11-22 00:00:00,PHI,PIT,spread,PHI,-4.5,38.5,,0.6048509056464589,0.0810413818369351,Strong,,,pending,,4.5,-110.0,assumed -110 model recommendation
 2026-11-12 10:33:08,2026,11,2026_11_MIN_SF,2026-11-22 00:00:00,SF,MIN,spread,MIN,3.5,46.5,,0.5848872910771015,0.0726921691258819,Good,,,pending,,3.5,-110.0,assumed -110 model recommendation
 2026-11-18 10:59:03,2026,12,2026_12_KC_BUF,2026-11-26 00:00:00,BUF,KC,spread,KC,3.0,50.5,,0.6538916886087811,0.1084371431542357,Elite,,,pending,,3.0,-110.0,assumed -110 model recommendation
+2026-11-19 11:01:14,2026,12,2026_12_NE_LAC,2026-11-29 00:00:00,LAC,NE,spread,NE,4.5,39.5,,0.5548206279179904,0.0310111041084665,Good,,,pending,,4.5,-110.0,assumed -110 model recommendation
+2026-11-19 11:01:14,2026,12,2026_12_WAS_ARI,2026-11-29 00:00:00,ARI,WAS,spread,ARI,-6.5,41.5,,0.5796162168742786,0.0558066930647547,Good,,,pending,,6.5,-110.0,assumed -110 model recommendation
+2026-11-19 11:01:14,2026,12,2026_12_SEA_SF,2026-11-29 00:00:00,SF,SEA,spread,SEA,2.5,46.5,,0.7040757520603482,0.1848449828295789,Elite,,,pending,,2.5,-110.0,assumed -110 model recommendation
