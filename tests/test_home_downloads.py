@@ -161,7 +161,10 @@ def pdf_text(body):
     for m in re.finditer(rb"stream\r?\n(.*?)endstream", body, re.S):
         data = m.group(1).strip()
         try:
-            out += zlib.decompress(base64.a85decode(data.rstrip(b"~>").replace(b"\n", b""), adobe=False))
+            # Remove the exact ASCII85 terminator, never matching data digits.
+            if data.endswith(b"~>"):
+                data = data[:-2]
+            out += zlib.decompress(base64.a85decode(data.replace(b"\n", b""), adobe=False))
         except Exception:
             out += data
     return out
@@ -443,3 +446,15 @@ class TestHomePageWiring:
         after = tree(home_dir)
         assert {k: v for k, v in after.items() if not k.startswith("exports/")} == before
         assert (home_dir / "exports" / name).read_bytes() == body
+
+
+def test_pdf_stream_decoder_preserves_trailing_base85_digit():
+    # A valid ASCII85 digit '>' immediately precedes the exact '~>' terminator.
+    # rstrip(b"~>") removes both, corrupting an otherwise valid Flate stream.
+    raw = b"BT\n(KC) Tj\n(BUF) Tj\n(DAL) Tj\n(PHI) Tj\nET\n%339xxxxxxxxxxxxxxxxxxx"
+    # Fixed encoded stream keeps the regression independent of encoder versions.
+    encoded = b'Garg^iR74=el2psimMcQFb;AQ*.8rg!"VjZ__m*?e_&N[!YYP6!>lI>'
+    assert encoded.endswith(b">")
+    stream = b"stream\n" + encoded + b"~>\nendstream"
+    assert pdf_text(stream) == raw
+    assert pdf_teams(stream) == {"KC", "BUF", "DAL", "PHI"}
