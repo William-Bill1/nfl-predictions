@@ -1,15 +1,15 @@
 {
   "artifact": {
     "path": "nfl_games_historical_with_predictions.csv",
-    "sha256": "c0940214759a4547601c75571d64929bbc47b70ccc34d2b7e55d344a4a6020fd"
+    "sha256": "05e1dd79aae8b0f8f9e16c39102bf76772f12271dd7974c3c41e17ca2c4795b4"
   },
   "ci_run": {
     "GITHUB_RUN_ATTEMPT": "1",
-    "GITHUB_RUN_ID": "44722081368",
+    "GITHUB_RUN_ID": "44894608104",
     "GITHUB_WORKFLOW": "Nightly NFL Data Update"
   },
   "code_dirty": false,
-  "code_revision": "609b35d06e0ff09edaa7777313f15f0fde25dad6",
+  "code_revision": "213b632e868d53e43898badc021afc70845361d0",
   "code_sha256": "56c05eac5fd1c06531053b6ad846d13d818c157c5ca9d082789b3d204a2bd6a9",
   "config": {
     "lgbm_available": true,
@@ -123,17 +123,17 @@
     "homeTeamWinPct",
     "spread_line"
   ],
-  "generated_at": "2026-11-20T10:49:04Z",
+  "generated_at": "2026-11-21T10:32:15Z",
   "platform": {
     "python": "3.12.16"
   },
-  "run_id": "20261120T104904Z-22b9d0e7587d",
+  "run_id": "20261121T103215Z-d405a7d78de3",
   "schedule": {
     "path": "nfl_games_historical.csv",
-    "sha256": "6041f1167936fa568f9c2e6cc32bbff9442b3709cc1f4c1dc1137d8392bbf1de"
+    "sha256": "771594e146dc6983b0bee673e3530fed9e7aeafe55b1923c72492162e55c7c1b"
   },
   "schema_version": 1,
-  "settled_as_of": "2026-11-20T10:48:50Z",
+  "settled_as_of": "2026-11-21T10:32:01Z",
   "spread_threshold": 0.5438774139871784,
   "training_cutoff": {
     "gameday": "2024-01-13",
