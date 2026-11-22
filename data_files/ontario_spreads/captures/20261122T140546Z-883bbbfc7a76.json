@@ -1,0 +1,4532 @@
+{
+ "books_requested": [
+  {
+   "jurisdiction": "CA-ON",
+   "key": "betano_ca_on",
+   "role": "ontario",
+   "title": "Betano (CA - ON)"
+  },
+  {
+   "jurisdiction": "CA-ON",
+   "key": "betmgm_ca_on",
+   "role": "ontario",
+   "title": "BetMGM (CA - ON)"
+  },
+  {
+   "jurisdiction": "CA-ON",
+   "key": "betrivers_ca_on",
+   "role": "ontario",
+   "title": "BetRivers (CA - ON)"
+  },
+  {
+   "jurisdiction": "CA-ON",
+   "key": "pointsbetca",
+   "role": "ontario",
+   "title": "PointsBet (CA - ON)"
+  },
+  {
+   "jurisdiction": "CA-ON",
+   "key": "proline_ca_on",
+   "role": "ontario",
+   "title": "PROLINE (CA - ON)"
+  },
+  {
+   "jurisdiction": "CA-ON",
+   "key": "sportsinteraction_ca_on",
+   "role": "ontario",
+   "title": "Sports Interaction (CA - ON)"
+  },
+  {
+   "jurisdiction": "US",
+   "key": "fanduel",
+   "role": "us_reference",
+   "title": "FanDuel"
+  }
+ ],
+ "captured_at": "2026-11-22T14:05:46Z",
+ "code_dirty": false,
+ "code_revision": "0a70407d3925b05d2256c0e4a58c0dfa0ade3ec4",
+ "conventions": {
+  "handicap": "each side's own handicap as quoted (favourite negative); home_point is the home team's, away_point the away team's",
+  "model_link": "per quote: the latest pregame model snapshot captured at or before the quote's market last_update (never later); a reference only - no model probabilities are stored here",
+  "price": "American odds",
+  "stale_after_minutes": 60.0,
+  "times": "UTC, YYYY-MM-DDTHH:MM:SSZ"
+ },
+ "coverage": {
+  "bet99_ca_on": {
+   "by_status": {},
+   "games": 0,
+   "jurisdiction": "CA-ON",
+   "note": "paid-tier coverage, not requested: no quotes exist for it in this capture (set ONTARIO_SPREADS_INCLUDE_BET99=1 on a paid plan)",
+   "requested": false,
+   "role": "ontario_paid_tier"
+  },
+  "betano_ca_on": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  },
+  "betmgm_ca_on": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  },
+  "betrivers_ca_on": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  },
+  "fanduel": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "US",
+   "note": "FanDuel US reference - NOT FanDuel Ontario",
+   "requested": true,
+   "role": "us_reference"
+  },
+  "pointsbetca": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  },
+  "proline_ca_on": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  },
+  "sportsinteraction_ca_on": {
+   "by_status": {
+    "event_not_matched": 2,
+    "quoted": 10
+   },
+   "games": 12,
+   "jurisdiction": "CA-ON",
+   "note": null,
+   "requested": true,
+   "role": "ontario"
+  }
+ },
+ "excluded_games": [
+  {
+   "away_team": "IND",
+   "game_id": "2026_11_IND_HOU",
+   "home_team": "HOU",
+   "kickoff_utc": null,
+   "reason": "completed",
+   "season": 2026,
+   "week": 11
+  }
+ ],
+ "games": [
+  {
+   "away_team": "ARI",
+   "game_id": "2026_11_ARI_KC",
+   "home_team": "KC",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "403a88701352da05b0710a9e883b803e",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 15.5,
+     "away_price": -118,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -15.5,
+     "home_price": -114,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 15.5,
+     "away_price": -110,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -15.5,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 14.5,
+     "away_price": -109,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -14.5,
+     "home_price": -112,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 15.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -15.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 14.5,
+     "away_price": -122,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -14.5,
+     "home_price": -125,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 15.5,
+     "away_price": -112,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -15.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 15.5,
+     "away_price": -106,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -15.5,
+     "home_price": -114,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "BAL",
+   "game_id": "2026_11_BAL_CAR",
+   "home_team": "CAR",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "4527f57f5bc32742d8194af1ccf7da7e",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 2.5,
+     "away_price": -105,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -2.5,
+     "home_price": -125,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 2.5,
+     "away_price": -105,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -2.5,
+     "home_price": -115,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 2.5,
+     "away_price": -103,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -2.5,
+     "home_price": -121,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 2.5,
+     "away_price": -105,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -2.5,
+     "home_price": -115,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 2.5,
+     "away_price": -114,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -2.5,
+     "home_price": -137,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 2.5,
+     "away_price": -105,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -2.5,
+     "home_price": -118,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 2.5,
+     "away_price": -104,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -2.5,
+     "home_price": -116,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "JAX",
+   "game_id": "2026_11_JAX_NYG",
+   "home_team": "NYG",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": "kickoff_mismatch",
+   "orientation": null,
+   "provider_commence_time": null,
+   "provider_event_id": null,
+   "quotes": [
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "US",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "MIA",
+   "game_id": "2026_11_MIA_BUF",
+   "home_team": "BUF",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "4c5b1c0843a260278e95eb93e7787576",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 16.5,
+     "away_price": -115,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -16.5,
+     "home_price": -115,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 16.0,
+     "away_price": -108,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -16.0,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 16.5,
+     "away_price": -110,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -16.5,
+     "home_price": -112,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 16.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -16.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 16.5,
+     "away_price": -122,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -16.5,
+     "home_price": -127,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 16.0,
+     "away_price": -108,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -16.0,
+     "home_price": -112,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 16.5,
+     "away_price": -110,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -16.5,
+     "home_price": -110,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "NO",
+   "game_id": "2026_11_NO_CHI",
+   "home_team": "CHI",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "3ea90704fb576633bd1e2fa5aafd9ea3",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 11.5,
+     "away_price": -118,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -11.5,
+     "home_price": -114,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 11.5,
+     "away_price": -110,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -11.5,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 11.5,
+     "away_price": -112,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -11.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 11.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -11.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 11.5,
+     "away_price": -125,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -11.5,
+     "home_price": -124,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 11.5,
+     "away_price": -110,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -11.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 11.5,
+     "away_price": -110,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -11.5,
+     "home_price": -110,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "TB",
+   "game_id": "2026_11_TB_DET",
+   "home_team": "DET",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "41e2dd69bddd65d7e823d9ed61cc2afc",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.5,
+     "away_price": -108,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.5,
+     "home_price": -114,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.5,
+     "away_price": -108,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 4.0,
+     "away_price": -110,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -4.0,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 3.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -3.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 4.0,
+     "away_price": -124,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -4.0,
+     "home_price": -124,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.5,
+     "away_price": -108,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -3.5,
+     "home_price": -112,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.5,
+     "away_price": -105,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -3.5,
+     "home_price": -115,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "TEN",
+   "game_id": "2026_11_TEN_DAL",
+   "home_team": "DAL",
+   "kickoff_utc": "2026-11-22T18:00:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T18:00:00Z",
+   "provider_event_id": "5e63079b678f8c13419adc169fff02d3",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 7.5,
+     "away_price": -120,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -7.5,
+     "home_price": -111,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 7.5,
+     "away_price": -110,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -7.5,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 7.5,
+     "away_price": -114,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -7.5,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 7.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -7.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 7.5,
+     "away_price": -129,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -7.5,
+     "home_price": -121,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 7.5,
+     "away_price": -112,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -7.5,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 7.5,
+     "away_price": -115,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -7.5,
+     "home_price": -105,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "NYJ",
+   "game_id": "2026_11_NYJ_LAC",
+   "home_team": "LAC",
+   "kickoff_utc": "2026-11-22T21:05:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T21:05:00Z",
+   "provider_event_id": "4b20b742b6168aaca4f25d87f11b1526",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.5,
+     "away_price": -122,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.5,
+     "home_price": 100,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.0,
+     "away_price": -102,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.0,
+     "home_price": -118,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.0,
+     "away_price": -108,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -3.0,
+     "home_price": -114,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 3.5,
+     "away_price": -115,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -3.5,
+     "home_price": -105,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 3.0,
+     "away_price": -121,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -3.0,
+     "home_price": -129,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.0,
+     "away_price": -102,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -3.0,
+     "home_price": -120,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.0,
+     "away_price": -104,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -3.0,
+     "home_price": -116,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "LV",
+   "game_id": "2026_11_LV_DEN",
+   "home_team": "DEN",
+   "kickoff_utc": "2026-11-22T21:25:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-22T21:25:00Z",
+   "provider_event_id": "1940706a79cbcbafacdcbf231069716b",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 10.5,
+     "away_price": -108,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -10.5,
+     "home_price": -115,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 11.0,
+     "away_price": -110,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -11.0,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 10.5,
+     "away_price": -110,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -10.5,
+     "home_price": -112,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 10.5,
+     "away_price": -110,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -10.5,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 10.5,
+     "away_price": -124,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -10.5,
+     "home_price": -125,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 11.0,
+     "away_price": -112,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -11.0,
+     "home_price": -108,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 10.5,
+     "away_price": -105,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -10.5,
+     "home_price": -115,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "PIT",
+   "game_id": "2026_11_PIT_PHI",
+   "home_team": "PHI",
+   "kickoff_utc": "2026-11-22T21:25:00Z",
+   "match_problem": "kickoff_mismatch",
+   "orientation": null,
+   "provider_commence_time": null,
+   "provider_event_id": null,
+   "quotes": [
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "CA-ON",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    },
+    {
+     "age_minutes": null,
+     "away_point": null,
+     "away_price": null,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": null,
+     "home_point": null,
+     "home_price": null,
+     "jurisdiction": "US",
+     "market_last_update": null,
+     "model_snapshot": {
+      "status": "no_quote"
+     },
+     "problem": "kickoff_mismatch",
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "event_not_matched"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "MIN",
+   "game_id": "2026_11_MIN_SF",
+   "home_team": "SF",
+   "kickoff_utc": "2026-11-23T01:20:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-23T01:20:00Z",
+   "provider_event_id": "60e1d27b083a335b722c2c852ea85612",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.5,
+     "away_price": -115,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.5,
+     "home_price": -105,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": 3.5,
+     "away_price": -115,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": -3.5,
+     "home_price": -102,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.5,
+     "away_price": -115,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -3.5,
+     "home_price": -106,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": 3.5,
+     "away_price": -115,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": -3.5,
+     "home_price": -105,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": 3.5,
+     "away_price": -130,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": -3.5,
+     "home_price": -118,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.5,
+     "away_price": -118,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": -3.5,
+     "home_price": -105,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": 3.5,
+     "away_price": -120,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": -3.5,
+     "home_price": 100,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:41Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:41Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  },
+  {
+   "away_team": "CIN",
+   "game_id": "2026_11_CIN_WAS",
+   "home_team": "WAS",
+   "kickoff_utc": "2026-11-24T01:15:00Z",
+   "match_problem": null,
+   "orientation": "same",
+   "provider_commence_time": "2026-11-24T01:15:00Z",
+   "provider_event_id": "3a60ed1d20004aa4d4772b2c1a2272e7",
+   "quotes": [
+    {
+     "age_minutes": 0.7,
+     "away_point": -6.5,
+     "away_price": -110,
+     "book_key": "betano_ca_on",
+     "book_title": "Betano (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": 6.5,
+     "home_price": -122,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.7,
+     "away_point": -6.0,
+     "away_price": -108,
+     "book_key": "betmgm_ca_on",
+     "book_title": "BetMGM (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:07Z",
+     "home_point": 6.0,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:07Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:07Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": -6.0,
+     "away_price": -112,
+     "book_key": "betrivers_ca_on",
+     "book_title": "BetRivers (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": 6.0,
+     "home_price": -109,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.6,
+     "away_point": -6.5,
+     "away_price": -105,
+     "book_key": "pointsbetca",
+     "book_title": "PointsBet (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:08Z",
+     "home_point": 6.5,
+     "home_price": -115,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:08Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:08Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.4,
+     "away_point": -6.0,
+     "away_price": -125,
+     "book_key": "proline_ca_on",
+     "book_title": "PROLINE (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:22Z",
+     "home_point": 6.0,
+     "home_price": -122,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:22Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:22Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": -6.0,
+     "away_price": -110,
+     "book_key": "sportsinteraction_ca_on",
+     "book_title": "Sports Interaction (CA - ON)",
+     "bookmaker_last_update": "2026-11-22T14:05:41Z",
+     "home_point": 6.0,
+     "home_price": -110,
+     "jurisdiction": "CA-ON",
+     "market_last_update": "2026-11-22T14:05:40Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:40Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "ontario",
+     "source": "the_odds_api",
+     "status": "quoted"
+    },
+    {
+     "age_minutes": 0.1,
+     "away_point": -5.5,
+     "away_price": -120,
+     "book_key": "fanduel",
+     "book_title": "FanDuel",
+     "bookmaker_last_update": "2026-11-22T14:05:42Z",
+     "home_point": 5.5,
+     "home_price": 100,
+     "jurisdiction": "US",
+     "market_last_update": "2026-11-22T14:05:42Z",
+     "model_snapshot": {
+      "as_of": "2026-11-22T14:05:42Z",
+      "basis": "market_last_update",
+      "captured_at": "2026-11-22T10:37:53Z",
+      "file": "20261122T103752Z-b17149443769.json",
+      "payload_sha256": "92fd543d8e45d05765c76098e7511a573bd04234170ea1d60a585f5d6da29263",
+      "prediction_status": "predicted",
+      "run_id": "20261122T103752Z-b17149443769",
+      "status": "linked"
+     },
+     "problem": null,
+     "role": "us_reference",
+     "source": "the_odds_api",
+     "status": "quoted"
+    }
+   ],
+   "season": 2026,
+   "unrequested_books": [],
+   "week": 11
+  }
+ ],
+ "kind": "ontario_spread_capture",
+ "not_ontario": {
+  "playnow_ca": "PlayNow (CA) - British Columbia, not Ontario"
+ },
+ "payload_sha256": "80ecf5aa38b916ec145126a99a3b210b47cc8bde3323686ae8e1ffc2a2ed4323",
+ "provider_response": [
+  {
+   "away_team": "Arizona Cardinals",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 15.5,
+         "price": -106
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -15.5,
+         "price": -114
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 15.5,
+         "price": -118
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -15.5,
+         "price": -114
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 14.5,
+         "price": -122
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -14.5,
+         "price": -125
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 14.5,
+         "price": -109
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -14.5,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 15.5,
+         "price": -110
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -15.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 15.5,
+         "price": -110
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -15.5,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Arizona Cardinals",
+         "point": 15.5,
+         "price": -112
+        },
+        {
+         "name": "Kansas City Chiefs",
+         "point": -15.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Kansas City Chiefs",
+   "id": "403a88701352da05b0710a9e883b803e",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Baltimore Ravens",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -104
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -116
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -105
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -125
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -114
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -137
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -103
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -121
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -105
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -105
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -118
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Baltimore Ravens",
+         "point": 2.5,
+         "price": -105
+        },
+        {
+         "name": "Carolina Panthers",
+         "point": -2.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Carolina Panthers",
+   "id": "4527f57f5bc32742d8194af1ccf7da7e",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Miami Dolphins",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.5,
+         "price": -110
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.5,
+         "price": -115
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.5,
+         "price": -127
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.5,
+         "price": -122
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.5,
+         "price": -112
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.5,
+         "price": -110
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.0,
+         "price": -112
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.0,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Buffalo Bills",
+         "point": -16.0,
+         "price": -110
+        },
+        {
+         "name": "Miami Dolphins",
+         "point": 16.0,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Buffalo Bills",
+   "id": "4c5b1c0843a260278e95eb93e7787576",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "New Orleans Saints",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -110
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -114
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -118
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -124
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -125
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -110
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -110
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -108
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Chicago Bears",
+         "point": -11.5,
+         "price": -110
+        },
+        {
+         "name": "New Orleans Saints",
+         "point": 11.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Chicago Bears",
+   "id": "3ea90704fb576633bd1e2fa5aafd9ea3",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Tennessee Titans",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -105
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -111
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -120
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -121
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -129
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -108
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -114
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -110
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -108
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Dallas Cowboys",
+         "point": -7.5,
+         "price": -108
+        },
+        {
+         "name": "Tennessee Titans",
+         "point": 7.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Dallas Cowboys",
+   "id": "5e63079b678f8c13419adc169fff02d3",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Tampa Bay Buccaneers",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -3.5,
+         "price": -115
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 3.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -3.5,
+         "price": -114
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 3.5,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -4.0,
+         "price": -124
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 4.0,
+         "price": -124
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -4.0,
+         "price": -110
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 4.0,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -3.5,
+         "price": -110
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 3.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -3.5,
+         "price": -112
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 3.5,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Detroit Lions",
+         "point": -3.5,
+         "price": -110
+        },
+        {
+         "name": "Tampa Bay Buccaneers",
+         "point": 3.5,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Detroit Lions",
+   "id": "41e2dd69bddd65d7e823d9ed61cc2afc",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Pittsburgh Steelers",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -108
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -114
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -122
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -125
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -109
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -110
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -110
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Philadelphia Eagles",
+         "point": 3.5,
+         "price": -108
+        },
+        {
+         "name": "Pittsburgh Steelers",
+         "point": -3.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Philadelphia Eagles",
+   "id": "cbe45bafcc2615fc1d96cbc12840377a",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "New York Jets",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.0,
+         "price": -116
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.0,
+         "price": -104
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.5,
+         "price": 100
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.5,
+         "price": -122
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.0,
+         "price": -129
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.0,
+         "price": -121
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.0,
+         "price": -114
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.0,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.5,
+         "price": -105
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.0,
+         "price": -120
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.0,
+         "price": -102
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Los Angeles Chargers",
+         "point": -3.0,
+         "price": -118
+        },
+        {
+         "name": "New York Jets",
+         "point": 3.0,
+         "price": -102
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T21:05:00Z",
+   "home_team": "Los Angeles Chargers",
+   "id": "4b20b742b6168aaca4f25d87f11b1526",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Las Vegas Raiders",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -10.5,
+         "price": -115
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 10.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -10.5,
+         "price": -115
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 10.5,
+         "price": -108
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -10.5,
+         "price": -112
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 10.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -10.5,
+         "price": -125
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 10.5,
+         "price": -124
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -10.5,
+         "price": -110
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 10.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -11.0,
+         "price": -108
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 11.0,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Denver Broncos",
+         "point": -11.0,
+         "price": -108
+        },
+        {
+         "name": "Las Vegas Raiders",
+         "point": 11.0,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T21:25:00Z",
+   "home_team": "Denver Broncos",
+   "id": "1940706a79cbcbafacdcbf231069716b",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Jacksonville Jaguars",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -5.5,
+         "price": -120
+        },
+        {
+         "name": "New York Giants",
+         "point": 5.5,
+         "price": 100
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -5.5,
+         "price": -118
+        },
+        {
+         "name": "New York Giants",
+         "point": 5.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -6.0,
+         "price": -121
+        },
+        {
+         "name": "New York Giants",
+         "point": 6.0,
+         "price": -127
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -6.0,
+         "price": -108
+        },
+        {
+         "name": "New York Giants",
+         "point": 6.0,
+         "price": -113
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -5.5,
+         "price": -115
+        },
+        {
+         "name": "New York Giants",
+         "point": 5.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -5.5,
+         "price": -112
+        },
+        {
+         "name": "New York Giants",
+         "point": 5.5,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Jacksonville Jaguars",
+         "point": -6.0,
+         "price": -105
+        },
+        {
+         "name": "New York Giants",
+         "point": 6.0,
+         "price": -112
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-22T21:25:00Z",
+   "home_team": "New York Giants",
+   "id": "8ba112fabf4e87639338a5f437c5abfe",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Minnesota Vikings",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:41Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -120
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": 100
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -118
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -115
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -102
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -115
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -130
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -118
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -115
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -106
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Minnesota Vikings",
+         "point": 3.5,
+         "price": -115
+        },
+        {
+         "name": "San Francisco 49ers",
+         "point": -3.5,
+         "price": -105
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-23T01:20:00Z",
+   "home_team": "San Francisco 49ers",
+   "id": "60e1d27b083a335b722c2c852ea85612",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  },
+  {
+   "away_team": "Cincinnati Bengals",
+   "bookmakers": [
+    {
+     "key": "fanduel",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -5.5,
+         "price": -120
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 5.5,
+         "price": 100
+        }
+       ]
+      }
+     ],
+     "title": "FanDuel"
+    },
+    {
+     "key": "betano_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.5,
+         "price": -110
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.5,
+         "price": -122
+        }
+       ]
+      }
+     ],
+     "title": "Betano (CA - ON)"
+    },
+    {
+     "key": "proline_ca_on",
+     "last_update": "2026-11-22T14:05:22Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:22Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.0,
+         "price": -125
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.0,
+         "price": -122
+        }
+       ]
+      }
+     ],
+     "title": "PROLINE (CA - ON)"
+    },
+    {
+     "key": "betrivers_ca_on",
+     "last_update": "2026-11-22T14:05:42Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:42Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.0,
+         "price": -112
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.0,
+         "price": -109
+        }
+       ]
+      }
+     ],
+     "title": "BetRivers (CA - ON)"
+    },
+    {
+     "key": "pointsbetca",
+     "last_update": "2026-11-22T14:05:08Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:08Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.5,
+         "price": -105
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.5,
+         "price": -115
+        }
+       ]
+      }
+     ],
+     "title": "PointsBet (CA - ON)"
+    },
+    {
+     "key": "sportsinteraction_ca_on",
+     "last_update": "2026-11-22T14:05:41Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:40Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.0,
+         "price": -110
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.0,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "Sports Interaction (CA - ON)"
+    },
+    {
+     "key": "betmgm_ca_on",
+     "last_update": "2026-11-22T14:05:07Z",
+     "markets": [
+      {
+       "key": "spreads",
+       "last_update": "2026-11-22T14:05:07Z",
+       "outcomes": [
+        {
+         "name": "Cincinnati Bengals",
+         "point": -6.0,
+         "price": -108
+        },
+        {
+         "name": "Washington Commanders",
+         "point": 6.0,
+         "price": -110
+        }
+       ]
+      }
+     ],
+     "title": "BetMGM (CA - ON)"
+    }
+   ],
+   "commence_time": "2026-11-24T01:15:00Z",
+   "home_team": "Washington Commanders",
+   "id": "3a60ed1d20004aa4d4772b2c1a2272e7",
+   "sport_key": "americanfootball_nfl",
+   "sport_title": "NFL"
+  }
+ ],
+ "received_at": "2026-11-22T14:05:46Z",
+ "request": {
+  "credit_reserve": 20,
+  "credits_before": 488,
+  "endpoint": "/sports/americanfootball_nfl/odds",
+  "estimated_cost": 1,
+  "http_status": 200,
+  "params": {
+   "bookmakers": "betano_ca_on,betmgm_ca_on,betrivers_ca_on,pointsbetca,proline_ca_on,sportsinteraction_ca_on,fanduel",
+   "commenceTimeFrom": "2026-11-22T14:05:46Z",
+   "commenceTimeTo": "2026-11-24T02:15:00Z",
+   "dateFormat": "iso",
+   "markets": "spreads",
+   "oddsFormat": "american"
+  },
+  "usage": {
+   "x-requests-last": 1,
+   "x-requests-remaining": 487,
+   "x-requests-used": 13
+  }
+ },
+ "run_id": "20261122T140546Z-883bbbfc7a76",
+ "schedule": {
+  "path": "nfl_games_historical.csv",
+  "sha256": "0d92880201cc3ea7b2712b15e84936439bbd94b28aabdd65a3e12a9b4b009a54"
+ },
+ "schema_version": 1,
+ "slot": {
+  "delay_minutes": 5.8,
+  "intended_local": "2026-11-22T09:00:00-05:00",
+  "intended_utc": "2026-11-22T14:00:00Z",
+  "name": "sunday_morning",
+  "slot_id": "2026-11-22_sunday_morning",
+  "status": "on_time",
+  "timezone": "America/Toronto"
+ },
+ "unmatched_provider_events": [
+  {
+   "away_team": "Jacksonville Jaguars",
+   "commence_time": "2026-11-22T21:25:00Z",
+   "home_team": "New York Giants",
+   "id": "8ba112fabf4e87639338a5f437c5abfe"
+  },
+  {
+   "away_team": "Pittsburgh Steelers",
+   "commence_time": "2026-11-22T18:00:00Z",
+   "home_team": "Philadelphia Eagles",
+   "id": "cbe45bafcc2615fc1d96cbc12840377a"
+  }
+ ],
+ "usable": true
+}
