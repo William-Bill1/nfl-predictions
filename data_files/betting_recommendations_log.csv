@@ -91,3 +91,4 @@ log_date,season,week,game_id,gameday,home_team,away_team,bet_type,recommended_te
 2026-11-19 11:01:14,2026,12,2026_12_WAS_ARI,2026-11-29 00:00:00,ARI,WAS,spread,ARI,-6.5,41.5,,0.5796162168742786,0.0558066930647547,Good,,,pending,,6.5,-110.0,assumed -110 model recommendation
 2026-11-19 11:01:14,2026,12,2026_12_SEA_SF,2026-11-29 00:00:00,SF,SEA,spread,SEA,2.5,46.5,,0.7040757520603482,0.1848449828295789,Elite,,,pending,,2.5,-110.0,assumed -110 model recommendation
 2026-11-20 10:49:08,2026,12,2026_12_NYG_IND,2026-11-29 00:00:00,IND,NYG,spread,IND,-5.5,43.5,,0.553884538168176,0.0393214313720594,Good,,,pending,,5.5,-110.0,assumed -110 model recommendation
+2026-11-22 10:37:57,2026,12,2026_12_DEN_PIT,2026-11-27 00:00:00,PIT,DEN,spread,PIT,-2.5,40.5,,0.5487952104751904,0.0182787785503077,Lean,,,pending,,2.5,-110.0,assumed -110 model recommendation
