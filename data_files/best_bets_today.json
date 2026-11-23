@@ -1,55 +1,10 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-22T10:38:06.059225+00:00",
+    "generated_at": "2026-11-23T11:38:25.630628+00:00",
     "model_version": "1.1.0",
-    "season": "2026"
+    "season": "2026",
+    "notes": "No spread signals for 2026-11-23"
   },
-  "bets": [
-    {
-      "game_date": "2026-11-22",
-      "game_time": "16:05",
-      "game": "NYJ @ LAC",
-      "home_team": "LAC",
-      "away_team": "NYJ",
-      "bet_type": "Spread",
-      "pick": "NYJ +3",
-      "confidence": 0.6247626300939867,
-      "edge": 0.1198121350444817,
-      "tier": "Elite",
-      "odds": -102,
-      "line": 3.0,
-      "notes": null
-    },
-    {
-      "game_date": "2026-11-22",
-      "game_time": "16:25",
-      "game": "PIT @ PHI",
-      "home_team": "PHI",
-      "away_team": "PIT",
-      "bet_type": "Spread",
-      "pick": "PHI +3.5",
-      "confidence": 0.6281657028786339,
-      "edge": 0.106634602400165,
-      "tier": "Elite",
-      "odds": -109,
-      "line": 3.5,
-      "notes": null
-    },
-    {
-      "game_date": "2026-11-22",
-      "game_time": "20:20",
-      "game": "MIN @ SF",
-      "home_team": "SF",
-      "away_team": "MIN",
-      "bet_type": "Spread",
-      "pick": "MIN +3.5",
-      "confidence": 0.5603297313238991,
-      "edge": 0.0276194509500673,
-      "tier": "Strong",
-      "odds": -114,
-      "line": 3.5,
-      "notes": null
-    }
-  ]
+  "bets": []
 }
