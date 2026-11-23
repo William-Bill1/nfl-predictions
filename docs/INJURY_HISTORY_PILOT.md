@@ -53,7 +53,7 @@ The fields in `injury_observations` are:
 
 **Two separate times.** The capture time is `received_at_utc`, when the response arrived. The source's own time is `source_entry_date_raw` / `source_entry_date_utc`. They're never merged, and missing values stay null.
 
-**Kickoff provenance.** Since the 2026 Week 11 schedule change, injury collection corrects two kickoffs in memory (see `docs/INJURY_REPORT_ARCHIVE.md`). Each game row says why its kickoff is what it is:
+**Kickoff provenance.** Since the 2026 Week 11 schedule change, injury collection corrects reviewed kickoffs in memory (Week 11 and Week 12) (see `docs/INJURY_REPORT_ARCHIVE.md`). Each game row says why its kickoff is what it is:
 
 | `kickoff_basis` | Meaning | `source_kickoff_utc` |
 |---|---|---|

@@ -1359,7 +1359,7 @@ class TestReviewedKickoffs:
         evidence=result.doc['schedule'];assert evidence['sha256']==hashlib.sha256(before).hexdigest()
         assert evidence['sha256_basis']==ir.SCHEDULE_SHA256_BASIS
         records=evidence['kickoff_review']['games'];assert [r['status'] for r in records]==['applied','applied']
-        assert all(c['authority']==ir.SCHEDULE_CORRECTION_SOURCE for c in records)
+        assert all(c['authority']==ir.kc.WEEK11_AUTHORITY for c in records)
         ir.validate_capture(result.doc);assert path.read_bytes()==before
 
     def test_corrected_input_unchanged(self,tmp_path):

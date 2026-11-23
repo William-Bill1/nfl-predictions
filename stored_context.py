@@ -19,7 +19,7 @@ stadium_id and stadium name (missing or different venue: no forecast shown). The
 captures RECEIVED after it are excluded. Source entry dates are never used as
 capture times.
 
-Reviewed kickoffs: for the two 2026 Week 11 games in kickoff_corrections.py the
+Reviewed kickoffs: for the 2026 Week 11 and Week 12 games in kickoff_corrections.py the
 identity uses the reviewed kickoff (the table's own time is kept as
 source_kickoff_utc), and an injury capture must also carry a documented kickoff
 basis (reviewed_correction or source_already_corrected) to match. Unexpected values
@@ -169,7 +169,7 @@ def game_identity(games: pd.DataFrame, game_id: str) -> dict:
     kickoff, problem = ps.kickoff_utc(_text(r.get("gameday"))[:10] or None, _text(r.get("gametime")) or None)
     if kickoff is None:
         raise GameIdentityError(f"game {game_id!r} has no usable kickoff time ({problem})")
-    # The 2026 Week 11 reviewed kickoff corrections (kickoff_corrections.py), the
+    # The reviewed 2026 kickoff corrections (kickoff_corrections.py), the
     # same rule injury collection uses. The table's own kickoff is kept as
     # source_kickoff_utc; the table itself is never changed.
     try:

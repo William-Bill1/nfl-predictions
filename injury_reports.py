@@ -272,9 +272,10 @@ def parse_entries(payload, api_key: str | None = None) -> tuple[list[dict], list
 # Scope, matching and coverage
 # --------------------------------------------------------------------------
 
-# Reviewed 2026 Week 11 kickoff corrections (kickoff_corrections.py): applied in
-# memory for injury scope only; never written back, never engine inputs.
-SCHEDULE_CORRECTION_SOURCE = kc.AUTHORITY
+# Reviewed 2026 kickoff corrections (kickoff_corrections.py; Week 11 and Week 12):
+# applied in memory for injury scope only; never written back, never engine inputs.
+# Each kickoff_review record names its own game's authority.
+SCHEDULE_CORRECTION_SOURCES = (kc.WEEK11_AUTHORITY, kc.WEEK12_AUTHORITY)
 SCHEDULE_SHA256_BASIS = ("raw source file bytes; reviewed kickoff corrections are listed in "
                          "kickoff_review and are not reflected in this hash")
 
@@ -762,6 +763,10 @@ def _check_schedule(doc, where: str) -> None:
         raise ValidationError(f"{where}: {exc}") from None
     for g in reviewed:
         rec = records.get(g["game_id"])
+        if rec is None and not kc.known_to_block(sch["kickoff_review"], g["game_id"]):
+            # A version 1 block predates this game's review: its kickoff is the
+            # source's, as captured; import records it as "source", never as reviewed.
+            continue
         _need(rec is not None, where, f"scope lists {g['game_id']} without its kickoff_review record")
         _need((g.get("season"), g.get("week"), g.get("away_team"), g.get("home_team"))
               == (rec["season"], rec["week"], rec["away_team"], rec["home_team"]), where,

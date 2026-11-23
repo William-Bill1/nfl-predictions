@@ -308,11 +308,13 @@ spreads moved.
   independent.
 
 
-## Reviewed kickoff corrections (2026 Week 11)
+## Reviewed kickoff corrections (2026 Weeks 11 and 12)
 
 The historical schedule (`nfl_games_historical.csv`) and the predictions table built from it
-(`nfl_games_historical_with_predictions.csv`) still list the times from before the NFL's
-November 9, 2026 schedule change:
+(`nfl_games_historical_with_predictions.csv`) can list the time from before an NFL schedule
+change. Each reviewed game keeps the NFL document that announced its change as its authority.
+
+Week 11 (November 22), announced November 9, 2026:
 https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Schedule%20Change.pdf
 
 | Game | Stale source time | Reviewed time |
@@ -320,10 +322,24 @@ https://media.nfl.com/content/dam/communications/documents/2026/Week%2011%20Sche
 | `2026_11_PIT_PHI` | 16:25 Eastern (21:25 UTC) | 13:00 Eastern (18:00 UTC) |
 | `2026_11_JAX_NYG` | 13:00 Eastern (18:00 UTC) | 16:25 Eastern (21:25 UTC) |
 
-`kickoff_corrections.py` holds these two corrections and the one rule that applies them. Injury
-collection and the stored-context panel both use it, in memory only. No schedule file, prediction
-input, probability or ranking changes. This is not schedule management: only these two games are
-known, and a later change that leaves the source at a recognized time can't be detected.
+Week 12 (November 29):
+https://media.nfl.com/content/dam/communications/documents/2026/Week%2012%20Schedule%20Change.pdf
+
+| Game | Pre-change time | Reviewed time |
+|---|---|---|
+| `2026_12_TEN_JAX` | 16:05 Eastern (21:05 UTC) | 13:00 Eastern (18:00 UTC) |
+| `2026_12_NE_LAC` | 20:20 Eastern (01:20 UTC Nov 30) | 16:05 Eastern (21:05 UTC) |
+| `2026_12_LV_CLE` | 13:00 Eastern (18:00 UTC) | 20:20 Eastern (01:20 UTC Nov 30) |
+
+The production schedule and predictions table already list the reviewed Week 12 times, so those
+records are `source_already_corrected`; a source with the pre-change times is corrected the same
+way as Week 11.
+
+`kickoff_corrections.py` holds these corrections and the one rule that applies them. Injury
+collection, the stored-context panel and the weekly market context use it, in memory only. No
+schedule file, prediction input, probability or ranking changes. This is not schedule management:
+only the listed games are known, and a later change that leaves the source at a recognized time
+can't be detected.
 
 **Rule.** A correction applies only when the exact game ID, both teams, season, week and date match,
 and the source time is the known old time or the reviewed time. Any other value, a duplicate row or
@@ -339,9 +355,17 @@ effective times (Eastern and UTC), the authority URL, and a status:
 
 A capture written before this change has no `kickoff_review` ("legacy") and stays valid as it was.
 
+**Review block versions.** Captures written since the Week 12 change carry `review_version` 2 with
+`authorities`, the sorted list of the distinct authorities of its records. Captures written between
+the Week 11 and Week 12 changes carry `review_version` 1 with a single `authority`, the Week 11
+document, and may list only Week 11 games; they stay valid as written. A version 1 capture whose
+scope includes a Week 12 game has no record for it (that code didn't know the game); its kickoff is
+the source's as captured, import stores it as `source`, and the panel never treats it as reviewed.
+
 **Validation checks consistency, not authenticity.** `validate_capture` requires:
 - exact record fields, types and values (each record must equal the one derived from its source time);
-- unique, known game IDs and the exact authority;
+- unique, known game IDs, each record's own game authority, and the block's authority (version 1) or
+  authority list (version 2);
 - that every reviewed game in the scope has a record whose identity matches the scope row, and whose
   effective kickoff equals the scope's kickoff;
 - that every recorded game is present when the scope is that week.
@@ -356,7 +380,7 @@ database is still readable, but it must be copied with `injury_history.py upgrad
 can be imported. Rows carried over get `imported_before_kickoff_provenance`.
 
 **Stored-context panel.** The panel builds each game's identity from the predictions table row.
-- For the two reviewed games it uses the reviewed kickoff, keeping the table's own time as
+- For the reviewed games it uses the reviewed kickoff, keeping the table's own time as
   `source_kickoff_utc`, and shows a note when the two differ.
 - An injury capture is shown for a reviewed game only if its kickoff matches the reviewed kickoff and
   its stored `kickoff_basis` is `reviewed_correction` or `source_already_corrected`.

@@ -258,7 +258,7 @@ TAMPERING = {
     "unreviewed_game_record": (lambda d: d["schedule"]["kickoff_review"]["games"].append(
         {**_rec(d, PIT), "game_id": LV}), "not a reviewed game"),
     "record_authority": (lambda d: _rec(d, PIT).__setitem__("authority", "https://example.com"), "differs"),
-    "block_authority": (lambda d: d["schedule"]["kickoff_review"].__setitem__("authority", "x"), "authority"),
+    "block_authority": (lambda d: d["schedule"]["kickoff_review"].__setitem__("authorities", ["x"]), "authority"),
     "status_flipped": (lambda d: _rec(d, PIT).__setitem__("status", "source_already_corrected"), "differs"),
     "effective_time": (lambda d: _rec(d, JAX).__setitem__("effective_kickoff_utc", "2026-11-22T21:30:00Z"),
                        "differs"),
@@ -358,7 +358,9 @@ def test_import_stores_raw_hash_basis_and_review_evidence(tmp_path):
 # ---------------------------------------------------------------- legacy captures and databases
 
 
-def test_retained_legacy_captures_still_validate_and_import_unchanged(tmp_path):
+def test_retained_captures_still_validate_and_import_unchanged(tmp_path):
+    """Retained captures (legacy, and reviewed ones written since the Week 11 change)
+    validate and import as captured; reviewed ones keep their own authorities."""
     caps = sorted((ROOT / "data_files" / "injury_reports" / "captures").glob("*.json"))
     assert caps, "retained captures expected in the repository"
     before = {p: sha(p) for p in caps}
@@ -366,10 +368,28 @@ def test_retained_legacy_captures_still_validate_and_import_unchanged(tmp_path):
     import_into(db, *caps)
     docs = {json.loads(p.read_text(encoding="utf-8"))["capture_id"]: json.loads(p.read_text(encoding="utf-8"))
             for p in caps}
+    kinds = {cid: ir.schedule_kind(d) for cid, d in docs.items()}
+    assert "legacy" in kinds.values()
     for (cid, gid), (kickoff, source, basis) in game_rows(db).items():
-        assert basis == "capture_without_kickoff_review" and source is None
         assert kickoff == next(g["kickoff_utc"] for g in docs[cid]["scope"]["games"] if g["game_id"] == gid)
-    assert all(ir.schedule_kind(d) == "legacy" for d in docs.values())
+        if kinds[cid] == "legacy":
+            assert basis == "capture_without_kickoff_review" and source is None
+            continue
+        recs = {r["game_id"]: r for r in docs[cid]["schedule"]["kickoff_review"]["games"]}
+        if gid in recs:
+            assert basis == ("reviewed_correction" if recs[gid]["status"] == "applied"
+                             else "source_already_corrected")
+            assert source == recs[gid]["source_kickoff_utc"]
+        else:
+            assert basis == "source" and source == kickoff
+    for d in docs.values():
+        if kinds[d["capture_id"]] == "legacy":
+            continue
+        block = d["schedule"]["kickoff_review"]
+        if block["review_version"] == 1:
+            assert block["authority"] == kc.WEEK11_AUTHORITY
+        for r in block["games"]:
+            assert r["authority"] == kc.REVIEWED[r["game_id"]].authority
     assert {p: sha(p) for p in caps} == before
 
 
@@ -542,4 +562,4 @@ def test_panel_renders_reviewed_kickoff_and_corrected_capture(tmp_path, monkeypa
     text = all_text(at)
     assert "reviewed Week 11 schedule change" in text and "04:25 PM EST" in text
     assert "Kickoff Sun Nov 22, 2026 01:00 PM EST" in text
-    assert new.doc["capture_id"] in text and kc.AUTHORITY in text
+    assert new.doc["capture_id"] in text and kc.WEEK11_AUTHORITY in text

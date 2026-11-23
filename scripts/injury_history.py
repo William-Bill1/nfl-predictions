@@ -170,7 +170,7 @@ CREATE TABLE injury_observations (
 CREATE INDEX injury_observations_team_player ON injury_observations (team, player_id);
 """
 
-# Kickoff provenance (2026 Week 11 reviewed corrections). Added to the frozen
+# Kickoff provenance (reviewed 2026 kickoff corrections). Added to the frozen
 # first schema by ALTER, so a new database and an upgraded copy of a first-schema
 # database end with identical schema text. Rows carried over by `upgrade` keep
 # their stored values and get the pre-provenance defaults: they were imported

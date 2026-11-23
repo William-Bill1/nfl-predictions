@@ -1,9 +1,11 @@
-"""Reviewed kickoff corrections for the 2026 Week 11 schedule change (research context only).
+"""Reviewed kickoff corrections for NFL-announced 2026 schedule changes (research context only).
 
 The historical schedule (nfl_games_historical.csv and the predictions table built
-from it) still lists the pre-change times for two games that the NFL moved on
-November 9, 2026. Injury collection and the stored-context panel apply these two
+from it) can list a pre-change time for a game the NFL moved: two Week 11 games
+(announced November 9, 2026) and three Week 12 games (November 29, 2026). Injury
+collection, the stored-context panel and the weekly market context apply these
 corrections in memory so that their kickoff matching agrees with the real games.
+Each game keeps the NFL document that announced its change as its authority.
 Nothing here changes a schedule file, a prediction input, a probability or a
 ranking, and it is not general schedule management: only the listed games are
 known, and a later change that leaves the source at a recognized time can't be
@@ -21,9 +23,17 @@ import pandas as pd
 
 import pregame_snapshots as ps
 
-AUTHORITY = ("https://media.nfl.com/content/dam/communications/documents/2026/"
-             "Week%2011%20Schedule%20Change.pdf")
-REVIEW_VERSION = 1
+WEEK11_AUTHORITY = ("https://media.nfl.com/content/dam/communications/documents/2026/"
+                    "Week%2011%20Schedule%20Change.pdf")
+WEEK12_AUTHORITY = ("https://media.nfl.com/content/dam/communications/documents/2026/"
+                    "Week%2012%20Schedule%20Change.pdf")
+# Version 1 blocks (written before the Week 12 change) carry one block authority,
+# the Week 11 document, and may list only Week 11 games. Version 2 blocks list the
+# distinct authorities of their records under "authorities".
+REVIEW_VERSION = 2
+V1_AUTHORITY = WEEK11_AUTHORITY
+_BLOCK_FIELDS = {1: {"review_version", "authority", "games"},
+                 2: {"review_version", "authorities", "games"}}
 TIMEZONE = ps.SOURCE_TZ.key           # nflverse local times; the same rule the scope uses
 
 APPLIED = "applied"                                   # source had the old time; corrected in memory
@@ -43,11 +53,15 @@ class Reviewed(NamedTuple):
     gameday: str
     old_gametime: str
     effective_gametime: str
+    authority: str
 
 
 REVIEWED = {r.game_id: r for r in (
-    Reviewed("2026_11_PIT_PHI", 2026, 11, "PIT", "PHI", "2026-11-22", "16:25", "13:00"),
-    Reviewed("2026_11_JAX_NYG", 2026, 11, "JAX", "NYG", "2026-11-22", "13:00", "16:25"),
+    Reviewed("2026_11_PIT_PHI", 2026, 11, "PIT", "PHI", "2026-11-22", "16:25", "13:00", WEEK11_AUTHORITY),
+    Reviewed("2026_11_JAX_NYG", 2026, 11, "JAX", "NYG", "2026-11-22", "13:00", "16:25", WEEK11_AUTHORITY),
+    Reviewed("2026_12_TEN_JAX", 2026, 12, "TEN", "JAX", "2026-11-29", "16:05", "13:00", WEEK12_AUTHORITY),
+    Reviewed("2026_12_NE_LAC", 2026, 12, "NE", "LAC", "2026-11-29", "20:20", "16:05", WEEK12_AUTHORITY),
+    Reviewed("2026_12_LV_CLE", 2026, 12, "LV", "CLE", "2026-11-29", "13:00", "20:20", WEEK12_AUTHORITY),
 )}
 
 
@@ -103,7 +117,7 @@ def expected_record(game_id: str, source_gametime: str) -> dict:
             "source_gametime": source_gametime, "effective_gametime": r.effective_gametime,
             "source_kickoff_utc": _iso(r.gameday, source_gametime),
             "effective_kickoff_utc": _iso(r.gameday, r.effective_gametime),
-            "status": status, "authority": AUTHORITY}
+            "status": status, "authority": r.authority}
 
 
 def resolve(game_id, *, season, week, away_team, home_team, gameday, gametime) -> dict | None:
@@ -148,18 +162,32 @@ def apply_to_frame(schedule: pd.DataFrame) -> tuple[pd.DataFrame, list[dict]]:
     return out, records
 
 
+def known_to_block(block: dict, game_id: str) -> bool:
+    """Whether a (checked) review block could have recorded this reviewed game:
+    version 1 blocks were written before the Week 12 change and know only Week 11."""
+    return block["review_version"] >= 2 or REVIEWED[game_id].authority == V1_AUTHORITY
+
+
+def _authorities(records) -> list[str]:
+    return sorted({rec["authority"] for rec in records})
+
+
 def review_block(records: list[dict]) -> dict:
-    return {"review_version": REVIEW_VERSION, "authority": AUTHORITY, "games": list(records)}
+    return {"review_version": REVIEW_VERSION, "authorities": _authorities(records), "games": list(records)}
 
 
 def check_review_block(block) -> dict:
     """{game_id: record} for a well-formed review block; raises otherwise. Every
-    record must equal the one this module derives from its source time."""
-    if not isinstance(block, dict) or set(block) != {"review_version", "authority", "games"}:
+    record must equal the one this module derives from its source time, including
+    its game's own authority. Version 1 blocks (Week 11 only) stay valid as written."""
+    if not isinstance(block, dict):
         raise KickoffReviewError("kickoff_review fields")
-    if block["review_version"] != REVIEW_VERSION or isinstance(block["review_version"], bool):
-        raise KickoffReviewError(f"unsupported kickoff review_version {block['review_version']!r}")
-    if block["authority"] != AUTHORITY:
+    version = block.get("review_version")
+    if isinstance(version, bool) or version not in _BLOCK_FIELDS:
+        raise KickoffReviewError(f"unsupported kickoff review_version {version!r}")
+    if set(block) != _BLOCK_FIELDS[version]:
+        raise KickoffReviewError("kickoff_review fields")
+    if version == 1 and block["authority"] != V1_AUTHORITY:
         raise KickoffReviewError("kickoff_review authority differs")
     if not isinstance(block["games"], list):
         raise KickoffReviewError("kickoff_review games must be a list")
@@ -173,9 +201,13 @@ def check_review_block(block) -> dict:
         if gid in out:
             raise KickoffReviewError(f"kickoff_review lists {gid} twice")
         r = REVIEWED[gid]
+        if version == 1 and r.authority != V1_AUTHORITY:
+            raise KickoffReviewError(f"kickoff_review games[{i}]: {gid} isn't a version 1 (Week 11) game")
         if rec["source_gametime"] not in (r.old_gametime, r.effective_gametime):
             raise KickoffReviewError(f"kickoff_review {gid}: source time {rec['source_gametime']!r} isn't reviewed")
         if rec != expected_record(gid, rec["source_gametime"]):
             raise KickoffReviewError(f"kickoff_review {gid}: record differs from the reviewed correction")
         out[gid] = rec
+    if version == 2 and block["authorities"] != _authorities(out.values()):
+        raise KickoffReviewError("kickoff_review authority list differs from its records")
     return out
