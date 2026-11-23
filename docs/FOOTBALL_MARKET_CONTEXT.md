@@ -29,8 +29,10 @@ earlier prices are never copied into it. Changes compare successive observations
 even if a day is missing. All raw observations remain available in card JSON.
 Conflicting same-time terms are retained and comparisons withheld.
 
-The two 2026 Week 11 games moved by the NFL (`2026_11_PIT_PHI` to 13:00 ET and
-`2026_11_JAX_NYG` to 16:25 ET) are checked with `kickoff_corrections.resolve`. The
+The 2026 games moved by the NFL (Week 11: `2026_11_PIT_PHI` to 13:00 ET and
+`2026_11_JAX_NYG` to 16:25 ET; Week 12: `2026_12_TEN_JAX` to 13:00 ET,
+`2026_12_NE_LAC` to 16:05 ET and `2026_12_LV_CLE` to 20:20 ET) are checked with
+`kickoff_corrections.resolve`. The
 market schedule must already list the reviewed time; a schedule with the old time
 is refused before any output is created and is never corrected in memory. Any
 other changed identity, date or time for these games is refused as needing

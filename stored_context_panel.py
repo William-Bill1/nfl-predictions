@@ -69,7 +69,7 @@ def render(games: pd.DataFrame, *, environ=None, now: datetime | None = None) ->
                    "after the cutoff are excluded; source entry dates are not capture times."))
     review = g.get("kickoff_review")
     if review is not None and review["status"] == "applied":
-        st.caption(_md(f"Kickoff uses the NFL's reviewed Week 11 schedule change; the schedule table still "
+        st.caption(_md(f"Kickoff uses the NFL's reviewed Week {review['week']} schedule change; the schedule table still "
                        f"lists {sc.toronto(g['source_kickoff_utc'])}. Only captures that recorded this "
                        "review can match. Source: " + review["authority"]))
     _receipt_times(ctx)
