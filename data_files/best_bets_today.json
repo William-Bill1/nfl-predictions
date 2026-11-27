@@ -1,24 +1,24 @@
 {
   "meta": {
     "sport": "NFL",
-    "generated_at": "2026-11-26T11:47:56.646548+00:00",
+    "generated_at": "2026-11-27T11:40:23.338745+00:00",
     "model_version": "1.1.0",
     "season": "2026"
   },
   "bets": [
     {
-      "game_date": "2026-11-26",
-      "game_time": "20:20",
-      "game": "KC @ BUF",
-      "home_team": "BUF",
-      "away_team": "KC",
+      "game_date": "2026-11-27",
+      "game_time": "15:00",
+      "game": "DEN @ PIT",
+      "home_team": "PIT",
+      "away_team": "DEN",
       "bet_type": "Spread",
-      "pick": "KC +3",
-      "confidence": 0.6338344374352015,
-      "edge": 0.1011241570613697,
-      "tier": "Elite",
-      "odds": -114,
-      "line": 3.0,
+      "pick": "PIT +4.5",
+      "confidence": 0.5818348379676911,
+      "edge": 0.0768843429181861,
+      "tier": "Strong",
+      "odds": -102,
+      "line": 4.5,
       "notes": null
     }
   ]
